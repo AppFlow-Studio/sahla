@@ -1,0 +1,87 @@
+import type { ConfigContext, ExpoConfig } from 'expo/config';
+
+/**
+ * Dynamic app config.
+ *
+ * Each masjid gets its own EAS build profile that sets `MASJID_ID` (see
+ * `eas.json`). This file reads that env var to:
+ *   1. Pick which bundled config ships in the binary (via `extra.masjidId`,
+ *      consumed at runtime by `src/config/resolver.ts`).
+ *   2. Set a unique `bundleIdentifier` / `package` so two variants can
+ *      coexist on the same device / store.
+ *   3. Set the display `name` from the tenant's branding.
+ *
+ * Expo's config evaluator runs this file in a restricted CJS context that
+ * doesn't follow arbitrary TS imports, so the build-time tenant lookup below
+ * is intentionally a plain inline map. The full runtime config (colors,
+ * features, etc.) lives in `src/config/masjids/*.ts` and is read at runtime
+ * via `src/config/resolver.ts`.
+ *
+ * Docs: https://docs.expo.dev/tutorial/eas/multiple-app-variants/
+ */
+
+type BuildTimeMasjid = { displayName: string };
+
+const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
+  sahla: { displayName: 'Sahla Demo Masjid' },
+};
+
+const MASJID_ID = process.env.MASJID_ID ?? 'sahla';
+const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: 'Sahla' };
+
+const IOS_BUNDLE_ID = `com.appflowstudios.sahla.${MASJID_ID}`;
+const ANDROID_PACKAGE = `com.appflowstudios.sahla.${MASJID_ID.replace(/-/g, '_')}`;
+
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
+  name: masjid.displayName,
+  slug: 'sahla',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/images/icon.png',
+  scheme: `sahla-${MASJID_ID}`,
+  userInterfaceStyle: 'automatic',
+  newArchEnabled: true,
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: IOS_BUNDLE_ID,
+  },
+  android: {
+    adaptiveIcon: {
+      backgroundColor: '#E6F4FE',
+      foregroundImage: './assets/images/android-icon-foreground.png',
+      backgroundImage: './assets/images/android-icon-background.png',
+      monochromeImage: './assets/images/android-icon-monochrome.png',
+    },
+    edgeToEdgeEnabled: true,
+    predictiveBackGestureEnabled: false,
+    package: ANDROID_PACKAGE,
+  },
+  web: {
+    output: 'static',
+    favicon: './assets/images/favicon.png',
+  },
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/images/splash-icon.png',
+        imageWidth: 200,
+        resizeMode: 'contain',
+        backgroundColor: '#ffffff',
+        dark: {
+          backgroundColor: '#000000',
+        },
+      },
+    ],
+  ],
+  experiments: {
+    typedRoutes: true,
+    reactCompiler: true,
+  },
+  extra: {
+    masjidId: MASJID_ID,
+  },
+});
