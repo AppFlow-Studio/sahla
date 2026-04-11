@@ -8,7 +8,19 @@ export default function TabLayout() {
         <Icon sf="house.fill" drawable="home" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Label>Settings</Label>
+        <Label>Discover</Label>
+        <Icon sf="gear" drawable="settings" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <Label>Library</Label>
+        <Icon sf="gear" drawable="settings" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <Label>Prayer</Label>
+        <Icon sf="gear" drawable="settings" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <Label>Profile</Label>
         <Icon sf="gear" drawable="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>
