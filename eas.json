@@ -1,0 +1,39 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "base": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
+    "sahla-dev": {
+      "extends": "base",
+      "env": {
+        "MASJID_ID": "sahla"
+      }
+    },
+    "sahla-preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "env": {
+        "MASJID_ID": "sahla"
+      }
+    },
+    "sahla-prod": {
+      "extends": "base",
+      "developmentClient": false,
+      "distribution": "store",
+      "env": {
+        "MASJID_ID": "sahla"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
