@@ -83,5 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     masjidId: MASJID_ID,
+    /** Read from `.env` when Metro / prebuild evaluates this file — reliable for dev bypass. */
+    devBypassAuth: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === 'true',
   },
 });

@@ -23,18 +23,22 @@ export const unstable_settings = {
  */
 function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
+  const devBypass = __DEV__ && env.DEV_BYPASS_AUTH;
 
   if (!isLoaded) {
     // Returning null keeps the native splash visible until Clerk is ready.
     return null;
   }
 
+  const showMain = !!isSignedIn || devBypass;
+  const showAuth = !isSignedIn && !devBypass;
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!!isSignedIn}>
+      <Stack.Protected guard={showMain}>
         <Stack.Screen name="(main)" />
       </Stack.Protected>
-      <Stack.Protected guard={!isSignedIn}>
+      <Stack.Protected guard={showAuth}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
