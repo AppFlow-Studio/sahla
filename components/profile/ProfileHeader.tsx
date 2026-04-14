@@ -1,18 +1,28 @@
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, ImageBackground, Platform, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFonts, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import { useProfile } from '@/src/hooks/use-profile';
 
+import {
+  useFonts,
+  CormorantGaramond_500Medium,
+  CormorantGaramond_600SemiBold,
+} from '@expo-google-fonts/cormorant-garamond';
 const HEADER_BG_DARK = '#0A261E';
 const HEADER_BG_LIGHT = '#0D2B1A';
 
 export default function ProfileHeader() {
   const { profile, status, error } = useProfile();
   const insets = useSafeAreaInsets();
-  const [fontsLoaded] = useFonts({ PlayfairDisplay_700Bold });
+  /** Measured header height so the vector can be exactly half (RN % height on absolute children is unreliable). */
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [fontsLoaded] = useFonts({
+    CormorantGaramond_500Medium,
+    CormorantGaramond_600SemiBold,
+  });
 
   if (status === 'idle' || status === 'loading' || !fontsLoaded) {
     return (
@@ -52,21 +62,43 @@ export default function ProfileHeader() {
 
   const initial = firstName?.charAt(0) ?? '?';
 
-  return (
-    <LinearGradient
-      colors={[HEADER_BG_LIGHT, HEADER_BG_DARK]}
-      className="w-full"
-      style={{ paddingTop: insets.top - 20, paddingBottom: 18 }}
-    >
-      {/* Geometric pattern overlay */}
-      <Image
-        source={require('@/assets/images/islamic-pattern.png')}
-        className="absolute inset-0 h-full w-full"
-        contentFit="cover"
-        style={{ opacity: 0.12 }}
-      />
+  /** ~54% of header (~8% taller than half; tune 0.525–0.55 for 5–10% more than 50%). */
+  const vectorHeight =
+    headerHeight > 0 ? Math.round(headerHeight * 0.54) : undefined;
 
-      <View className="w-full items-center px-4">
+  return (
+    <View className="relative w-full overflow-hidden bg-[#0A261E]">
+      <LinearGradient
+        colors={[HEADER_BG_LIGHT, HEADER_BG_DARK]}
+        className="w-full"
+        style={{ paddingTop: insets.top - 20, paddingBottom: 18 }}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0) setHeaderHeight(h);
+        }}
+      >
+        {/* Geometric pattern overlay */}
+        <Image
+          source={require('@/assets/images/islamic-pattern.png')}
+          className="absolute inset-0 h-full w-full"
+          contentFit="cover"
+          style={{ opacity: 0.12 }}
+        />
+
+        {/* Vector art: top half of header only, behind content (not a separate block above) */}
+        <ImageBackground
+          source={require('@/assets/images/Vector.png')}
+          resizeMode="cover"
+          className="absolute left-0 right-0 top-0 w-full"
+          style={{
+            height: vectorHeight ?? 185,
+            opacity: 0.78,
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+
+        <View className="relative z-10 w-full items-center px-4">
         {/* Avatar */}
         <Pressable className="relative h-20 w-20">
           {hasPhoto && url ? (
@@ -78,44 +110,67 @@ export default function ProfileHeader() {
           ) : (
             <View className="h-full w-full items-center justify-center rounded-full bg-[#5A6652]">
               <Text
-                className="text-3xl text-primary-foreground text-center"
-                style={{ fontFamily: 'PlayfairDisplay_700Bold' }}
+                className="text-5xl text-primary-foreground text-center "
+                style={{
+                  fontFamily: 'CormorantGaramond_500Medium',
+                  lineHeight: 48,
+                  marginLeft: 5,
+                  marginTop: 3,
+                }}
               >
                 {initial}
               </Text>
             </View>
           )}
-          <View className="absolute bottom-0 right-0 rounded-full bg-accent p-1">
+          <View className="absolute bottom-0 right-0 rounded-full bg-[#B8922A] p-1">
             <EvilIcons name="pencil" size={14} color="#FFFBF2" />
           </View>
         </Pressable>
 
         {/* Name */}
         <Text
-          className="mt-2 text-center text-xl text-primary-foreground"
-          style={{ fontFamily: 'PlayfairDisplay_700Bold' }}
+          className="mt-2 text-center text-3xl text-primary-foreground"
+          style={{ fontFamily: 'CormorantGaramond_600SemiBold' }}
         >
           {fullName}
         </Text>
 
-        {/* Member since */}
-        <Text className="mt-0.5 text-center text-xs text-muted-foreground">
+        {/* Member since — SF Pro Text Regular on iOS (system UI font for small copy) */}
+        <Text
+          className="mb-0.5 text-center text-xs text-[#FFFBF299] "
+          style={{
+            fontFamily: Platform.select({
+              android: 'Roboto',
+              default: 'sans-serif',
+            }),
+            fontWeight: '400',
+          }}
+        >
           Member Since {createdYear}
         </Text>
 
         {/* Action buttons */}
         <View className="mt-3 flex-row items-center justify-center gap-3">
-          {!isProfileComplete && (
-            <Pressable className="flex-row items-center rounded-full border border-accent px-4 py-2">
-              <View className="mr-2 h-1.5 w-1.5 rounded-full bg-accent" />
-              <Text className="text-sm font-medium text-accent">Complete Profile</Text>
-            </Pressable>
-          )}
-          <Pressable className="rounded-full border border-primary-foreground px-4 py-2">
-            <Text className="text-sm font-medium text-primary-foreground">Edit Profile</Text>
-          </Pressable>
+  {!isProfileComplete && (
+    <Pressable className="flex-row items-center justify-center rounded-full border border-accent px-5 py-2.5" style={{ minWidth: 130 }}>
+      <View className="mr-2 items-center justify-center">
+    {/* Glow */}
+    <View className="absolute h-4 w-4 rounded-full bg-accent opacity-20" />
+    {/* Dot */}
+    <View className="h-2.5 w-2.5 rounded-full bg-accent" />
+  </View>
+      <Text className="text-xs font-medium text-accent">Complete Profile</Text>
+    </Pressable>
+  )}
+  <Pressable
+    className="items-center justify-center rounded-full border border-primary-foreground px-5 py-2.5"
+    style={{ minWidth: 130 }}
+  >
+    <Text className="text-xs font-medium text-primary-foreground">Edit Profile</Text>
+  </Pressable>
+</View>
         </View>
-      </View>
-    </LinearGradient>
+      </LinearGradient>
+    </View>
   );
 }
