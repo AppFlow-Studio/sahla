@@ -71,7 +71,7 @@ export default function ProfileHeader() {
       <LinearGradient
         colors={[HEADER_BG_LIGHT, HEADER_BG_DARK]}
         className="w-full"
-        style={{ paddingTop: insets.top - 20, paddingBottom: 18 }}
+        style={{ paddingTop: insets.top - 40, paddingBottom: 36 }}
         onLayout={(e) => {
           const h = e.nativeEvent.layout.height;
           if (h > 0) setHeaderHeight(h);
@@ -91,7 +91,7 @@ export default function ProfileHeader() {
           resizeMode="cover"
           className="absolute left-0 right-0 top-0 w-full"
           style={{
-            height: vectorHeight ?? 185,
+            height: vectorHeight ?? 200,
             opacity: 0.78,
             zIndex: 1,
             pointerEvents: 'none',
@@ -163,10 +163,10 @@ export default function ProfileHeader() {
     </Pressable>
   )}
   <Pressable
-    className="items-center justify-center rounded-full border border-primary-foreground px-5 py-2.5"
+    className="items-center justify-center rounded-full border border-[#FFFBF280] px-5 py-2.5 "
     style={{ minWidth: 130 }}
   >
-    <Text className="text-xs font-medium text-primary-foreground">Edit Profile</Text>
+    <Text className="text-xs font-medium text-[#FFFBF2]">Edit Profile</Text>
   </Pressable>
 </View>
         </View>

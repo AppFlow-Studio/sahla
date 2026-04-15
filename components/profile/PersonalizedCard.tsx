@@ -8,10 +8,10 @@ type Props = {
 
 export default function PersonalizedCard({ onPress }: Props) {
   return (
-    <Pressable className="py-3 w-full flex-row justify-between items-center bg-[#B8922A33] rounded-full px-4"
+    <Pressable className="py-2.5 w-full flex-row justify-between items-center bg-[#B8922A33] rounded-full px-4"
     onPress={onPress}
     >
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-1">
             <Image
             source = {require("@/assets/images/Vector-2.png")}
             style = {{
@@ -20,7 +20,7 @@ export default function PersonalizedCard({ onPress }: Props) {
             }}
             contentFit="cover"
             />
-            <View className="flex-col gap-1">
+            <View className="flex-col ml-2">
                 <Text
                 style = {{
                     fontFamily: Platform.select({ android: "Roboto", default: undefined }),
@@ -52,7 +52,7 @@ export default function PersonalizedCard({ onPress }: Props) {
 
         </View>
 
-        <IconSymbol name="chevron.right" size={16} color="#0A261E99" />
+        <IconSymbol name="chevron.right" size={10} color="#0A261E99" />
 
     </Pressable>
   )

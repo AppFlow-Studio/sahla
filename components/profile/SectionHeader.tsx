@@ -7,7 +7,7 @@ type Props = {
 
 export default function SectionHeader({ title }: Props) {
   return (
-    <View className="px-4 pb-2 pt-4">
+    <View className="pb-2 pt-4">
       <Text
         style={{
           fontFamily: Platform.select({ android: 'Roboto', default: undefined }),

@@ -10,11 +10,13 @@ import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
-
+import {useEffect} from 'react';
+import {Inter_800ExtraBold,useFonts} from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
 export const unstable_settings = {
   anchor: '(main)',
 };
-
+SplashScreen.preventAutoHideAsync();
 /**
  * Auth-aware navigator. Uses Expo Router v6's `Stack.Protected` to gate the
  * `(main)` and `(auth)` groups on Clerk's session state. The `isLoaded` check
@@ -46,6 +48,17 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded,fontError] = useFonts({
+    Inter_800ExtraBold
+  })
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  },[fontsLoaded,fontError])
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
   return (
     <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
       <SupabaseProvider>
