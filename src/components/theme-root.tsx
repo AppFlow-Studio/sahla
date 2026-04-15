@@ -23,6 +23,13 @@ export function ThemeRoot({ children }: { children: React.ReactNode }) {
     '--color-muted': config.colors.muted,
     '--color-muted-foreground': config.colors.mutedForeground,
     '--color-border': config.colors.border,
+    '--color-onboarding-bg': config.colors.onboardingBackground,
+    '--color-onboarding-surface': config.colors.onboardingSurface,
+    '--color-onboarding-accent': config.colors.onboardingAccent,
+    '--color-onboarding-halo-1': config.colors.onboardingHalo1,
+    '--color-onboarding-halo-2': config.colors.onboardingHalo2,
+    '--color-onboarding-halo-3': config.colors.onboardingHalo3,
+    '--color-onboarding-layer': config.colors.onboardingLayer,
   });
 
   return (
