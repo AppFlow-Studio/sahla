@@ -4,19 +4,27 @@ import { Text, TextInput, View } from 'react-native';
 
 import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 export default function NameScreen() {
   const router = useRouter();
-  const [name, setName] = useState('');
+  const storedName = useOnboardingStore((s) => s.firstName);
+  const setFirstName = useOnboardingStore((s) => s.setFirstName);
+  const [name, setName] = useState(storedName);
   const config = useMasjidConfig();
   const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
+
+  const handleContinue = () => {
+    setFirstName(name.trim());
+    router.push('/(onboarding)/notifications');
+  };
 
   return (
     <OnboardingScaffold
       step={1}
       title={`What should we\ncall you?`}
       primaryLabel="Continue"
-      onPrimary={() => router.push('/(onboarding)/notifications')}
+      onPrimary={handleContinue}
     >
       <View className="mt-10">
         <Text

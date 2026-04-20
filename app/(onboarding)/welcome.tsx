@@ -3,8 +3,6 @@ import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
-  interpolateColor,
-  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -22,8 +20,6 @@ const SERIF = 'PlayfairDisplay_500Medium';
 const ARABIC = 'Amiri_400Regular';
 
 const triplet = (t: string) => `rgb(${t.replace(/ /g, ',')})`;
-
-const AnimatedMosque = Animated.createAnimatedComponent(Mosque);
 
 function Halo({
   c1,
@@ -57,7 +53,6 @@ export default function WelcomeScreen() {
 
   const mosqueY = useSharedValue(200);
   const mosqueOpacity = useSharedValue(0);
-  const mosqueColor = useSharedValue(0);
   const haloPulse = useSharedValue(1);
   const textOpacity = useSharedValue(0);
 
@@ -69,13 +64,6 @@ export default function WelcomeScreen() {
     mosqueY.value = withDelay(
       700,
       withTiming(0, { duration: 1400, easing: Easing.out(Easing.cubic) }),
-    );
-    mosqueColor.value = withDelay(
-      2100,
-      withSequence(
-        withTiming(0, { duration: 600 }),
-        withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.cubic) }),
-      ),
     );
     haloPulse.value = withDelay(
       2100,
@@ -89,19 +77,11 @@ export default function WelcomeScreen() {
       ),
     );
     textOpacity.value = withDelay(300, withTiming(1, { duration: 700 }));
-  }, [mosqueOpacity, mosqueY, mosqueColor, haloPulse, textOpacity]);
+  }, [mosqueOpacity, mosqueY, haloPulse, textOpacity]);
 
   const mosqueStyle = useAnimatedStyle(() => ({
     opacity: mosqueOpacity.value,
     transform: [{ translateY: mosqueY.value }],
-  }));
-
-  const mosqueProps = useAnimatedProps(() => ({
-    color: interpolateColor(
-      mosqueColor.value,
-      [0, 1],
-      ['#B8922A', '#071F18'],
-    ),
   }));
 
   const haloStyle = useAnimatedStyle(() => ({
@@ -109,10 +89,6 @@ export default function WelcomeScreen() {
   }));
 
   const textStyle = useAnimatedStyle(() => ({ opacity: textOpacity.value }));
-
-  const titleColorStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(mosqueColor.value, [0, 1], ['#B8922A', '#FFFBF2']),
-  }));
 
   return (
     <View className="flex-1 bg-onboarding-bg">
@@ -128,27 +104,28 @@ export default function WelcomeScreen() {
         className="absolute inset-x-0 bottom-0"
         style={[{ height: '66%' }, mosqueStyle]}
       >
-        <AnimatedMosque
+        <Mosque
           width="100%"
           height="100%"
           preserveAspectRatio="xMidYMax meet"
-          animatedProps={mosqueProps}
+          color="#071F18"
         />
       </Animated.View>
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <Animated.View className="items-center pt-2" style={textStyle}>
-          <Animated.Text style={[{ fontFamily: ARABIC, fontSize: 20 }, titleColorStyle]}>
+          <Text
+            className="text-onboarding-surface"
+            style={{ fontFamily: ARABIC, fontSize: 20 }}
+          >
             السلام عليكم
-          </Animated.Text>
-          <Animated.Text
-            style={[
-              { fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginTop: 6 },
-              titleColorStyle,
-            ]}
+          </Text>
+          <Text
+            className="text-onboarding-surface"
+            style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginTop: 6 }}
           >
             Welcome
-          </Animated.Text>
+          </Text>
           <Text
             className="text-onboarding-accent"
             style={{ fontSize: 12, marginTop: 10, letterSpacing: 0.3 }}
