@@ -23,6 +23,8 @@ export function ThemeRoot({ children }: { children: React.ReactNode }) {
     '--color-muted': config.colors.muted,
     '--color-muted-foreground': config.colors.mutedForeground,
     '--color-border': config.colors.border,
+    '--color-card': config.colors.card,
+    '--color-card-foreground': config.colors.cardForeground,
   });
 
   return (

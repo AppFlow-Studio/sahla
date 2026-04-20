@@ -11,15 +11,19 @@ export const defaultConfig: MasjidConfig = {
   displayName: 'Sahla',
   tagline: 'Your masjid, in your pocket',
   colors: {
-    primary: '16 122 87', //       #107A57  green
-    primaryForeground: '255 255 255',
-    accent: '212 175 55', //       #D4AF37  gold
-    accentForeground: '24 24 27',
-    background: '250 250 249', //  stone-50
-    foreground: '24 24 27', //     zinc-900
-    muted: '228 228 231', //       zinc-200
-    mutedForeground: '113 113 122', // zinc-500
-    border: '212 212 216', //      zinc-300
+    primary: '10 38 30', //            #0A261E  brand primary (no pure black)
+    primaryForeground: '255 251 242', //#FFFBF2  brand cream (no pure white)
+    accent: '184 146 42', //           #B8922A  brand marigold
+    accentForeground: '10 38 30', //   #0A261E  brand primary
+    background: '255 251 242', //      #FFFBF2  brand cream
+    foreground: '10 38 30', //         #0A261E  brand primary
+    muted: '241 237 228', //           #F1EDE4  cream surface tint
+    mutedForeground: '92 110 103', //  #5C6E67  corduroy / 60% primary
+    border: '221 216 209', //          #DDD8D1
+    card: '255 251 242', //            #FFFBF2  cream (no pure white)
+    cardForeground: '10 38 30', //     #0A261E  brand primary
+    depth: '7 31 24', //               #071F18  layering / depth on dark surfaces
+    shadow: '0 0 0', //                #000000  shadow effect color (cast/drop shadows)
   },
   features: {
     prayerTimes: true,

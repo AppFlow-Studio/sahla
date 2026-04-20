@@ -7,21 +7,21 @@ export default function TabLayout() {
         <Label>Home</Label>
         <Icon sf="house.fill" drawable="home" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
+      <NativeTabs.Trigger name="discover">
         <Label>Discover</Label>
-        <Icon sf="gear" drawable="settings" />
+        <Icon sf="safari" drawable="explore" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
+      <NativeTabs.Trigger name="library">
         <Label>Library</Label>
-        <Icon sf="gear" drawable="settings" />
+        <Icon sf="books.vertical" drawable="library" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
+      <NativeTabs.Trigger name="prayer">
         <Label>Prayer</Label>
-        <Icon sf="gear" drawable="settings" />
+        <Icon sf="moon.stars" drawable="prayer" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
+      <NativeTabs.Trigger name="profile">
         <Label>Profile</Label>
-        <Icon sf="gear" drawable="settings" />
+        <Icon sf="person.fill" drawable="person" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

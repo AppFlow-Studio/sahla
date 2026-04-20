@@ -24,6 +24,12 @@ export type MasjidColors = {
   muted: string;
   mutedForeground: string;
   border: string;
+  card: string;
+  cardForeground: string;
+  /** Deeper than primary; used for layering/depth overlays on the dark surfaces. */
+  depth: string;
+  /** True shadow color (used for drop shadows / cast shadows only). */
+  shadow: string;
 };
 
 export type MasjidFeatures = {
