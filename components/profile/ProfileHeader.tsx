@@ -64,26 +64,20 @@ export default function ProfileHeader() {
 
   /** ~54% of header (~8% taller than half; tune 0.525–0.55 for 5–10% more than 50%). */
   const vectorHeight =
-    headerHeight > 0 ? Math.round(headerHeight * 0.54) : undefined;
+    headerHeight > 0 ? Math.round(headerHeight * 0.60) : undefined;
 
   return (
     <View className="relative w-full overflow-hidden bg-[#0A261E]">
       <LinearGradient
         colors={[HEADER_BG_LIGHT, HEADER_BG_DARK]}
         className="w-full"
-        style={{ paddingTop: insets.top - 40, paddingBottom: 36 }}
+        style={{ paddingTop: insets.top + 5, paddingBottom: 28 }}
         onLayout={(e) => {
           const h = e.nativeEvent.layout.height;
           if (h > 0) setHeaderHeight(h);
         }}
       >
-        {/* Geometric pattern overlay */}
-        <Image
-          source={require('@/assets/images/islamic-pattern.png')}
-          className="absolute inset-0 h-full w-full"
-          contentFit="cover"
-          style={{ opacity: 0.12 }}
-        />
+        {/* Pattern overlay lives in the screen-level backdrop so it covers the status-bar area too. */}
 
         {/* Vector art: top half of header only, behind content (not a separate block above) */}
         <ImageBackground
