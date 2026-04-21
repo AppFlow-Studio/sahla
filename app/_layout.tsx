@@ -2,6 +2,10 @@ import '../global.css';
 
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
+import { Amiri_400Regular } from '@expo-google-fonts/amiri';
+import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
+import { PlayfairDisplay_500Medium } from '@expo-google-fonts/playfair-display';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -12,7 +16,7 @@ import { ConfigProvider } from '@/src/providers/config-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
 
 export const unstable_settings = {
-  anchor: '(main)',
+  anchor: '(onboarding)',
 };
 
 /**
@@ -22,26 +26,28 @@ export const unstable_settings = {
  * rehydrates its session from SecureStore.
  */
 function RootNavigator() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded } = useAuth();
 
-  if (!isLoaded) {
-    // Returning null keeps the native splash visible until Clerk is ready.
-    return null;
-  }
+  if (!isLoaded) return null;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!!isSignedIn}>
-        <Stack.Screen name="(main)" />
-      </Stack.Protected>
-      <Stack.Protected guard={!isSignedIn}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
+      <Stack.Screen name="(onboarding)" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(main)" />
     </Stack>
   );
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_500Medium,
+    Amiri_400Regular,
+    CormorantGaramond_400Regular,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
     <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
       <SupabaseProvider>

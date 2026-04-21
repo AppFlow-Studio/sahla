@@ -24,6 +24,13 @@ export type MasjidColors = {
   muted: string;
   mutedForeground: string;
   border: string;
+  onboardingBackground: string;
+  onboardingSurface: string;
+  onboardingAccent: string;
+  onboardingHalo1: string;
+  onboardingHalo2: string;
+  onboardingHalo3: string;
+  onboardingLayer: string;
 };
 
 export type MasjidFeatures = {
