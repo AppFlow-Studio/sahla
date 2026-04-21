@@ -11,17 +11,10 @@ export const sahlaConfig: MasjidConfig = {
   id: 'sahla',
   displayName: 'Sahla Demo Masjid',
   tagline: 'A sample tenant for local development',
-  colors: {
-    ...defaultConfig.colors,
-    primary: '37 99 235', //       blue-600
-    primaryForeground: '255 255 255',
-    accent: '234 179 8', //        yellow-500
-    accentForeground: '24 24 27',
-  },
   features: {
     ...defaultConfig.features,
     donations: true,
-    jumaahRegistration: true,
+    jumaahRegistration: false,
   },
   locale: 'en',
   timezone: 'America/New_York',

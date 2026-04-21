@@ -1,4 +1,5 @@
-import { useAuth } from '@clerk/clerk-expo';
+// AUTH DISABLED — Clerk auth gating removed
+// import { useAuth } from '@clerk/clerk-expo';
 import { useEffect } from 'react';
 
 import type { RemoteMasjidOverrides } from '@/src/config/types';
@@ -6,30 +7,13 @@ import { useSupabase } from '@/src/hooks/use-supabase';
 import { hexToRgbTriplet } from '@/src/lib/color';
 import { useConfigStore } from '@/src/stores/config-store';
 
-/**
- * Mounts inside the Clerk + Supabase tree. Responsibility is narrow:
- *   - Wait until the user is authenticated (so RLS lets us read the row)
- *   - Fetch the `mosques` row for the current build's slug
- *   - Map the flat DB columns into our structured overrides shape
- *   - Hand the result to the Zustand store, which persists to MMKV
- *
- * The store's `hydrate()` already seeded state from MMKV-or-bundled at module
- * import time, so the UI is already branded before this component runs. This
- * provider's only job is to keep the cache fresh.
- *
- * The DB schema stores colors as flat hex strings (`brand_color`,
- * `accent_color`, `secondary_color`) while our runtime theme expects the
- * `"R G B"` triplet form that NativeWind's `vars()` consumes — we convert
- * here at the boundary.
- */
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth();
+  // const { isLoaded, isSignedIn } = useAuth();
   const supabase = useSupabase();
   const config = useConfigStore((s) => s.config);
   const applyRemoteOverrides = useConfigStore((s) => s.applyRemoteOverrides);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
     let cancelled = false;
 
     (async () => {
@@ -76,7 +60,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn, supabase, config.id, applyRemoteOverrides]);
+  }, [supabase, config.id, applyRemoteOverrides]);
 
   return <>{children}</>;
 }

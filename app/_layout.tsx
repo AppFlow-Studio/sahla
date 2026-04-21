@@ -1,22 +1,35 @@
 import '../global.css';
 
-import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
-import { tokenCache } from '@clerk/clerk-expo/token-cache';
+// AUTH DISABLED — Clerk sign-in commented out
+// import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
+// import { tokenCache } from '@clerk/clerk-expo/token-cache';
+import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
+import {
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_500Medium,
+} from '@expo-google-fonts/playfair-display';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeRoot } from '@/src/components/theme-root';
-import { env } from '@/src/lib/env';
+// import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
+import { DonationProvider } from '@/src/providers/donation-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
 import {useEffect} from 'react';
 import {Inter_800ExtraBold,useFonts} from '@expo-google-fonts/inter';
 import { PlayfairDisplay_500Medium, PlayfairDisplay_600SemiBold } from '@expo-google-fonts/playfair-display';
 import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 export const unstable_settings = {
-  anchor: '(main)',
+  anchor: '(onboarding)',
 };
 SplashScreen.preventAutoHideAsync();
 /**
@@ -58,31 +71,28 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded,fontError] = useFonts({
-    Inter_800ExtraBold,
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_400Regular,
     PlayfairDisplay_500Medium,
-    PlayfairDisplay_600SemiBold,
-  })
+    CormorantGaramond_400Regular,
+  });
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  },[fontsLoaded,fontError])
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
+    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
-        <SupabaseProvider>
-          <ConfigProvider>
-            <ThemeRoot>
-              <RootNavigator />
-              <StatusBar style="auto" />
-            </ThemeRoot>
-          </ConfigProvider>
-        </SupabaseProvider>
-      </ClerkProvider>
-    </GestureHandlerRootView>
+    <SupabaseProvider>
+      <ConfigProvider>
+        <ThemeRoot>
+          <DonationProvider>
+            <RootNavigator />
+            <StatusBar style="auto" />
+          </DonationProvider>
+        </ThemeRoot>
+      </ConfigProvider>
+    </SupabaseProvider>
   );
 }
