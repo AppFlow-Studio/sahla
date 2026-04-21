@@ -9,7 +9,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Semantic tokens driven by runtime CSS vars injected from the active masjid config.
         primary: 'rgb(var(--color-primary) / <alpha-value>)',
         'primary-foreground': 'rgb(var(--color-primary-foreground) / <alpha-value>)',
         accent: 'rgb(var(--color-accent) / <alpha-value>)',
@@ -19,6 +18,8 @@ module.exports = {
         muted: 'rgb(var(--color-muted) / <alpha-value>)',
         'muted-foreground': 'rgb(var(--color-muted-foreground) / <alpha-value>)',
         border: 'rgb(var(--color-border) / <alpha-value>)',
+        card: 'rgb(var(--color-card) / <alpha-value>)',
+        'card-foreground': 'rgb(var(--color-card-foreground) / <alpha-value>)',
         'onboarding-bg': 'rgb(var(--color-onboarding-bg) / <alpha-value>)',
         'onboarding-surface': 'rgb(var(--color-onboarding-surface) / <alpha-value>)',
         'onboarding-accent': 'rgb(var(--color-onboarding-accent) / <alpha-value>)',
