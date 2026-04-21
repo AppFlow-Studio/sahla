@@ -1,3 +1,4 @@
+import { router, type Href } from "expo-router";
 import { Platform, View } from "react-native";
 import DonateCard from "./DonateCard";
 import Notifications from "./Notifications";
@@ -60,7 +61,7 @@ export default function ProfileBody({
           <RowItem
             icon={SAVED_PROGRAMS_AND_EVENTS_ICON}
             title="Saved Programs & Events"
-            onPress={() => {}}
+            onPress={() => router.push("/profile/saved-events" as Href)}
           />
           <RowItem
             icon={SAVED_CLIPS_ICON}
