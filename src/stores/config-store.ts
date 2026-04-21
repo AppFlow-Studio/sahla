@@ -4,7 +4,7 @@ import { mergeConfig, resolveBundledConfig } from '@/src/config/resolver';
 import type { MasjidConfig, RemoteMasjidOverrides } from '@/src/config/types';
 import { kv } from '@/src/lib/mmkv';
 
-const MMKV_KEY = 'masjid-config.v1';
+const MMKV_KEY = 'masjid-config.v2';
 
 type PersistedShape = {
   config: MasjidConfig;

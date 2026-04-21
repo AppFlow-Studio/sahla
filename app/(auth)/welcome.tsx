@@ -1,6 +1,9 @@
+import { useAuth } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
+
+import { useOnboardingStore } from '@/src/stores/onboarding-store';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -50,6 +53,8 @@ function Halo({
 export default function WelcomeScreen() {
   const router = useRouter();
   const config = useMasjidConfig();
+  const { signOut, isSignedIn } = useAuth();
+  const resetOnboarding = useOnboardingStore((s) => s.reset);
 
   const mosqueY = useSharedValue(200);
   const mosqueOpacity = useSharedValue(0);
@@ -114,6 +119,39 @@ export default function WelcomeScreen() {
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <Animated.View className="items-center pt-2" style={textStyle}>
+          {__DEV__ && (
+            <Text
+              onPress={() => {
+                console.log('[DEV] Logout pressed, isSignedIn:', isSignedIn);
+                Alert.alert('Dev Logout', `Signed in: ${isSignedIn}`, [
+                  { text: 'Cancel' },
+                  {
+                    text: 'Sign out & reset',
+                    style: 'destructive',
+                    onPress: async () => {
+                      console.log('[DEV] Signing out...');
+                      resetOnboarding();
+                      try {
+                        await signOut();
+                        console.log('[DEV] Signed out');
+                      } catch (err) {
+                        console.warn('[DEV] Sign out error:', err);
+                      }
+                    },
+                  },
+                ]);
+              }}
+              style={{
+                fontSize: 12,
+                color: '#EF4444',
+                fontWeight: '600',
+                marginBottom: 8,
+                padding: 8,
+              }}
+            >
+              [DEV] Sign out &amp; reset
+            </Text>
+          )}
           <Text
             className="text-onboarding-surface"
             style={{ fontFamily: ARABIC, fontSize: 20 }}

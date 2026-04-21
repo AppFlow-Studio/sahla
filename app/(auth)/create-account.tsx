@@ -1,4 +1,4 @@
-import { useSignInWithApple } from '@clerk/clerk-expo';
+import { useAuth, useClerk, useSignInWithApple } from '@clerk/clerk-expo';
 import { useSSO } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import * as WebBrowser from 'expo-web-browser';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
 const SERIF = 'PlayfairDisplay_500Medium';
 
@@ -57,6 +58,8 @@ function AuthButton({ label, variant, icon, onPress, loading }: AuthButtonProps)
 
 export default function CreateAccountScreen() {
   const router = useRouter();
+  const { isSignedIn, signOut } = useAuth();
+  const clerk = useClerk();
   const config = useMasjidConfig();
   const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
   const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
@@ -64,8 +67,46 @@ export default function CreateAccountScreen() {
   const { startAppleAuthenticationFlow } = useSignInWithApple();
   const { startSSOFlow } = useSSO();
   const [loading, setLoading] = useState<'apple' | 'google' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const joinAndActivateOrg = useCallback(
+    async (userId: string) => {
+      const orgId = config.clerkOrgId;
+      if (!orgId) return;
+      const result = await joinOrgDirect(userId, orgId);
+      if (result === 'error') {
+        setError('Failed to join organization. Please try again.');
+        return;
+      }
+      await clerk.setActive({ organization: orgId });
+    },
+    [clerk, config.clerkOrgId],
+  );
+
+  const activateOAuthSession = useCallback(
+    async (result: any) => {
+      const { createdSessionId, setActive, signIn, signUp } = result;
+
+      const sessionId =
+        createdSessionId ??
+        (signUp?.status === 'complete' ? signUp.createdSessionId : null) ??
+        (signIn?.status === 'complete' ? signIn.createdSessionId : null);
+
+      if (!sessionId || !setActive) {
+        console.warn('[Auth] OAuth flow did not produce a session.');
+        return;
+      }
+
+      await setActive({ session: sessionId });
+      const userId = clerk.user?.id;
+      if (userId) await joinAndActivateOrg(userId);
+    },
+    [clerk, joinAndActivateOrg],
+  );
 
   const handleApple = useCallback(async () => {
+    console.log('[Auth] handleApple pressed');
+    if (isSignedIn) await signOut().catch(() => {});
     setLoading('apple');
     try {
       let result;
@@ -73,34 +114,31 @@ export default function CreateAccountScreen() {
         result = await startAppleAuthenticationFlow();
       } else {
         result = await startSSOFlow({ strategy: 'oauth_apple' });
+        if (result.authSessionResult?.type === 'dismiss') return;
       }
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId, organization: config.clerkOrgId });
-        // Guards will redirect to (onboarding) or (main) based on onboardingComplete
-      }
+      await activateOAuthSession(result);
     } catch (err: any) {
       if (err?.code === 'ERR_REQUEST_CANCELED') return;
-      console.warn('[Auth] Apple sign-in error:', err);
+      console.error('[Auth] Apple error:', err);
     } finally {
       setLoading(null);
     }
-  }, [startAppleAuthenticationFlow, startSSOFlow, config.clerkOrgId]);
+  }, [isSignedIn, signOut, startAppleAuthenticationFlow, startSSOFlow, activateOAuthSession]);
 
   const handleGoogle = useCallback(async () => {
+    console.log('[Auth] handleGoogle pressed');
+    if (isSignedIn) await signOut().catch(() => {});
     setLoading('google');
     try {
       const result = await startSSOFlow({ strategy: 'oauth_google' });
       if (result.authSessionResult?.type === 'dismiss') return;
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId, organization: config.clerkOrgId });
-        // Guards will redirect to (onboarding) or (main) based on onboardingComplete
-      }
+      await activateOAuthSession(result);
     } catch (err) {
-      console.warn('[Auth] Google sign-in error:', err);
+      console.error('[Auth] Google error:', err);
     } finally {
       setLoading(null);
     }
-  }, [startSSOFlow, config.clerkOrgId]);
+  }, [isSignedIn, signOut, startSSOFlow, activateOAuthSession]);
 
   const handleEmail = useCallback(() => {
     router.push('/(auth)/sign-up');
@@ -129,6 +167,12 @@ export default function CreateAccountScreen() {
           >
             Create Account
           </Text>
+
+          {error ? (
+            <Text className="mb-4 text-center" style={{ fontSize: 13, color: '#EF4444' }}>
+              {error}
+            </Text>
+          ) : null}
 
           <View style={{ gap: 16 }}>
             <AuthButton

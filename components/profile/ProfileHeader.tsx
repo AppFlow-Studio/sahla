@@ -1,10 +1,15 @@
-import { useState } from 'react';
-import { ActivityIndicator, ImageBackground, Platform, Pressable, Text, View } from 'react-native';
+import { useAuth, useUser } from '@clerk/clerk-expo';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, ImageBackground, Platform, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile } from '@/src/hooks/use-profile';
+import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 import {
   useFonts,
@@ -16,7 +21,28 @@ const HEADER_BG_LIGHT = '#0D2B1A';
 
 export default function ProfileHeader() {
   const { profile, status, error } = useProfile();
+  const { signOut } = useAuth();
+  const { user } = useUser();
+  const { clerkOrgId } = useMasjidConfig();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const passwordEnabled = (user as any)?.passwordEnabled ?? false;
+
+  const handleSignOut = useCallback(() => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          useOnboardingStore.getState().reset();
+          queryClient.clear();
+          await signOut();
+        },
+      },
+    ]);
+  }, [signOut, queryClient]);
   /** Measured header height so the vector can be exactly half (RN % height on absolute children is unreliable). */
   const [headerHeight, setHeaderHeight] = useState(0);
   const [fontsLoaded] = useFonts({
@@ -35,7 +61,7 @@ export default function ProfileHeader() {
     );
   }
 
-  if (status === 'error') {
+  if (status === 'error' && !user) {
     return (
       <View className="w-full items-center justify-center p-6">
         <Text className="text-red-500">{error}</Text>
@@ -43,14 +69,22 @@ export default function ProfileHeader() {
     );
   }
 
-  const hasPhoto = Boolean(profile?.profile_pic);
-  const url = profile?.profile_pic;
-  const firstName = profile?.first_name;
-  const lastName = profile?.last_name;
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'Unknown';
+  // Resolve user info: Supabase profile → Clerk metadata (org-keyed) → onboarding store → Clerk user
+  const meta = user?.publicMetadata as Record<string, any> | undefined;
+  const metaFirstName = clerkOrgId ? meta?.[clerkOrgId]?.firstName : null;
+  const storedFirstName = useOnboardingStore.getState().firstName;
+
+  const hasPhoto = Boolean(profile?.profile_pic ?? user?.imageUrl);
+  const url = profile?.profile_pic ?? user?.imageUrl;
+  const firstName =
+    profile?.first_name ?? metaFirstName ?? (storedFirstName.trim() || null) ?? user?.firstName;
+  const lastName = profile?.last_name ?? user?.lastName;
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (user?.primaryEmailAddress?.emailAddress ?? 'Unknown');
   const createdYear = profile?.created_at
     ? new Date(profile.created_at).getFullYear()
-    : undefined;
+    : user?.createdAt
+      ? new Date(user.createdAt).getFullYear()
+      : undefined;
 
   const nonEmpty = (s: string | null | undefined) => (s?.trim().length ?? 0) > 0;
   const isProfileComplete =
@@ -98,7 +132,7 @@ export default function ProfileHeader() {
           {hasPhoto && url ? (
             <Image
               source={{ uri: url }}
-              className="h-full w-full rounded-full"
+              style={{ width: 80, height: 80, borderRadius: 40 }}
               contentFit="cover"
             />
           ) : (
@@ -116,7 +150,7 @@ export default function ProfileHeader() {
               </Text>
             </View>
           )}
-          <View className="absolute bottom-0 right-0 rounded-full bg-[#B8922A] p-1">
+          <View className="absolute -bottom-2 -right-2 rounded-full bg-[#B8922A] p-1">
             <EvilIcons name="pencil" size={14} color="#FFFBF2" />
           </View>
         </Pressable>
@@ -129,19 +163,31 @@ export default function ProfileHeader() {
           {fullName}
         </Text>
 
-        {/* Member since — SF Pro Text Regular on iOS (system UI font for small copy) */}
-        <Text
-          className="mb-0.5 text-center text-xs text-[#FFFBF299] "
-          style={{
-            fontFamily: Platform.select({
-              android: 'Roboto',
-              default: 'sans-serif',
-            }),
-            fontWeight: '400',
-          }}
-        >
-          Member Since {createdYear}
-        </Text>
+        {/* Signed-in email */}
+        {user?.primaryEmailAddress?.emailAddress && (
+          <Text
+            className="mt-0.5 text-center text-xs text-[#FFFBF280]"
+            style={{ fontWeight: '400' }}
+          >
+            {user.primaryEmailAddress.emailAddress}
+          </Text>
+        )}
+
+        {/* Member since */}
+        {createdYear && (
+          <Text
+            className="mb-0.5 text-center text-xs text-[#FFFBF260]"
+            style={{
+              fontFamily: Platform.select({
+                android: 'Roboto',
+                default: 'sans-serif',
+              }),
+              fontWeight: '400',
+            }}
+          >
+            Member Since {createdYear}
+          </Text>
+        )}
 
         {/* Action buttons */}
         <View className="mt-3 flex-row items-center justify-center gap-3">
@@ -163,6 +209,25 @@ export default function ProfileHeader() {
     <Text className="text-xs font-medium text-[#FFFBF2]">Edit Profile</Text>
   </Pressable>
 </View>
+
+        <View className="mt-3 flex-row items-center justify-center gap-3">
+          {passwordEnabled && (
+            <Pressable
+              onPress={() => router.push('/change-password')}
+              className="items-center justify-center rounded-full border border-[#FFFBF280] px-5 py-2.5"
+              style={{ minWidth: 130 }}
+            >
+              <Text className="text-xs font-medium text-[#FFFBF2]">Change Password</Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={handleSignOut}
+            className="items-center justify-center rounded-full border border-red-500/50 px-5 py-2.5"
+            style={{ minWidth: 130 }}
+          >
+            <Text className="text-xs font-medium text-red-400">Sign Out</Text>
+          </Pressable>
+        </View>
         </View>
       </LinearGradient>
     </View>

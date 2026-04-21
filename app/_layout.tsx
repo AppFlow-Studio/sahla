@@ -19,7 +19,9 @@ import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { DonationProvider } from '@/src/providers/donation-provider';
+import { QueryProvider } from '@/src/providers/query-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
+import { useOnboardingSync } from '@/src/hooks/use-onboarding-sync';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +41,9 @@ function RootNavigator() {
   const onboardingComplete = useOnboardingStore((s) => s.complete);
   const devBypass = __DEV__ && env.DEV_BYPASS_AUTH;
 
+  // Sync onboarding state from Clerk metadata (handles new-device scenario)
+  useOnboardingSync();
+
   if (!isLoaded) {
     // Returning null keeps the native splash visible until Clerk is ready.
     return null;
@@ -48,6 +53,9 @@ function RootNavigator() {
   const showAuth = !authenticated;
   const showOnboarding = authenticated && !onboardingComplete && !devBypass;
   const showMain = authenticated && (onboardingComplete || devBypass);
+
+  console.log('[RootNav] isSignedIn:', isSignedIn, 'onboardingComplete:', onboardingComplete, 'devBypass:', devBypass);
+  console.log('[RootNav] → showAuth:', showAuth, 'showOnboarding:', showOnboarding, 'showMain:', showMain);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -59,6 +67,13 @@ function RootNavigator() {
             presentation: 'transparentModal',
             headerShown: false,
             animation: 'none',
+          }}
+        />
+        <Stack.Screen
+          name="change-password"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
           }}
         />
       </Stack.Protected>
@@ -89,16 +104,18 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
       <ClerkLoaded>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <SupabaseProvider>
-            <ConfigProvider>
-              <ThemeRoot>
-                <DonationProvider>
-                  <RootNavigator />
-                  <StatusBar style="auto" />
-                </DonationProvider>
-              </ThemeRoot>
-            </ConfigProvider>
-          </SupabaseProvider>
+          <QueryProvider>
+            <SupabaseProvider>
+              <ConfigProvider>
+                <ThemeRoot>
+                  <DonationProvider>
+                    <RootNavigator />
+                    <StatusBar style="auto" />
+                  </DonationProvider>
+                </ThemeRoot>
+              </ConfigProvider>
+            </SupabaseProvider>
+          </QueryProvider>
         </GestureHandlerRootView>
       </ClerkLoaded>
     </ClerkProvider>

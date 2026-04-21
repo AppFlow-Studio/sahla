@@ -1,4 +1,4 @@
-import { useSignIn, useSSO, useSignInWithApple } from '@clerk/clerk-expo';
+import { useClerk, useSignIn, useSSO, useSignInWithApple } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
 const SERIF = 'PlayfairDisplay_500Medium';
 
@@ -14,6 +15,7 @@ export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startSSOFlow } = useSSO();
   const { startAppleAuthenticationFlow } = useSignInWithApple();
+  const clerk = useClerk();
   const router = useRouter();
   const config = useMasjidConfig();
 
@@ -23,6 +25,20 @@ export default function SignInScreen() {
   const [ssoLoading, setSsoLoading] = useState<'apple' | 'google' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const joinAndActivateOrg = useCallback(
+    async (userId: string) => {
+      const orgId = config.clerkOrgId;
+      if (!orgId) return;
+      const result = await joinOrgDirect(userId, orgId);
+      if (result === 'error') {
+        setError('Failed to join organization. Please try again.');
+        return;
+      }
+      await clerk.setActive({ organization: orgId });
+    },
+    [clerk, config.clerkOrgId],
+  );
+
   const onSubmit = useCallback(async () => {
     if (!isLoaded || submitting) return;
     setError(null);
@@ -30,8 +46,9 @@ export default function SignInScreen() {
     try {
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === 'complete') {
-        await setActive({ session: attempt.createdSessionId, organization: config.clerkOrgId });
-        // Guards redirect to (onboarding) or (main)
+        await setActive({ session: attempt.createdSessionId });
+        const userId = clerk.user?.id;
+        if (userId) await joinAndActivateOrg(userId);
       } else {
         setError(`Additional step required: ${attempt.status}`);
       }
@@ -45,7 +62,28 @@ export default function SignInScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, password, setActive, config.clerkOrgId, submitting]);
+  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk]);
+
+  const activateOAuthSession = useCallback(
+    async (result: any) => {
+      const { createdSessionId, setActive: setActiveOAuth, signIn: oauthSignIn, signUp } = result;
+
+      const sessionId =
+        createdSessionId ??
+        (signUp?.status === 'complete' ? signUp.createdSessionId : null) ??
+        (oauthSignIn?.status === 'complete' ? oauthSignIn.createdSessionId : null);
+
+      if (!sessionId || !setActiveOAuth) {
+        console.warn('[Auth] OAuth flow did not produce a session.');
+        return;
+      }
+
+      await setActiveOAuth({ session: sessionId });
+      const userId = clerk.user?.id;
+      if (userId) await joinAndActivateOrg(userId);
+    },
+    [clerk, joinAndActivateOrg],
+  );
 
   const handleApple = useCallback(async () => {
     setSsoLoading('apple');
@@ -55,32 +93,29 @@ export default function SignInScreen() {
         result = await startAppleAuthenticationFlow();
       } else {
         result = await startSSOFlow({ strategy: 'oauth_apple' });
+        if (result.authSessionResult?.type === 'dismiss') return;
       }
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId, organization: config.clerkOrgId });
-      }
+      await activateOAuthSession(result);
     } catch (err: any) {
       if (err?.code === 'ERR_REQUEST_CANCELED') return;
-      console.warn('[Auth] Apple sign-in error:', err);
+      console.error('[Auth] Apple error:', err);
     } finally {
       setSsoLoading(null);
     }
-  }, [startAppleAuthenticationFlow, startSSOFlow, config.clerkOrgId]);
+  }, [startAppleAuthenticationFlow, startSSOFlow, activateOAuthSession]);
 
   const handleGoogle = useCallback(async () => {
     setSsoLoading('google');
     try {
       const result = await startSSOFlow({ strategy: 'oauth_google' });
       if (result.authSessionResult?.type === 'dismiss') return;
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId, organization: config.clerkOrgId });
-      }
+      await activateOAuthSession(result);
     } catch (err) {
-      console.warn('[Auth] Google sign-in error:', err);
+      console.error('[Auth] Google error:', err);
     } finally {
       setSsoLoading(null);
     }
-  }, [startSSOFlow, config.clerkOrgId]);
+  }, [startSSOFlow, activateOAuthSession]);
 
   const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
 
@@ -142,9 +177,16 @@ export default function SignInScreen() {
             placeholderTextColor="rgba(255,251,242,0.25)"
             secureTextEntry
             autoComplete="password"
-            className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
+            className="border-onboarding-surface/20 text-onboarding-surface mb-2 border-b pb-2"
             style={{ fontSize: 16 }}
           />
+          <Link
+            href="/(auth)/forgot-password"
+            className="text-onboarding-accent mb-4 self-end"
+            style={{ fontSize: 11, fontWeight: '500' }}
+          >
+            Forgot password?
+          </Link>
 
           {error ? (
             <Text className="mb-4" style={{ fontSize: 13, color: '#EF4444' }}>
