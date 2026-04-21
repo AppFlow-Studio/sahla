@@ -1,38 +1,56 @@
+import { useSignInWithApple } from '@clerk/clerk-expo';
+import { useSSO } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
 const SERIF = 'PlayfairDisplay_500Medium';
 
+// Warm up the browser on Android for faster OAuth redirects.
+if (Platform.OS === 'android') {
+  WebBrowser.warmUpAsync();
+}
+
 type AuthButtonProps = {
   label: string;
   variant: 'primary' | 'secondary';
   icon?: React.ReactNode;
   onPress: () => void;
+  loading?: boolean;
 };
 
-function AuthButton({ label, variant, icon, onPress }: AuthButtonProps) {
+function AuthButton({ label, variant, icon, onPress, loading }: AuthButtonProps) {
   const isPrimary = variant === 'primary';
   return (
     <Pressable
       onPress={onPress}
+      disabled={loading}
       className={[
         'h-10 flex-row items-center justify-center rounded-full active:opacity-80',
         isPrimary ? 'bg-onboarding-surface' : 'bg-onboarding-surface/5',
+        loading ? 'opacity-60' : '',
       ].join(' ')}
       style={{ gap: 8 }}
     >
-      {icon}
-      <Text
-        className={isPrimary ? 'text-onboarding-bg' : 'text-onboarding-surface'}
-        style={{ fontSize: 14, fontWeight: '500' }}
-      >
-        {label}
-      </Text>
+      {loading ? (
+        <ActivityIndicator size="small" color={isPrimary ? '#0A261E' : '#fff'} />
+      ) : (
+        <>
+          {icon}
+          <Text
+            className={isPrimary ? 'text-onboarding-bg' : 'text-onboarding-surface'}
+            style={{ fontSize: 14, fontWeight: '500' }}
+          >
+            {label}
+          </Text>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -42,6 +60,51 @@ export default function CreateAccountScreen() {
   const config = useMasjidConfig();
   const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
   const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
+
+  const { startAppleAuthenticationFlow } = useSignInWithApple();
+  const { startSSOFlow } = useSSO();
+  const [loading, setLoading] = useState<'apple' | 'google' | null>(null);
+
+  const handleApple = useCallback(async () => {
+    setLoading('apple');
+    try {
+      let result;
+      if (Platform.OS === 'ios') {
+        result = await startAppleAuthenticationFlow();
+      } else {
+        result = await startSSOFlow({ strategy: 'oauth_apple' });
+      }
+      if (result.createdSessionId && result.setActive) {
+        await result.setActive({ session: result.createdSessionId });
+        router.push('/(onboarding)/name');
+      }
+    } catch (err: any) {
+      if (err?.code === 'ERR_REQUEST_CANCELED') return;
+      console.warn('[Auth] Apple sign-in error:', err);
+    } finally {
+      setLoading(null);
+    }
+  }, [startAppleAuthenticationFlow, startSSOFlow, router]);
+
+  const handleGoogle = useCallback(async () => {
+    setLoading('google');
+    try {
+      const result = await startSSOFlow({ strategy: 'oauth_google' });
+      if (result.authSessionResult?.type === 'dismiss') return;
+      if (result.createdSessionId && result.setActive) {
+        await result.setActive({ session: result.createdSessionId });
+        router.push('/(onboarding)/name');
+      }
+    } catch (err) {
+      console.warn('[Auth] Google sign-in error:', err);
+    } finally {
+      setLoading(null);
+    }
+  }, [startSSOFlow, router]);
+
+  const handleEmail = useCallback(() => {
+    router.push('/(auth)/sign-up');
+  }, [router]);
 
   return (
     <View className="flex-1 bg-onboarding-bg">
@@ -72,18 +135,20 @@ export default function CreateAccountScreen() {
               label="Continue with Apple"
               variant="primary"
               icon={<Ionicons name="logo-apple" size={14} color={bgHex} />}
-              onPress={() => router.push('/(onboarding)/name')}
+              onPress={handleApple}
+              loading={loading === 'apple'}
             />
             <AuthButton
               label="Continue with Google ID"
               variant="secondary"
               icon={<Ionicons name="logo-google" size={12} color={surfaceHex} />}
-              onPress={() => router.push('/(onboarding)/name')}
+              onPress={handleGoogle}
+              loading={loading === 'google'}
             />
             <AuthButton
               label="Continue with Email"
               variant="secondary"
-              onPress={() => router.push('/(onboarding)/name')}
+              onPress={handleEmail}
             />
           </View>
 

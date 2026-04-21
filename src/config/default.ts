@@ -24,6 +24,13 @@ export const defaultConfig: MasjidConfig = {
     cardForeground: '10 38 30', //     #0A261E  brand primary
     depth: '7 31 24', //               #071F18  layering / depth on dark surfaces
     shadow: '0 0 0', //                #000000  shadow effect color (cast/drop shadows)
+    onboardingBackground: '10 38 30', //  #0A261E  brand primary (dark green)
+    onboardingSurface: '16 54 42', //     #10362A  slightly lighter green surface
+    onboardingAccent: '184 146 42', //    #B8922A  brand marigold
+    onboardingHalo1: '16 80 60', //       #10503C  mid-green halo
+    onboardingHalo2: '184 146 42', //     #B8922A  marigold halo
+    onboardingHalo3: '8 30 22', //        #081E16  deep-green halo
+    onboardingLayer: '7 31 24', //        #071F18  overlay layer (depth)
   },
   features: {
     prayerTimes: true,

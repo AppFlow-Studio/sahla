@@ -1,8 +1,7 @@
 import '../global.css';
 
-// AUTH DISABLED — Clerk sign-in commented out
-// import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
-// import { tokenCache } from '@clerk/clerk-expo/token-cache';
+import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
+import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
 import {
   PlayfairDisplay_400Regular,
@@ -16,10 +15,11 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { ThemeRoot } from '@/src/components/theme-root';
-// import { env } from '@/src/lib/env';
+import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { DonationProvider } from '@/src/providers/donation-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
+import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -28,9 +28,20 @@ export const unstable_settings = {
 };
 
 function RootNavigator() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const onboardingComplete = useOnboardingStore((s) => s.complete);
+
+  if (!isLoaded) return null;
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(main)" />
+      {isSignedIn ? (
+        <Stack.Screen name="(main)" />
+      ) : !onboardingComplete ? (
+        <Stack.Screen name="(onboarding)" />
+      ) : (
+        <Stack.Screen name="(auth)" />
+      )}
     </Stack>
   );
 }
@@ -49,15 +60,19 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <SupabaseProvider>
-      <ConfigProvider>
-        <ThemeRoot>
-          <DonationProvider>
-            <RootNavigator />
-            <StatusBar style="auto" />
-          </DonationProvider>
-        </ThemeRoot>
-      </ConfigProvider>
-    </SupabaseProvider>
+    <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
+      <ClerkLoaded>
+        <SupabaseProvider>
+          <ConfigProvider>
+            <ThemeRoot>
+              <DonationProvider>
+                <RootNavigator />
+                <StatusBar style="auto" />
+              </DonationProvider>
+            </ThemeRoot>
+          </ConfigProvider>
+        </SupabaseProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }

@@ -66,6 +66,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-sqlite',
     'expo-asset',
+    'expo-apple-authentication',
+    'expo-crypto',
     [
       'expo-splash-screen',
       {

@@ -14,8 +14,12 @@ type PersistedShape = {
 type ConfigState = {
   config: MasjidConfig;
   lastSyncedAt: number | null;
+  /** Resolved UUID from the `mosques` table (not the slug). */
+  mosqueUuid: string | null;
   /** Replace the current config with a freshly-merged one and persist it. */
   applyRemoteOverrides: (overrides: RemoteMasjidOverrides) => void;
+  /** Store the resolved mosque UUID from the `mosques.id` column. */
+  setMosqueUuid: (id: string) => void;
   /** Wipe the cache and fall back to the bundled default. */
   reset: () => void;
 };
@@ -47,15 +51,17 @@ function hydrate(): PersistedShape {
 
 export const useConfigStore = create<ConfigState>((set, get) => ({
   ...hydrate(),
+  mosqueUuid: null,
   applyRemoteOverrides: (overrides) => {
     const merged = mergeConfig(get().config, overrides);
     const next: PersistedShape = { config: merged, lastSyncedAt: Date.now() };
     kv.setJSON(MMKV_KEY, next);
     set(next);
   },
+  setMosqueUuid: (id) => set({ mosqueUuid: id }),
   reset: () => {
     kv.delete(MMKV_KEY);
-    set({ config: resolveBundledConfig(), lastSyncedAt: null });
+    set({ config: resolveBundledConfig(), lastSyncedAt: null, mosqueUuid: null });
   },
 }));
 

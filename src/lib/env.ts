@@ -18,8 +18,7 @@ function required(name: string): string {
 }
 
 export const env = {
-  // AUTH DISABLED — Clerk key no longer required
-  // CLERK_PUBLISHABLE_KEY: required('EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY'),
+  CLERK_PUBLISHABLE_KEY: required('EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY'),
   SUPABASE_URL: required('EXPO_PUBLIC_SUPABASE_URL'),
   // Supabase renamed "anon key" to "publishable key" in 2025 — the env var
   // name here tracks the newer naming used in the dashboard.

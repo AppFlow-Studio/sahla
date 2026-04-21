@@ -1,5 +1,4 @@
-// AUTH DISABLED — Clerk auth gating removed
-// import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@clerk/clerk-expo';
 import { useEffect } from 'react';
 
 import type { RemoteMasjidOverrides } from '@/src/config/types';
@@ -8,7 +7,7 @@ import { hexToRgbTriplet } from '@/src/lib/color';
 import { useConfigStore } from '@/src/stores/config-store';
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
-  // const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded } = useAuth();
   const supabase = useSupabase();
   const config = useConfigStore((s) => s.config);
   const applyRemoteOverrides = useConfigStore((s) => s.applyRemoteOverrides);
@@ -22,7 +21,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('mosques')
         .select(
-          'name, app_name, logo_url, brand_color, accent_color, secondary_color, timezone, calculation_method',
+          'id, name, app_name, logo_url, brand_color, accent_color, secondary_color, timezone, calculation_method',
         )
         .eq('slug', config.id)
         .maybeSingle();
@@ -35,18 +34,16 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
       }
       if (!data) return;
 
+      // Store the resolved mosque UUID for data writes.
+      useConfigStore.getState().setMosqueUuid(data.id);
+
       const primary = hexToRgbTriplet(data.brand_color);
       const accent = hexToRgbTriplet(data.accent_color);
-      // `secondary_color` on the DB is currently unused by the theme tokens
-      // but we keep the plumbing in place for a future design-system field.
 
       const overrides: RemoteMasjidOverrides = {
         displayName: data.app_name ?? data.name ?? undefined,
         logoUrl: data.logo_url ?? undefined,
         timezone: data.timezone ?? undefined,
-        // `calculation_method` is an integer in the DB (matching Adhan-lib
-        // method constants). We stringify it for the config surface; the
-        // prayer-times feature will parse it back into a method enum.
         prayerCalculationMethod:
           data.calculation_method != null ? String(data.calculation_method) : undefined,
         colors: {

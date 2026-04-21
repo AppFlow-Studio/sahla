@@ -34,6 +34,7 @@ export default function WelcomeFullScreen() {
   const router = useRouter();
   const config = useMasjidConfig();
   const storedName = useOnboardingStore((s) => s.firstName);
+  const markComplete = useOnboardingStore((s) => s.markComplete);
   const firstName = storedName.trim().split(/\s+/)[0] || 'Friend';
 
   return (
@@ -97,7 +98,10 @@ export default function WelcomeFullScreen() {
 
         <View style={{ paddingHorizontal: 59, paddingBottom: 24 }}>
           <Pressable
-            onPress={() => router.replace('/(main)')}
+            onPress={() => {
+              markComplete();
+              router.replace('/(main)');
+            }}
             className="h-[37px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90"
           >
             <Text
