@@ -24,9 +24,10 @@ type BuildTimeMasjid = { displayName: string };
 
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
   sahla: { displayName: 'Sahla Demo Masjid' },
+  'mas-si': { displayName: 'MAS S.I' },
 };
 
-const MASJID_ID = process.env.MASJID_ID ?? 'sahla';
+const MASJID_ID = process.env.MASJID_ID ?? 'mas-si';
 const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: 'Sahla' };
 
 const IOS_BUNDLE_ID = `com.appflowstudios.sahla.${MASJID_ID}`;
@@ -85,5 +86,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     masjidId: MASJID_ID,
+    /** Read from `.env` when Metro / prebuild evaluates this file — reliable for dev bypass. */
+    devBypassAuth: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === 'true',
   },
 });

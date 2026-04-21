@@ -1,4 +1,5 @@
 import type { MasjidConfig } from '../types';
+import { masSiConfig } from './mas-si';
 import { sahlaConfig } from './sahla';
 
 /**
@@ -8,6 +9,7 @@ import { sahlaConfig } from './sahla';
  */
 export const masjidRegistry: Record<string, MasjidConfig> = {
   [sahlaConfig.id]: sahlaConfig,
+  [masSiConfig.id]: masSiConfig,
 };
 
-export { sahlaConfig };
+export { masSiConfig, sahlaConfig };
