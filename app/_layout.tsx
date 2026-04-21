@@ -24,7 +24,7 @@ import { SupabaseProvider } from '@/src/providers/supabase-provider';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export const unstable_settings = {
-  anchor: '(main)',
+  anchor: '(onboarding)',
 };
 
 function RootNavigator() {

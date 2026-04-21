@@ -1,13 +1,12 @@
-// AUTH DISABLED — Clerk sign-out and user info commented out
-// import { useAuth, useUser } from '@clerk/clerk-expo';
-import { ScrollView, Text, View } from 'react-native';
+import { useAuth, useUser } from '@clerk/clerk-expo';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
-export default function ProfileScreen() {
-  // const { signOut } = useAuth();
-  // const { user } = useUser();
+export default function SettingsScreen() {
+  const { signOut } = useAuth();
+  const { user } = useUser();
   const masjid = useMasjidConfig();
 
   return (

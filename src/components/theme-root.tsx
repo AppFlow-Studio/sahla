@@ -25,6 +25,13 @@ export function ThemeRoot({ children }: { children: React.ReactNode }) {
     '--color-border': config.colors.border,
     '--color-card': config.colors.card,
     '--color-card-foreground': config.colors.cardForeground,
+    '--color-onboarding-bg': config.colors.onboardingBackground,
+    '--color-onboarding-surface': config.colors.onboardingSurface,
+    '--color-onboarding-accent': config.colors.onboardingAccent,
+    '--color-onboarding-halo-1': config.colors.onboardingHalo1,
+    '--color-onboarding-halo-2': config.colors.onboardingHalo2,
+    '--color-onboarding-halo-3': config.colors.onboardingHalo3,
+    '--color-onboarding-layer': config.colors.onboardingLayer,
   });
 
   return (

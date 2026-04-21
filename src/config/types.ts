@@ -30,6 +30,13 @@ export type MasjidColors = {
   depth: string;
   /** True shadow color (used for drop shadows / cast shadows only). */
   shadow: string;
+  onboardingBackground: string;
+  onboardingSurface: string;
+  onboardingAccent: string;
+  onboardingHalo1: string;
+  onboardingHalo2: string;
+  onboardingHalo3: string;
+  onboardingLayer: string;
 };
 
 export type MasjidFeatures = {

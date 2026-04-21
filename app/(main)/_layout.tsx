@@ -11,17 +11,17 @@ export default function TabLayout() {
         <Label>Discover</Label>
         <Icon sf="safari" drawable="explore" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="library">
-        <Label>Library</Label>
-        <Icon sf="books.vertical" drawable="library" />
+      <NativeTabs.Trigger name="watch">
+        <Label>Watch</Label>
+        <Icon sf="play.circle.fill" drawable="play" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="prayer">
         <Label>Prayer</Label>
-        <Icon sf="moon.stars" drawable="prayer" />
+        <Icon sf="clock" drawable="schedule" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Label>Profile</Label>
-        <Icon sf="person.fill" drawable="person" />
+        <Icon sf="person.crop.circle" drawable="person" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );
