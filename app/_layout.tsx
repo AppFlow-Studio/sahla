@@ -13,6 +13,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
@@ -21,27 +22,52 @@ import { DonationProvider } from '@/src/providers/donation-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
-  anchor: '(onboarding)',
+  anchor: '(auth)',
 };
 
+/**
+ * Auth-aware navigator. Uses Expo Router v6's `Stack.Protected` to gate the
+ * `(main)` and `(auth)` groups on Clerk's session state. The `isLoaded` check
+ * prevents a flash of the sign-in screen during cold boot while Clerk
+ * rehydrates its session from SecureStore.
+ */
 function RootNavigator() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const onboardingComplete = useOnboardingStore((s) => s.complete);
+  const devBypass = __DEV__ && env.DEV_BYPASS_AUTH;
 
-  if (!isLoaded) return null;
+  if (!isLoaded) {
+    // Returning null keeps the native splash visible until Clerk is ready.
+    return null;
+  }
+
+  const authenticated = !!isSignedIn || devBypass;
+  const showAuth = !authenticated;
+  const showOnboarding = authenticated && !onboardingComplete && !devBypass;
+  const showMain = authenticated && (onboardingComplete || devBypass);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {isSignedIn ? (
+      <Stack.Protected guard={showMain}>
         <Stack.Screen name="(main)" />
-      ) : !onboardingComplete ? (
+        <Stack.Screen
+          name="content/[id]"
+          options={{
+            presentation: 'transparentModal',
+            headerShown: false,
+            animation: 'none',
+          }}
+        />
+      </Stack.Protected>
+      <Stack.Protected guard={showOnboarding}>
         <Stack.Screen name="(onboarding)" />
-      ) : (
+      </Stack.Protected>
+      <Stack.Protected guard={showAuth}>
         <Stack.Screen name="(auth)" />
-      )}
+      </Stack.Protected>
     </Stack>
   );
 }
@@ -62,16 +88,18 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
       <ClerkLoaded>
-        <SupabaseProvider>
-          <ConfigProvider>
-            <ThemeRoot>
-              <DonationProvider>
-                <RootNavigator />
-                <StatusBar style="auto" />
-              </DonationProvider>
-            </ThemeRoot>
-          </ConfigProvider>
-        </SupabaseProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SupabaseProvider>
+            <ConfigProvider>
+              <ThemeRoot>
+                <DonationProvider>
+                  <RootNavigator />
+                  <StatusBar style="auto" />
+                </DonationProvider>
+              </ThemeRoot>
+            </ConfigProvider>
+          </SupabaseProvider>
+        </GestureHandlerRootView>
       </ClerkLoaded>
     </ClerkProvider>
   );

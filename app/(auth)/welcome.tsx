@@ -138,7 +138,7 @@ export default function WelcomeScreen() {
 
         <Animated.View style={[{ paddingHorizontal: 59 }, textStyle]} className="pb-2">
           <Pressable
-            onPress={() => router.push('/(onboarding)/create-account')}
+            onPress={() => router.push('/(auth)/create-account')}
             className="h-[38px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90"
           >
             <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>

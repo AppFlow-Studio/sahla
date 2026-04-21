@@ -31,6 +31,27 @@
       "env": {
         "MASJID_ID": "sahla"
       }
+    },
+    "mas-cnj-dev": {
+      "extends": "base",
+      "env": {
+        "MASJID_ID": "mas-cnj"
+      }
+    },
+    "mas-cnj-preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "env": {
+        "MASJID_ID": "mas-cnj"
+      }
+    },
+    "mas-cnj-prod": {
+      "extends": "base",
+      "developmentClient": false,
+      "distribution": "store",
+      "env": {
+        "MASJID_ID": "mas-cnj"
+      }
     }
   },
   "submit": {

@@ -75,8 +75,8 @@ export default function CreateAccountScreen() {
         result = await startSSOFlow({ strategy: 'oauth_apple' });
       }
       if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId });
-        router.push('/(onboarding)/name');
+        await result.setActive({ session: result.createdSessionId, organization: config.clerkOrgId });
+        // Guards will redirect to (onboarding) or (main) based on onboardingComplete
       }
     } catch (err: any) {
       if (err?.code === 'ERR_REQUEST_CANCELED') return;
@@ -84,7 +84,7 @@ export default function CreateAccountScreen() {
     } finally {
       setLoading(null);
     }
-  }, [startAppleAuthenticationFlow, startSSOFlow, router]);
+  }, [startAppleAuthenticationFlow, startSSOFlow, config.clerkOrgId]);
 
   const handleGoogle = useCallback(async () => {
     setLoading('google');
@@ -92,15 +92,15 @@ export default function CreateAccountScreen() {
       const result = await startSSOFlow({ strategy: 'oauth_google' });
       if (result.authSessionResult?.type === 'dismiss') return;
       if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId });
-        router.push('/(onboarding)/name');
+        await result.setActive({ session: result.createdSessionId, organization: config.clerkOrgId });
+        // Guards will redirect to (onboarding) or (main) based on onboardingComplete
       }
     } catch (err) {
       console.warn('[Auth] Google sign-in error:', err);
     } finally {
       setLoading(null);
     }
-  }, [startSSOFlow, router]);
+  }, [startSSOFlow, config.clerkOrgId]);
 
   const handleEmail = useCallback(() => {
     router.push('/(auth)/sign-up');

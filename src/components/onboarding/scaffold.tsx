@@ -38,7 +38,7 @@ export function OnboardingScaffold({
   const accentHex = `rgb(${config.colors.onboardingAccent.replace(/ /g, ',')})`;
 
   return (
-    <View className="flex-1 bg-onboarding-bg">
+    <View className="flex-1 bg-onboarding-bg z-100">
       <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
         <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin slice" />
       </View>

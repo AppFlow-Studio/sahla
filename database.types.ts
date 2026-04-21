@@ -482,6 +482,7 @@ export type Database = {
         Row: {
           content_id: string
           created_at: string
+          current_count: number | null
           days: string[] | null
           description: string | null
           end_date: string | null
@@ -492,6 +493,7 @@ export type Database = {
           is_fourteen_plus: boolean | null
           is_kids: boolean | null
           is_paid: boolean | null
+          max_capacity: number | null
           mosque_id: string
           name: string | null
           paid_link: string | null
@@ -506,6 +508,7 @@ export type Database = {
         Insert: {
           content_id?: string
           created_at?: string
+          current_count?: number | null
           days?: string[] | null
           description?: string | null
           end_date?: string | null
@@ -516,6 +519,7 @@ export type Database = {
           is_fourteen_plus?: boolean | null
           is_kids?: boolean | null
           is_paid?: boolean | null
+          max_capacity?: number | null
           mosque_id: string
           name?: string | null
           paid_link?: string | null
@@ -530,6 +534,7 @@ export type Database = {
         Update: {
           content_id?: string
           created_at?: string
+          current_count?: number | null
           days?: string[] | null
           description?: string | null
           end_date?: string | null
@@ -540,6 +545,7 @@ export type Database = {
           is_fourteen_plus?: boolean | null
           is_kids?: boolean | null
           is_paid?: boolean | null
+          max_capacity?: number | null
           mosque_id?: string
           name?: string | null
           paid_link?: string | null
@@ -1152,6 +1158,7 @@ export type Database = {
           mosque_id: string
           name: string | null
           speaker: string[] | null
+          status: string | null
         }
         Insert: {
           ai_summary?: string | null
@@ -1166,6 +1173,7 @@ export type Database = {
           mosque_id: string
           name?: string | null
           speaker?: string[] | null
+          status?: string | null
         }
         Update: {
           ai_summary?: string | null
@@ -1180,6 +1188,7 @@ export type Database = {
           mosque_id?: string
           name?: string | null
           speaker?: string[] | null
+          status?: string | null
         }
         Relationships: [
           {
@@ -1461,6 +1470,7 @@ export type Database = {
           bundle_id: string | null
           calculation_method: number | null
           city: string | null
+          clerk_org_id: string | null
           created_at: string
           eas_project_id: string | null
           id: string
@@ -1492,6 +1502,7 @@ export type Database = {
           bundle_id?: string | null
           calculation_method?: number | null
           city?: string | null
+          clerk_org_id?: string | null
           created_at?: string
           eas_project_id?: string | null
           id: string
@@ -1523,6 +1534,7 @@ export type Database = {
           bundle_id?: string | null
           calculation_method?: number | null
           city?: string | null
+          clerk_org_id?: string | null
           created_at?: string
           eas_project_id?: string | null
           id?: string

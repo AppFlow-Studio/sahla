@@ -1,4 +1,3 @@
-import { useAuth } from '@clerk/clerk-expo';
 import { useEffect } from 'react';
 
 import type { RemoteMasjidOverrides } from '@/src/config/types';
@@ -7,7 +6,6 @@ import { hexToRgbTriplet } from '@/src/lib/color';
 import { useConfigStore } from '@/src/stores/config-store';
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded } = useAuth();
   const supabase = useSupabase();
   const config = useConfigStore((s) => s.config);
   const applyRemoteOverrides = useConfigStore((s) => s.applyRemoteOverrides);
@@ -21,7 +19,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('mosques')
         .select(
-          'id, name, app_name, logo_url, brand_color, accent_color, secondary_color, timezone, calculation_method',
+          'id, name, app_name, logo_url, brand_color, accent_color, secondary_color, timezone, calculation_method, clerk_org_id',
         )
         .eq('slug', config.id)
         .maybeSingle();
@@ -46,6 +44,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         timezone: data.timezone ?? undefined,
         prayerCalculationMethod:
           data.calculation_method != null ? String(data.calculation_method) : undefined,
+        clerkOrgId: data.clerk_org_id ?? undefined,
         colors: {
           ...(primary ? { primary } : {}),
           ...(accent ? { accent } : {}),
