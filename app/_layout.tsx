@@ -1,8 +1,7 @@
 import '../global.css';
 
-// AUTH DISABLED — Clerk sign-in commented out
-// import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
-// import { tokenCache } from '@clerk/clerk-expo/token-cache';
+import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
+import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
 import {
   PlayfairDisplay_400Regular,
@@ -17,21 +16,20 @@ import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeRoot } from '@/src/components/theme-root';
-// import { env } from '@/src/lib/env';
+import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { DonationProvider } from '@/src/providers/donation-provider';
+import { QueryProvider } from '@/src/providers/query-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
-import {useEffect} from 'react';
-import {Inter_800ExtraBold,useFonts} from '@expo-google-fonts/inter';
-import { PlayfairDisplay_500Medium, PlayfairDisplay_600SemiBold } from '@expo-google-fonts/playfair-display';
-import * as SplashScreen from 'expo-splash-screen';
+import { useOnboardingSync } from '@/src/hooks/use-onboarding-sync';
+import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
-  anchor: '(onboarding)',
+  anchor: '(auth)',
 };
-SplashScreen.preventAutoHideAsync();
+
 /**
  * Auth-aware navigator. Uses Expo Router v6's `Stack.Protected` to gate the
  * `(main)` and `(auth)` groups on Clerk's session state. The `isLoaded` check
@@ -40,15 +38,24 @@ SplashScreen.preventAutoHideAsync();
  */
 function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
+  const onboardingComplete = useOnboardingStore((s) => s.complete);
   const devBypass = __DEV__ && env.DEV_BYPASS_AUTH;
+
+  // Sync onboarding state from Clerk metadata (handles new-device scenario)
+  useOnboardingSync();
 
   if (!isLoaded) {
     // Returning null keeps the native splash visible until Clerk is ready.
     return null;
   }
 
-  const showMain = !!isSignedIn || devBypass;
-  const showAuth = !isSignedIn && !devBypass;
+  const authenticated = !!isSignedIn || devBypass;
+  const showAuth = !authenticated;
+  const showOnboarding = authenticated && !onboardingComplete && !devBypass;
+  const showMain = authenticated && (onboardingComplete || devBypass);
+
+  console.log('[RootNav] isSignedIn:', isSignedIn, 'onboardingComplete:', onboardingComplete, 'devBypass:', devBypass);
+  console.log('[RootNav] → showAuth:', showAuth, 'showOnboarding:', showOnboarding, 'showMain:', showMain);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -62,6 +69,16 @@ function RootNavigator() {
             animation: 'none',
           }}
         />
+        <Stack.Screen
+          name="change-password"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+      </Stack.Protected>
+      <Stack.Protected guard={showOnboarding}>
+        <Stack.Screen name="(onboarding)" />
       </Stack.Protected>
       <Stack.Protected guard={showAuth}>
         <Stack.Screen name="(auth)" />
@@ -84,15 +101,23 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <SupabaseProvider>
-      <ConfigProvider>
-        <ThemeRoot>
-          <DonationProvider>
-            <RootNavigator />
-            <StatusBar style="auto" />
-          </DonationProvider>
-        </ThemeRoot>
-      </ConfigProvider>
-    </SupabaseProvider>
+    <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
+      <ClerkLoaded>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <QueryProvider>
+            <SupabaseProvider>
+              <ConfigProvider>
+                <ThemeRoot>
+                  <DonationProvider>
+                    <RootNavigator />
+                    <StatusBar style="auto" />
+                  </DonationProvider>
+                </ThemeRoot>
+              </ConfigProvider>
+            </SupabaseProvider>
+          </QueryProvider>
+        </GestureHandlerRootView>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }

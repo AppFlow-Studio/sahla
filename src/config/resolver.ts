@@ -34,6 +34,7 @@ export function mergeConfig(
     timezone: overrides.timezone ?? base.timezone,
     prayerCalculationMethod:
       overrides.prayerCalculationMethod ?? base.prayerCalculationMethod,
+    clerkOrgId: overrides.clerkOrgId ?? base.clerkOrgId,
     colors: { ...base.colors, ...(overrides.colors ?? {}) },
     features: { ...base.features, ...(overrides.features ?? {}) },
   };

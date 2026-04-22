@@ -1,5 +1,5 @@
 import type { MasjidConfig } from '../types';
-import { masSiConfig } from './mas-si';
+import { masCnjConfig } from './mas-cnj';
 import { sahlaConfig } from './sahla';
 
 /**
@@ -9,7 +9,7 @@ import { sahlaConfig } from './sahla';
  */
 export const masjidRegistry: Record<string, MasjidConfig> = {
   [sahlaConfig.id]: sahlaConfig,
-  [masSiConfig.id]: masSiConfig,
+  [masCnjConfig.id]: masCnjConfig,
 };
 
-export { masSiConfig, sahlaConfig };
+export { masCnjConfig, sahlaConfig };

@@ -1,8 +1,10 @@
+import { useUser } from '@clerk/clerk-expo';
 import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useOnboardingStore } from '@/src/stores/onboarding-store';
 import {
   MOCK_CURRENT_TIME,
   MOCK_HIJRI_DATE,
@@ -14,11 +16,21 @@ const patternSource = require('@/assets/islamic-pattern.png');
 
 export function HomeHeader() {
   const insets = useSafeAreaInsets();
-  const { colors } = useMasjidConfig();
+  const { colors, clerkOrgId } = useMasjidConfig();
+  const { user } = useUser();
+  const storedFirstName = useOnboardingStore((s) => s.firstName);
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
 
+  // Read firstName: Clerk metadata (org-keyed) → onboarding store → Clerk user
+  const meta = user?.publicMetadata as Record<string, any> | undefined;
+  const firstName =
+    (clerkOrgId ? meta?.[clerkOrgId]?.firstName : null) ??
+    (storedFirstName.trim() || null) ??
+    user?.firstName ??
+    '';
+
   return (
-    <View className="overflow-hidden bg-primary" style={{ paddingTop: insets.top + 16 }}>
+    <View className="overflow-hidden bg-[#0A261E]" style={{ paddingTop: insets.top + 16 }}>
       <Image
         source={patternSource}
         tintColor={accentRgb}
@@ -45,7 +57,7 @@ export function HomeHeader() {
             textTransform: 'uppercase',
           }}
         >
-          Assalamu Alaikum D!
+          Assalamu Alaikum{firstName ? ` ${firstName}` : ''}!
         </Text>
 
         <Text

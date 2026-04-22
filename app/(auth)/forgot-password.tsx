@@ -1,4 +1,4 @@
-import { useClerk, useSignUp } from '@clerk/clerk-expo';
+import { useSignIn } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -7,20 +7,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
 const SERIF = 'PlayfairDisplay_500Medium';
 
-export default function SignUpScreen() {
-  const { signUp, setActive, isLoaded } = useSignUp();
-  const clerk = useClerk();
+type Step = 'email' | 'code' | 'new-password';
+
+export default function ForgotPasswordScreen() {
+  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   const config = useMasjidConfig();
 
+  const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
-  const [pendingVerification, setPendingVerification] = useState(false);
+  const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,54 +32,72 @@ export default function SignUpScreen() {
     return 'Something went wrong';
   };
 
-  const onCreate = useCallback(async () => {
+  const onSendCode = useCallback(async () => {
     if (!isLoaded || submitting) return;
     setError(null);
     setSubmitting(true);
     try {
-      await signUp.create({ emailAddress: email, password });
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      setPendingVerification(true);
+      await signIn.create({
+        strategy: 'reset_password_email_code',
+        identifier: email,
+      });
+      setStep('code');
     } catch (err) {
       setError(clerkError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signUp, email, password, submitting]);
+  }, [isLoaded, signIn, email, submitting]);
 
-  const joinAndActivateOrg = useCallback(
-    async (userId: string) => {
-      const orgId = config.clerkOrgId;
-      if (!orgId) return;
-      const result = await joinOrgDirect(userId, orgId);
-      if (result === 'error') {
-        setError('Failed to join organization. Please try again.');
-        return;
-      }
-      await clerk.setActive({ organization: orgId });
-    },
-    [clerk, config.clerkOrgId],
-  );
-
-  const onVerify = useCallback(async () => {
+  const onVerifyCode = useCallback(async () => {
     if (!isLoaded || submitting) return;
     setError(null);
     setSubmitting(true);
     try {
-      const attempt = await signUp.attemptEmailAddressVerification({ code });
-      if (attempt.status === 'complete') {
-        await setActive({ session: attempt.createdSessionId });
-        const userId = clerk.user?.id;
-        if (userId) await joinAndActivateOrg(userId);
+      const attempt = await signIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code,
+      });
+      if (attempt.status === 'needs_new_password') {
+        setStep('new-password');
       } else {
-        setError(`Unexpected verification status: ${attempt.status}`);
+        setError(`Unexpected status: ${attempt.status}`);
       }
     } catch (err) {
       setError(clerkError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signUp, code, setActive, submitting, joinAndActivateOrg, clerk]);
+  }, [isLoaded, signIn, code, submitting]);
+
+  const onResetPassword = useCallback(async () => {
+    if (!isLoaded || submitting) return;
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result = await signIn.resetPassword({ password });
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        router.replace('/(auth)/sign-in');
+      } else {
+        setError(`Unexpected status: ${result.status}`);
+      }
+    } catch (err) {
+      setError(clerkError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [isLoaded, signIn, password, setActive, submitting, router]);
+
+  const titles: Record<Step, string> = {
+    email: 'Reset your\npassword',
+    code: 'Check your\nemail',
+    'new-password': 'Set a new\npassword',
+  };
 
   return (
     <View className="flex-1 bg-onboarding-bg">
@@ -108,11 +126,14 @@ export default function SignUpScreen() {
               marginBottom: 32,
             }}
           >
-            {pendingVerification ? 'Verify your\nemail' : 'Create your\naccount'}
+            {titles[step]}
           </Text>
 
-          {!pendingVerification ? (
+          {step === 'email' && (
             <>
+              <Text className="text-onboarding-surface/80 mb-6" style={{ fontSize: 11 }}>
+                Enter your email and we&apos;ll send you a reset code.
+              </Text>
               <Text
                 className="text-onboarding-surface/40 mb-2"
                 style={{ fontSize: 10, letterSpacing: 1.5 }}
@@ -127,27 +148,13 @@ export default function SignUpScreen() {
                 autoCapitalize="none"
                 autoComplete="email"
                 keyboardType="email-address"
-                className="border-onboarding-surface/20 text-onboarding-surface mb-5 border-b pb-2"
-                style={{ fontSize: 16 }}
-              />
-              <Text
-                className="text-onboarding-surface/40 mb-2"
-                style={{ fontSize: 10, letterSpacing: 1.5 }}
-              >
-                PASSWORD
-              </Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="At least 8 characters"
-                placeholderTextColor="rgba(255,251,242,0.25)"
-                secureTextEntry
-                autoComplete="new-password"
                 className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
                 style={{ fontSize: 16 }}
               />
             </>
-          ) : (
+          )}
+
+          {step === 'code' && (
             <>
               <Text className="text-onboarding-surface/80 mb-6" style={{ fontSize: 11 }}>
                 Enter the 6-digit code we sent to {email}
@@ -170,6 +177,30 @@ export default function SignUpScreen() {
             </>
           )}
 
+          {step === 'new-password' && (
+            <>
+              <Text className="text-onboarding-surface/80 mb-6" style={{ fontSize: 11 }}>
+                Choose a new password (at least 8 characters).
+              </Text>
+              <Text
+                className="text-onboarding-surface/40 mb-2"
+                style={{ fontSize: 10, letterSpacing: 1.5 }}
+              >
+                NEW PASSWORD
+              </Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="At least 8 characters"
+                placeholderTextColor="rgba(255,251,242,0.25)"
+                secureTextEntry
+                autoComplete="new-password"
+                className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
+                style={{ fontSize: 16 }}
+              />
+            </>
+          )}
+
           {error ? (
             <Text className="mb-4" style={{ fontSize: 13, color: '#EF4444' }}>
               {error}
@@ -178,7 +209,13 @@ export default function SignUpScreen() {
 
           <View style={{ paddingHorizontal: 30 }}>
             <Pressable
-              onPress={pendingVerification ? onVerify : onCreate}
+              onPress={
+                step === 'email'
+                  ? onSendCode
+                  : step === 'code'
+                    ? onVerifyCode
+                    : onResetPassword
+              }
               disabled={submitting || !isLoaded}
               className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90 disabled:opacity-50"
             >
@@ -189,7 +226,11 @@ export default function SignUpScreen() {
                   className="text-onboarding-bg"
                   style={{ fontSize: 14, fontWeight: '600' }}
                 >
-                  {pendingVerification ? 'Verify email' : 'Create account'}
+                  {step === 'email'
+                    ? 'Send reset code'
+                    : step === 'code'
+                      ? 'Verify code'
+                      : 'Reset password'}
                 </Text>
               )}
             </Pressable>

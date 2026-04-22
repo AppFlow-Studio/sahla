@@ -19,4 +19,5 @@ export const sahlaConfig: MasjidConfig = {
   locale: 'en',
   timezone: 'America/New_York',
   prayerCalculationMethod: 'ISNA',
+  clerkOrgId: 'org_3CfxuY1bSbDRGv2y8LIcZRA6w7Q',
 };

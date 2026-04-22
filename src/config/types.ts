@@ -62,6 +62,8 @@ export type MasjidConfig = {
   timezone: string;
   /** Calculation method name, resolved by the prayer-times feature later. */
   prayerCalculationMethod?: string;
+  /** Clerk Organization ID for this mosque — fetched from Supabase `mosques` row. */
+  clerkOrgId?: string;
 };
 
 /**

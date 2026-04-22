@@ -7,6 +7,7 @@ export default function OnboardingLayout() {
   const bg = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
   return (
     <Stack
+      initialRouteName="name"
       screenOptions={{
         headerShown: false,
         animation: 'fade',

@@ -1,9 +1,8 @@
 import { useAuth } from '@clerk/clerk-expo';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
-import { env } from '@/src/lib/env';
 
 export type RecommendationItem = {
   content_id: string;
@@ -16,8 +15,6 @@ export type RecommendationItem = {
   start_date: string | null;
   start_time: string | null;
 };
-
-type Status = 'idle' | 'loading' | 'success' | 'error';
 
 type EdgeResponse = {
   recomputed: boolean;
@@ -40,53 +37,19 @@ type EdgeResponse = {
 export function useRecommendation() {
   const { userId, isLoaded } = useAuth();
   const supabase = useSupabase();
-  const supabaseRef = useRef(supabase);
-  supabaseRef.current = supabase;
   const config = useMasjidConfig();
 
-  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<Status>('idle');
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const refetch = useCallback(() => setRefreshKey((k) => k + 1), []);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    const effectiveUserId =
-      userId ??
-      (__DEV__ && env.DEV_BYPASS_AUTH
-        ? 'user_3Bg53r7ZnLPWAVVTLwYU7BKNOpM'
-        : null);
-    if (!effectiveUserId) return;
-
-    let cancelled = false;
-    setStatus('loading');
-
-    (async () => {
-      const { data, error: fnError } = await supabaseRef.current.functions.invoke<
-        EdgeResponse
-      >('recommend', {
-        body: { user_id: effectiveUserId, mosque_slug: config.id },
+  const query = useQuery({
+    queryKey: ['recommendations', userId, config.id],
+    queryFn: async (): Promise<RecommendationItem[]> => {
+      const { data, error } = await supabase.functions.invoke<EdgeResponse>('recommend', {
+        body: { user_id: userId, mosque_slug: config.id },
       });
 
-      if (cancelled) return;
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error('Empty response from recommend function');
 
-      if (fnError) {
-        if (__DEV__) console.error('[useRecommendation] invoke failed', fnError);
-        setError(fnError.message);
-        setStatus('error');
-        return;
-      }
-      if (!data) {
-        if (__DEV__) console.error('[useRecommendation] empty response');
-        setError('Empty response from recommend function');
-        setStatus('error');
-        return;
-      }
-
-      const items: RecommendationItem[] = data.items
+      return data.items
         .filter((r) => r.content_items !== null)
         .map((r) => ({
           content_id: r.content_id,
@@ -99,17 +62,20 @@ export function useRecommendation() {
           start_date: r.content_items!.start_date,
           start_time: r.content_items!.start_time,
         }));
+    },
+    enabled: isLoaded && !!userId,
+  });
 
-      setRecommendations(items);
-      setError(null);
-      setStatus('success');
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoaded, userId, config.id, refreshKey]);
-
-  return { recommendations, status, error, refetch };
+  return {
+    recommendations: query.data ?? [],
+    status: !isLoaded
+      ? ('idle' as const)
+      : query.isPending
+        ? ('loading' as const)
+        : query.isError
+          ? ('error' as const)
+          : ('success' as const),
+    error: query.error?.message ?? null,
+    refetch: query.refetch,
+  };
 }
-

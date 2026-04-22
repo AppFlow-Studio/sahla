@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import { router, Stack } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -15,8 +15,10 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
+import QuranScreen from '@/src/screens/QuranScreen';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useTrackerVersion } from '@/src/hooks/use-tracker';
+import { getLastViewed } from '@/src/lib/quran-tracker';
 import {
   getGoalForPeriod,
   getGoals,
@@ -386,7 +388,7 @@ const PERIOD_OPTIONS: { key: Period; short: string; long: string }[] = [
   { key: 'year', short: 'Yearly', long: 'this year' },
 ];
 
-function DailyQuranGoalCard({ c }: { c: Palette }) {
+function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueReading?: () => void }) {
   const [period, setPeriod] = useState<Period>('day');
   const version = useTrackerVersion();
 
@@ -457,12 +459,7 @@ function DailyQuranGoalCard({ c }: { c: Palette }) {
           </Text>
           <Pressable
             style={{ alignSelf: 'flex-start', marginTop: 14 }}
-            onPress={() =>
-              router.push({
-                pathname: '/(main)/library',
-                params: { resumeQuran: '1' },
-              })
-            }
+            onPress={onContinueReading}
           >
             <GlassView
               glassEffectStyle="regular"
@@ -898,6 +895,8 @@ function PrayerRowItem({
 export default function PrayerScreen() {
   const c = usePalette();
   const [now, setNow] = useState(new Date());
+  const [quranOpen, setQuranOpen] = useState(false);
+  const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -1088,12 +1087,21 @@ export default function PrayerScreen() {
               return <PrayerRowItem key={p.name} row={p} c={c} showDivider={showDivider} />;
             })}
 
-            <DailyQuranGoalCard c={c} />
+            <DailyQuranGoalCard c={c} onContinueReading={() => { setResumeTarget(getLastViewed()); setQuranOpen(true); }} />
             <SupportMasjidCard c={c} />
             <CommunityPartnersSection c={c} />
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <Modal
+        visible={quranOpen}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        onRequestClose={() => { setQuranOpen(false); setResumeTarget(null); }}
+      >
+        <QuranScreen onClose={() => { setQuranOpen(false); setResumeTarget(null); }} initial={resumeTarget} />
+      </Modal>
     </View>
   );
 }
