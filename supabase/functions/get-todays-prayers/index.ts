@@ -6,9 +6,15 @@
  * regular authenticated mobile users cannot read prayer times directly.
  *
  * This edge function uses the service-role key to fetch a single mosque's
- * row set on behalf of the caller. It is read-only and scoped to a single
- * mosque per request — safe to expose because prayer times are public
- * information by their nature.
+ * row set. It is read-only and scoped to a single mosque per request —
+ * safe to expose because prayer times are public information by their
+ * nature.
+ *
+ * verify_jwt is disabled to match the rest of this project's edge
+ * functions (clerk-webhooks, recommend, join-org, sync-onboarding all
+ * have verify_jwt=false). Supabase isn't configured here to accept
+ * Clerk JWTs via third-party auth, so verify_jwt=true rejects every
+ * mobile call with 401.
  *
  * **Delete this file (and revert use-prayer-times.ts to a direct table
  * read) once F-RLS-01 lands.**
