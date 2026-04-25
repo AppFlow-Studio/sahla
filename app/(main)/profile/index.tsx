@@ -5,7 +5,7 @@ import { Linking, Platform, ScrollView, View } from "react-native";
 
 export default function ProfileScreen() {
   return (
-    <View className="flex-1" style={{ backgroundColor: "#0D2B1A" }}>
+    <View className="flex-1 bg-primary">
       <Image
         source={require("@/assets/images/islamic-pattern.png")}
         style={{
