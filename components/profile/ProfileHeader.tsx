@@ -27,6 +27,7 @@ export default function ProfileHeader() {
   const { user } = useUser();
   const { clerkOrgId, colors } = useMasjidConfig();
   const primaryRgb = tripletToRgb(colors.primary);
+  const accentRgb = tripletToRgb(colors.accent);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -104,6 +105,22 @@ export default function ProfileHeader() {
         className="w-full"
         style={{ paddingTop: insets.top + 5, paddingBottom: 28 }}
       >
+        <Image
+          source={require('@/assets/islamic-pattern.png')}
+          tintColor={accentRgb}
+          style={{
+            position: 'absolute',
+            top: -10,
+            left: 0,
+            right: 0,
+            height: 340,
+            opacity: 0.35,
+            transform: [{ rotate: '180deg' }],
+          }}
+          contentFit="cover"
+          pointerEvents="none"
+        />
+
         <View className="relative z-10 w-full items-center px-4">
         {/* Avatar */}
         <Pressable className="relative h-20 w-20">
