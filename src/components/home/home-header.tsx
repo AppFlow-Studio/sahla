@@ -36,9 +36,9 @@ export function HomeHeader() {
         style={{
           position: 'absolute',
           top: -10,
-          right: -10,
-          width: 180,
-          height: 200,
+          left: 0,
+          right: 0,
+          height: 280,
           opacity: 0.35,
           transform: [{ rotate: '180deg' }],
         }}
