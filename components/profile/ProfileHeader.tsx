@@ -16,14 +16,17 @@ import {
   CormorantGaramond_500Medium,
   CormorantGaramond_600SemiBold,
 } from '@expo-google-fonts/cormorant-garamond';
-const HEADER_BG_DARK = '#0A261E';
-const HEADER_BG_LIGHT = '#0D2B1A';
+
+function tripletToRgb(triplet: string) {
+  return `rgb(${triplet.replace(/ /g, ',')})`;
+}
 
 export default function ProfileHeader() {
   const { profile, status, error } = useProfile();
   const { signOut } = useAuth();
   const { user } = useUser();
-  const { clerkOrgId } = useMasjidConfig();
+  const { clerkOrgId, colors } = useMasjidConfig();
+  const primaryRgb = tripletToRgb(colors.primary);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -101,9 +104,9 @@ export default function ProfileHeader() {
     headerHeight > 0 ? Math.round(headerHeight * 0.60) : undefined;
 
   return (
-    <View className="relative w-full overflow-hidden bg-[#0A261E]">
+    <View className="relative w-full overflow-hidden bg-primary">
       <LinearGradient
-        colors={[HEADER_BG_LIGHT, HEADER_BG_DARK]}
+        colors={[primaryRgb, primaryRgb]}
         className="w-full"
         style={{ paddingTop: insets.top + 5, paddingBottom: 28 }}
         onLayout={(e) => {
@@ -150,7 +153,7 @@ export default function ProfileHeader() {
               </Text>
             </View>
           )}
-          <View className="absolute -bottom-2 -right-2 rounded-full bg-[#B8922A] p-1">
+          <View className="absolute -bottom-2 -right-2 rounded-full bg-accent p-1">
             <EvilIcons name="pencil" size={14} color="#FFFBF2" />
           </View>
         </Pressable>
