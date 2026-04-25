@@ -28,8 +28,6 @@ type TodaysPrayerRow = {
   iqamah_time: string;
 };
 
-const SELECT = 'prayer_name, athan_time, iqamah_time' as const;
-
 const PRAYER_ORDER: Record<string, number> = {
   fajr: 0,
   sunrise: 1,
@@ -149,13 +147,19 @@ export function usePrayerTimes(): UsePrayerTimesResult {
   const query = useQuery({
     queryKey: ['prayer-times', mosqueUuid, todayDateStr],
     queryFn: async (): Promise<TodaysPrayerRow[]> => {
-      const { data, error } = await supabase
-        .from('todays_prayers')
-        .select(SELECT)
-        .eq('mosque_id', mosqueUuid!)
-        .order('athan_time', { ascending: true });
+      // TEMPORARY: until F-RLS-01 lands an `org_members_select` policy on
+      // `todays_prayers`, route through the read-only `get-todays-prayers`
+      // edge function which uses the service-role key. Swap back to a
+      // direct table read once F-RLS-01 ships.
+      const { data, error } = await supabase.functions.invoke<{
+        rows: TodaysPrayerRow[];
+        error?: string;
+      }>('get-todays-prayers', {
+        body: { mosque_id: mosqueUuid },
+      });
       if (error) throw new Error(error.message);
-      return (data ?? []) as TodaysPrayerRow[];
+      if (data?.error) throw new Error(data.error);
+      return data?.rows ?? [];
     },
     enabled: !!mosqueUuid,
   });
