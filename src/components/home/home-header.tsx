@@ -4,12 +4,9 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
+import { getHijriDate } from '@/src/lib/hijri';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
-import {
-  MOCK_CURRENT_TIME,
-  MOCK_HIJRI_DATE,
-  MOCK_NEXT_PRAYER,
-} from '@/src/data/mock-home';
 import { PrayerTimesBar } from './prayer-times-bar';
 
 const patternSource = require('@/assets/islamic-pattern.png');
@@ -19,6 +16,8 @@ export function HomeHeader() {
   const { colors, clerkOrgId } = useMasjidConfig();
   const { user } = useUser();
   const storedFirstName = useOnboardingStore((s) => s.firstName);
+  const { nextPrayer, currentTimeFormatted, countdownLabel } = usePrayerTimes();
+  const hijriDate = getHijriDate();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
 
   // Read firstName: Clerk metadata (org-keyed) → onboarding store → Clerk user
@@ -70,14 +69,14 @@ export function HomeHeader() {
             fontFamily: 'PlayfairDisplay_400Regular',
           }}
         >
-          {MOCK_CURRENT_TIME}
+          {currentTimeFormatted}
         </Text>
 
         <Text
           className="text-primary-foreground"
           style={{ fontSize: 13, fontWeight: '600', marginTop: 4 }}
         >
-          {MOCK_HIJRI_DATE}
+          {hijriDate}
         </Text>
 
         <View className="mt-3 flex-row items-center">
@@ -86,11 +85,17 @@ export function HomeHeader() {
             style={{ height: 6, width: 6, borderRadius: 3 }}
           />
           <Text style={{ fontSize: 13 }}>
-            <Text className="text-primary-foreground/50">{MOCK_NEXT_PRAYER.name}</Text>
-            <Text className="text-primary-foreground/80">
-              {' '}
-              {MOCK_NEXT_PRAYER.type} in {MOCK_NEXT_PRAYER.timeRemaining}
-            </Text>
+            {nextPrayer ? (
+              <>
+                <Text className="text-primary-foreground/50">{nextPrayer.name}</Text>
+                <Text className="text-primary-foreground/80">
+                  {' '}
+                  iqamah in {countdownLabel}
+                </Text>
+              </>
+            ) : (
+              <Text className="text-primary-foreground/80">All prayers complete for today</Text>
+            )}
           </Text>
         </View>
       </View>
