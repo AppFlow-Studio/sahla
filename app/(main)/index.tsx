@@ -1,60 +1,82 @@
-import { ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
+import { ScrollView, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
+import { HomeHeader } from '@/src/components/home/home-header';
+import { DonateBanner } from '@/src/components/home/donate-banner';
+import { TodaysEvents } from '@/src/components/home/todays-events';
+import { FeaturedCard } from '@/src/components/home/featured-card';
+import { QuickActions } from '@/src/components/home/quick-actions';
+import { ProgramsSection } from '@/src/components/home/programs-section';
+import { RecommendedForYou } from '@/src/components/home/recommended-for-you';
+import { CommunityPartners } from '@/src/components/home/community-partners';
+import { CommunityPartnerCta } from '@/src/components/home/community-partner-cta';
+import { JummahScheduleCard } from '@/src/components/home/jummah-schedule';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
+
+const JUMMAH_HEIGHT = 360;
 
 export default function HomeScreen() {
-  const masjid = useMasjidConfig();
+  const { features } = useMasjidConfig();
+  const { nextPrayer } = usePrayerTimes();
+  const showJummah = features.jumaahRegistration;
+  const isMaghribTime = nextPrayer?.rawName === 'maghrib';
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(isMaghribTime && showJummah ? 1 : 0, {
+      duration: 850,
+      easing: Easing.inOut(Easing.cubic),
+    });
+  }, [isMaghribTime, showJummah, progress]);
+
+  const revealStyle = useAnimatedStyle(() => ({
+    height: interpolate(progress.value, [0, 1], [0, JUMMAH_HEIGHT]),
+  }));
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.45, 1], [0, 0, 1]),
+    transform: [{ translateY: interpolate(progress.value, [0, 1], [20, 0]) }],
+  }));
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <ScrollView contentContainerClassName="px-6 pb-10 pt-4">
-        <View className="mb-6">
-          <Text className="text-sm uppercase tracking-widest text-muted-foreground">
-            Assalamu alaikum
-          </Text>
-          <Text className="mt-1 text-3xl font-bold text-foreground">{masjid.displayName}</Text>
-          {masjid.tagline ? (
-            <Text className="mt-1 text-muted-foreground">{masjid.tagline}</Text>
-          ) : null}
-        </View>
+    <View className="flex-1 bg-primary">
+      <StatusBar style="light" />
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+        <HomeHeader />
 
-        <View className="mb-4 rounded-2xl bg-primary p-5">
-          <Text className="text-sm font-semibold uppercase tracking-wider text-primary-foreground/80">
-            Next prayer
-          </Text>
-          <Text className="mt-1 text-2xl font-bold text-primary-foreground">Asr · 3:42 PM</Text>
-          <Text className="mt-0.5 text-primary-foreground/80">in 1h 12m</Text>
-        </View>
+        {showJummah && (
+          <Animated.View style={[{ overflow: 'hidden' }, revealStyle]}>
+            <Animated.View style={cardStyle}>
+              <JummahScheduleCard />
+            </Animated.View>
+          </Animated.View>
+        )}
 
-        <Text className="mb-2 text-lg font-semibold text-foreground">Quick actions</Text>
-        <View className="gap-3">
-          {masjid.features.prayerTimes ? (
-            <FeatureCard title="Prayer times" subtitle="Daily schedule for this masjid" />
-          ) : null}
-          {masjid.features.events ? (
-            <FeatureCard title="Events" subtitle="Community events & programs" />
-          ) : null}
-          {masjid.features.announcements ? (
-            <FeatureCard title="Announcements" subtitle="Latest updates from the imam" />
-          ) : null}
-          {masjid.features.donations ? (
-            <FeatureCard title="Donate" subtitle="Support your masjid" />
-          ) : null}
-          {masjid.features.jumaahRegistration ? (
-            <FeatureCard title="Jumu'ah sign-up" subtitle="Reserve your spot for Friday prayer" />
-          ) : null}
+        <View
+          className="bg-background"
+          style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
+        >
+          <View className="gap-7 px-5 pt-5" style={{ paddingBottom: 160 }}>
+            <DonateBanner />
+            <TodaysEvents />
+            <FeaturedCard />
+            <QuickActions />
+            <ProgramsSection />
+            <RecommendedForYou />
+            <CommunityPartners />
+            <CommunityPartnerCta />
+          </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function FeatureCard({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <View className="rounded-xl border border-border bg-muted/40 p-4">
-      <Text className="text-base font-semibold text-foreground">{title}</Text>
-      <Text className="mt-0.5 text-sm text-muted-foreground">{subtitle}</Text>
     </View>
   );
 }

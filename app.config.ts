@@ -24,6 +24,7 @@ type BuildTimeMasjid = { displayName: string };
 
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
   sahla: { displayName: 'Sahla Demo Masjid' },
+  'mas-cnj': { displayName: 'MAS Central New Jersey' },
 };
 
 const MASJID_ID = process.env.MASJID_ID ?? 'sahla';
@@ -45,6 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
+    usesAppleSignIn: true,
   },
   android: {
     adaptiveIcon: {
@@ -64,6 +66,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    'expo-sqlite',
+    'expo-asset',
+    'expo-apple-authentication',
     [
       'expo-splash-screen',
       {
@@ -83,5 +88,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     masjidId: MASJID_ID,
+    /** Read from `.env` when Metro / prebuild evaluates this file — reliable for dev bypass. */
+    devBypassAuth: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === 'true',
   },
 });

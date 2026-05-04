@@ -1,249 +1,235 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
 
-const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
-type PrayerName = (typeof PRAYER_NAMES)[number];
+export type PrayerStatus = 'passed' | 'next' | 'upcoming';
 
-const PRAYER_ICONS: Record<PrayerName, string> = {
-  Fajr: 'weather-sunset-up',
-  Dhuhr: 'white-balance-sunny',
-  Asr: 'weather-sunny',
-  Maghrib: 'weather-sunset-down',
-  Isha: 'moon-waning-crescent',
-};
-
-export type PrayerTime = {
+export type PrayerEntry = {
+  /** Title-case display name, e.g. 'Fajr'. */
   name: string;
-  time: string;
-  icon: string;
-  isActive: boolean;
+  /** Raw lowercase DB name, e.g. 'fajr'. */
+  rawName: string;
+  /** 12-hour formatted athan time, e.g. '5:19 AM'. */
+  athan: string;
+  /** 12-hour formatted iqamah time, e.g. '5:44 AM'. */
+  iqamah: string;
+  /** Raw HH:MM:SS time-of-day from the DB. */
+  athanTimeRaw: string;
+  iqamahTimeRaw: string;
+  status: PrayerStatus;
 };
 
-export type NextPrayer = {
-  name: string;
-  timeRemaining: string;
-  type: 'athan' | 'iqamah';
+type TodaysPrayerRow = {
+  prayer_name: string;
+  athan_time: string;
+  iqamah_time: string;
 };
 
-type AlAdhanResponse = {
-  data: {
-    timings: Record<string, string>;
-    date: {
-      hijri: {
-        day: string;
-        month: { en: string; number: number };
-        year: string;
-      };
-    };
-  };
+const PRAYER_ORDER: Record<string, number> = {
+  fajr: 0,
+  sunrise: 1,
+  dhuhr: 2,
+  asr: 3,
+  maghrib: 4,
+  isha: 5,
 };
 
-function formatTime12h(time24: string): string {
-  const [h, m] = time24.split(':').map(Number);
-  const suffix = h >= 12 ? 'PM' : 'AM';
+function titleCase(name: string): string {
+  if (!name) return name;
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
+function timeToSeconds(hhmmss: string): number {
+  const [hh = '0', mm = '0', ss = '0'] = hhmmss.split(':');
+  return Number(hh) * 3600 + Number(mm) * 60 + Number(ss);
+}
+
+function formatTo12Hour(hhmmss: string): string {
+  const [hh = '0', mm = '0'] = hhmmss.split(':');
+  const h = Number(hh);
+  const m = Number(mm);
+  const period = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-function parseTime(time24: string, timezone: string): Date {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-CA', { timeZone: timezone });
-  const [h, m] = time24.split(':').map(Number);
-  return new Date(`${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
-}
-
-function formatRemaining(ms: number): string {
-  if (ms <= 0) return '0m';
-  const totalMin = Math.floor(ms / 60_000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
+function formatCountdown(totalSeconds: number): string {
+  if (totalSeconds <= 0) return 'now';
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (m > 0) return `${m}m`;
+  return '<1m';
 }
 
-function getCurrentTimeFormatted(timezone: string): string {
-  return new Date().toLocaleTimeString('en-US', {
-    timeZone: timezone,
+function formatCountdownClock(totalSeconds: number): string {
+  if (totalSeconds <= 0) return '00:00';
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function getNowInTimezone(timeZone: string): {
+  hour: number;
+  minute: number;
+  second: number;
+  totalSeconds: number;
+  hours: number;
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(new Date());
+
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0') % 24;
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+  const second = Number(parts.find((p) => p.type === 'second')?.value ?? '0');
+
+  const totalSeconds = hour * 3600 + minute * 60 + second;
+  const hours = hour + minute / 60 + second / 3600;
+
+  return { hour, minute, second, totalSeconds, hours };
+}
+
+function formatCurrentTimeInTz(timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
+  }).format(new Date());
 }
 
-function getTodayDateStr(timezone: string): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: timezone });
+function getTodayDateStringInTz(timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 }
 
-/** Compute prayers array + next prayer from a list of {name, time24} */
-function buildPrayerState(
-  times: { name: PrayerName; time24: string }[],
-  timezone: string
-) {
-  const now = new Date();
-  let foundNext = false;
-  let nextPrayer: NextPrayer | null = null;
+export type UsePrayerTimesResult = {
+  items: PrayerEntry[];
+  nextPrayer: PrayerEntry | null;
+  /** Live-formatted clock time in mosque tz, e.g. '4:01 PM'. */
+  currentTimeFormatted: string;
+  /** 'in 1h 53m' style countdown to next iqamah, or null when no next prayer. */
+  countdownLabel: string | null;
+  /** 'HH:MM' clock-style countdown to next iqamah, or null when no next prayer. */
+  countdownClock: string | null;
+  /** Decimal hours-of-day in mosque tz, used by the prayer screen ring. */
+  nowHours: number;
+  status: 'idle' | 'loading' | 'success' | 'error';
+  error: string | null;
+};
 
-  const prayers: PrayerTime[] = times.map(({ name, time24 }) => {
-    const prayerDate = parseTime(time24, timezone);
-    const isNext = !foundNext && prayerDate > now;
-    if (isNext) {
-      foundNext = true;
-      nextPrayer = {
-        name,
-        timeRemaining: formatRemaining(prayerDate.getTime() - now.getTime()),
-        type: 'athan',
-      };
-    }
-    return {
-      name,
-      time: formatTime12h(time24),
-      icon: PRAYER_ICONS[name],
-      isActive: isNext,
-    };
-  });
-
-  if (!foundNext && prayers.length > 0) {
-    nextPrayer = { name: 'Fajr', timeRemaining: 'tomorrow', type: 'athan' };
-  }
-
-  return { prayers, nextPrayer };
-}
-
-export function usePrayerTimes() {
-  const config = useMasjidConfig();
+/**
+ * Reads today's prayer schedule from `todays_prayers` for the active mosque.
+ *
+ * The query key includes `todayDateStringInMosqueTz` so the hook auto-refetches
+ * when the day rolls over. A 1-second internal tick keeps the next-prayer
+ * status, countdown label, and clock display fresh without needing to refetch.
+ */
+export function usePrayerTimes(): UsePrayerTimesResult {
   const supabase = useSupabase();
+  const config = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
-  const timezone = config.timezone || 'America/New_York';
-  const todayStr = getTodayDateStr(timezone);
+  const timezone = config.timezone || 'UTC';
+  const todayDateStr = getTodayDateStringInTz(timezone);
 
-  // 1. Try DB first (synced bi-weekly by edge function)
-  const dbQuery = useQuery({
-    queryKey: ['prayer-times-db', mosqueUuid, todayStr],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('todays_prayers')
-        .select('prayer_name, athan_time, iqamah_time')
-        .eq('mosque_id', mosqueUuid!)
-        .eq('date', todayStr)
-        .order('athan_time', { ascending: true });
+  const query = useQuery({
+    queryKey: ['prayer-times', mosqueUuid, todayDateStr],
+    queryFn: async (): Promise<TodaysPrayerRow[]> => {
+      // TEMPORARY: until F-RLS-01 lands an `org_members_select` policy on
+      // `todays_prayers`, route through the read-only `get-todays-prayers`
+      // edge function which uses the service-role key. Swap back to a
+      // direct table read once F-RLS-01 ships.
+      const { data, error } = await supabase.functions.invoke<{
+        rows: TodaysPrayerRow[];
+        error?: string;
+      }>('get-todays-prayers', {
+        body: { mosque_id: mosqueUuid },
+      });
       if (error) throw new Error(error.message);
-      return data ?? [];
+      if (data?.error) throw new Error(data.error);
+      return data?.rows ?? [];
     },
     enabled: !!mosqueUuid,
-    staleTime: 1000 * 60 * 30, // 30 min
   });
 
-  const hasDbData = (dbQuery.data?.length ?? 0) > 0;
-
-  // 2. Fall back to Al Adhan API if DB has no data for today
-  const apiQuery = useQuery({
-    queryKey: ['prayer-times-api', todayStr, config.id],
-    queryFn: async (): Promise<AlAdhanResponse> => {
-      let city = 'New York';
-      let country = 'US';
-      let method = 2;
-      let school = 0;
-
-      if (mosqueUuid) {
-        const { data: mosque } = await supabase
-          .from('mosques')
-          .select('city, state, calculation_method, school')
-          .eq('id', mosqueUuid)
-          .single();
-        if (mosque) {
-          city = mosque.city || city;
-          method = mosque.calculation_method ?? method;
-          school = mosque.school ?? school;
-        }
-      }
-
-      const [y, mo, d] = todayStr.split('-');
-      const dateParam = `${d}-${mo}-${y}`;
-      const url = `https://api.aladhan.com/v1/timingsByCity/${dateParam}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${method}&school=${school}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Al Adhan API error: ${res.status}`);
-      return res.json();
-    },
-    enabled: !hasDbData && !dbQuery.isPending,
-    staleTime: 1000 * 60 * 60,
-  });
-
-  // Tick every 30s so countdown updates
-  const [_tick, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Build output
-  let prayers: PrayerTime[] = [];
-  let nextPrayer: NextPrayer | null = null;
-  let hijriDate = '';
-  const currentTime = getCurrentTimeFormatted(timezone);
-
-  if (hasDbData && dbQuery.data) {
-    // Build from DB rows
-    const times = PRAYER_NAMES.map((name) => {
-      const row = dbQuery.data.find(
-        (r) => r.prayer_name?.toLowerCase() === name.toLowerCase()
-      );
-      // athan_time comes as "HH:MM:SS" from DB
-      const raw = row?.athan_time?.substring(0, 5) ?? '00:00';
-      return { name, time24: raw };
+  const computed = useMemo(() => {
+    const rows = (query.data ?? []).slice().sort((a, b) => {
+      // Defensive secondary sort: canonical prayer order if athan_time tie.
+      const cmp = a.athan_time.localeCompare(b.athan_time);
+      if (cmp !== 0) return cmp;
+      return (PRAYER_ORDER[a.prayer_name] ?? 99) - (PRAYER_ORDER[b.prayer_name] ?? 99);
     });
-    const state = buildPrayerState(times, timezone);
-    prayers = state.prayers;
-    nextPrayer = state.nextPrayer;
 
-    // Hijri date: compute client-side via Intl API
-    try {
-      const parts = new Intl.DateTimeFormat('en-US', {
-        calendar: 'islamic-umalqura',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        timeZone: timezone,
-      }).formatToParts(new Date());
-      const month = parts.find((p) => p.type === 'month')?.value ?? '';
-      const day = parts.find((p) => p.type === 'day')?.value ?? '';
-      const year = parts.find((p) => p.type === 'year')?.value ?? '';
-      hijriDate = `${month} ${day}, ${year}`;
-    } catch {
-      // Intl islamic calendar not supported on this device
-    }
-  } else if (apiQuery.data) {
-    // Build from API response
-    const timings = apiQuery.data.data.timings;
-    const hijri = apiQuery.data.data.date.hijri;
-    hijriDate = `${hijri.month.en} ${hijri.day}, ${hijri.year}`;
+    const now = getNowInTimezone(timezone);
 
-    const times = PRAYER_NAMES.map((name) => {
-      const raw = timings[name]?.replace(/\s*\(.*\)/, '') ?? '00:00';
-      return { name, time24: raw };
+    const items: PrayerEntry[] = rows.map((r) => {
+      const athanSec = timeToSeconds(r.athan_time);
+      const status: PrayerStatus = athanSec <= now.totalSeconds ? 'passed' : 'upcoming';
+      return {
+        name: titleCase(r.prayer_name),
+        rawName: r.prayer_name,
+        athan: formatTo12Hour(r.athan_time),
+        iqamah: formatTo12Hour(r.iqamah_time),
+        athanTimeRaw: r.athan_time,
+        iqamahTimeRaw: r.iqamah_time,
+        status,
+      };
     });
-    const state = buildPrayerState(times, timezone);
-    prayers = state.prayers;
-    nextPrayer = state.nextPrayer;
-  }
 
-  const isLoading =
-    (!!mosqueUuid && dbQuery.isPending) || (!hasDbData && apiQuery.isPending);
-  const isError = dbQuery.isError && apiQuery.isError;
+    // The first non-passed entry becomes "next".
+    const nextIdx = items.findIndex((p) => p.status !== 'passed');
+    if (nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
+
+    const nextPrayer = nextIdx >= 0 ? items[nextIdx] : null;
+    const secondsToIqamah = nextPrayer
+      ? timeToSeconds(nextPrayer.iqamahTimeRaw) - now.totalSeconds
+      : null;
+    const countdownLabel =
+      secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;
+    const countdownClock =
+      secondsToIqamah !== null ? formatCountdownClock(secondsToIqamah) : null;
+
+    return {
+      items,
+      nextPrayer,
+      currentTimeFormatted: formatCurrentTimeInTz(timezone),
+      countdownLabel,
+      countdownClock,
+      nowHours: now.hours,
+    };
+    // `tick` re-runs the memo every second so countdown / status / clock stay live.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query.data, timezone, tick]);
+
+  const status: UsePrayerTimesResult['status'] = !mosqueUuid
+    ? 'idle'
+    : query.isPending
+      ? 'loading'
+      : query.isError
+        ? 'error'
+        : 'success';
 
   return {
-    prayers,
-    nextPrayer,
-    currentTime,
-    hijriDate,
-    status: isLoading
-      ? ('loading' as const)
-      : isError
-        ? ('error' as const)
-        : ('success' as const),
-    error: apiQuery.error?.message ?? dbQuery.error?.message ?? null,
+    ...computed,
+    status,
+    error: query.error?.message ?? null,
   };
 }
