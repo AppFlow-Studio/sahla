@@ -24,10 +24,10 @@ type BuildTimeMasjid = { displayName: string };
 
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
   sahla: { displayName: 'Sahla Demo Masjid' },
-  'mas-si': { displayName: 'MAS S.I' },
+  'mas-cnj': { displayName: 'MAS Central New Jersey' },
 };
 
-const MASJID_ID = process.env.MASJID_ID ?? 'mas-si';
+const MASJID_ID = process.env.MASJID_ID ?? 'sahla';
 const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: 'Sahla' };
 
 const IOS_BUNDLE_ID = `com.appflowstudios.sahla.${MASJID_ID}`;
@@ -46,6 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
+    usesAppleSignIn: true,
   },
   android: {
     adaptiveIcon: {
@@ -65,6 +66,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    'expo-sqlite',
+    'expo-asset',
+    'expo-apple-authentication',
     [
       'expo-splash-screen',
       {

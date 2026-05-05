@@ -24,6 +24,19 @@ export type MasjidColors = {
   muted: string;
   mutedForeground: string;
   border: string;
+  card: string;
+  cardForeground: string;
+  /** Deeper than primary; used for layering/depth overlays on the dark surfaces. */
+  depth: string;
+  /** True shadow color (used for drop shadows / cast shadows only). */
+  shadow: string;
+  onboardingBackground: string;
+  onboardingSurface: string;
+  onboardingAccent: string;
+  onboardingHalo1: string;
+  onboardingHalo2: string;
+  onboardingHalo3: string;
+  onboardingLayer: string;
 };
 
 export type MasjidFeatures = {
@@ -49,6 +62,8 @@ export type MasjidConfig = {
   timezone: string;
   /** Calculation method name, resolved by the prayer-times feature later. */
   prayerCalculationMethod?: string;
+  /** Clerk Organization ID for this mosque — fetched from Supabase `mosques` row. */
+  clerkOrgId?: string;
 };
 
 /**
