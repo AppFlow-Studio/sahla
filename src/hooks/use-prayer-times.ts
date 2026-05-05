@@ -42,12 +42,14 @@ function titleCase(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
-function timeToSeconds(hhmmss: string): number {
+function timeToSeconds(hhmmss: string | null | undefined): number {
+  if (!hhmmss) return 0;
   const [hh = '0', mm = '0', ss = '0'] = hhmmss.split(':');
   return Number(hh) * 3600 + Number(mm) * 60 + Number(ss);
 }
 
-function formatTo12Hour(hhmmss: string): string {
+function formatTo12Hour(hhmmss: string | null | undefined): string {
+  if (!hhmmss) return '--:--';
   const [hh = '0', mm = '0'] = hhmmss.split(':');
   const h = Number(hh);
   const m = Number(mm);
@@ -115,8 +117,26 @@ function getTodayDateStringInTz(timeZone: string): string {
   }).format(new Date());
 }
 
+const PRAYER_ICONS: Record<string, string> = {
+  fajr: 'weather-sunset-up',
+  sunrise: 'white-balance-sunny',
+  dhuhr: 'white-balance-sunny',
+  asr: 'weather-sunny',
+  maghrib: 'weather-sunset-down',
+  isha: 'moon-waning-crescent',
+};
+
+export type SimplePrayer = {
+  name: string;
+  time: string;
+  icon: string;
+  isActive: boolean;
+};
+
 export type UsePrayerTimesResult = {
   items: PrayerEntry[];
+  /** Simplified prayer list for UI components like PrayerTimesBar. */
+  prayers: SimplePrayer[];
   nextPrayer: PrayerEntry | null;
   /** Live-formatted clock time in mosque tz, e.g. '4:01 PM'. */
   currentTimeFormatted: string;
@@ -147,19 +167,13 @@ export function usePrayerTimes(): UsePrayerTimesResult {
   const query = useQuery({
     queryKey: ['prayer-times', mosqueUuid, todayDateStr],
     queryFn: async (): Promise<TodaysPrayerRow[]> => {
-      // TEMPORARY: until F-RLS-01 lands an `org_members_select` policy on
-      // `todays_prayers`, route through the read-only `get-todays-prayers`
-      // edge function which uses the service-role key. Swap back to a
-      // direct table read once F-RLS-01 ships.
-      const { data, error } = await supabase.functions.invoke<{
-        rows: TodaysPrayerRow[];
-        error?: string;
-      }>('get-todays-prayers', {
-        body: { mosque_id: mosqueUuid },
-      });
+      const { data, error } = await supabase
+        .from('todays_prayers')
+        .select('prayer_name, athan_time, iqamah_time')
+        .eq('mosque_id', mosqueUuid!)
+        .eq('date', todayDateStr);
       if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      return data?.rows ?? [];
+      return (data as TodaysPrayerRow[]) ?? [];
     },
     enabled: !!mosqueUuid,
   });
@@ -207,8 +221,16 @@ export function usePrayerTimes(): UsePrayerTimesResult {
     const countdownClock =
       secondsToIqamah !== null ? formatCountdownClock(secondsToIqamah) : null;
 
+    const prayers: SimplePrayer[] = items.map((p) => ({
+      name: p.name,
+      time: p.athan,
+      icon: PRAYER_ICONS[p.rawName] ?? 'weather-sunny',
+      isActive: p.status === 'next',
+    }));
+
     return {
       items,
+      prayers,
       nextPrayer,
       currentTimeFormatted: formatCurrentTimeInTz(timezone),
       countdownLabel,
