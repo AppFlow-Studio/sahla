@@ -913,8 +913,8 @@ export default function PrayerScreen() {
     [prayerItems]
   );
   const prayerRows = useMemo(
-    () => buildPrayerRows(prayerData, nextPrayer ? { name: nextPrayer.name, timeRemaining: countdownLabel ?? '' } : null),
-    [prayerData, nextPrayer, countdownLabel]
+    () => buildPrayerRows(prayerData, nextPrayer),
+    [prayerData, nextPrayer]
   );
 
   useEffect(() => {

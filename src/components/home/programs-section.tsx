@@ -2,13 +2,16 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { MOCK_PROGRAMS } from '@/src/data/mock-home';
+import { usePrograms } from '@/src/hooks/use-programs';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export function ProgramsSection() {
   const { colors } = useMasjidConfig();
+  const { programs } = usePrograms();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
+
+  if (programs.length === 0) return null;
 
   return (
     <View>
@@ -21,11 +24,11 @@ export function ProgramsSection() {
         </TouchableOpacity>
       </View>
       <View className="border-t border-foreground">
-        {MOCK_PROGRAMS.map((program, index) => (
+        {programs.map((program, index) => (
           <View
             key={program.id}
             className={`flex-row items-center py-4 ${
-              index < MOCK_PROGRAMS.length - 1 ? 'border-b border-foreground/10' : ''
+              index < programs.length - 1 ? 'border-b border-foreground/10' : ''
             }`}
           >
             <View className="mr-3 h-[50px] w-[50px] items-center justify-center rounded-[10px] bg-primary/10">

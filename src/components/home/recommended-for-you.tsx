@@ -1,15 +1,19 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { MOCK_RECOMMENDED } from '@/src/data/mock-home';
+import { useRecommendation } from '@/src/hooks/use-Recommendation';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export function RecommendedForYou() {
   const { colors } = useMasjidConfig();
+  const { recommendations } = useRecommendation();
   const primary = colors.primary.replace(/ /g, ',');
   const fg = colors.primaryForeground.replace(/ /g, ',');
+
+  if (recommendations.length === 0) return null;
 
   return (
     <View>
@@ -27,23 +31,31 @@ export function RecommendedForYou() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 12 }}
         >
-          {MOCK_RECOMMENDED.map((item) => (
-            <TouchableOpacity key={item.id} activeOpacity={0.85}>
+          {recommendations.map((item) => (
+            <TouchableOpacity key={item.content_id} activeOpacity={0.85}>
               <View
                 className="mb-2 h-[196px] w-[220px] items-center justify-center overflow-hidden rounded-2xl"
                 style={{ backgroundColor: `rgb(${primary})` }}
               >
-                <MaterialCommunityIcons
-                  name={item.icon as IconName}
-                  size={64}
-                  color={`rgba(${fg},0.85)`}
-                />
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="book-open-variant"
+                    size={64}
+                    color={`rgba(${fg},0.85)`}
+                  />
+                )}
               </View>
               <Text className="w-[220px] text-[13px] font-semibold text-foreground">
-                {item.title}
+                {item.name}
               </Text>
               <Text className="w-[220px] text-[11px] text-foreground/60">
-                {item.category}
+                {item.type}
               </Text>
             </TouchableOpacity>
           ))}

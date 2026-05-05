@@ -124,12 +124,12 @@ export default function DiscoverScreen() {
   const isLoading = status === "loading" && items.length === 0;
 
   return (
-    <View className="flex-1 bg-primary">
+    <View className="flex-1" style={{ backgroundColor: "#0A261E" }}>
       <SafeAreaView edges={["top"]} />
       <View className="flex-1" style={{ backgroundColor: "#FFFBF2" }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <DiscoverHeader active={activeTab} onSelect={setActiveTab} />
 

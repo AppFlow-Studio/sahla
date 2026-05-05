@@ -1,8 +1,6 @@
-import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useCallback } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
+import { useUser } from '@clerk/clerk-expo';
+import { useState } from 'react';
+import { ActivityIndicator, ImageBackground, Platform, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +8,7 @@ import EvilIcons from '@expo/vector-icons/EvilIcons';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
+import EditProfileSheet from './EditProfileSheet';
 
 import {
   useFonts,
@@ -17,36 +16,19 @@ import {
   CormorantGaramond_600SemiBold,
 } from '@expo-google-fonts/cormorant-garamond';
 
-function tripletToRgb(triplet: string) {
-  return `rgb(${triplet.replace(/ /g, ',')})`;
-}
-
 export default function ProfileHeader() {
   const { profile, status, error } = useProfile();
-  const { signOut } = useAuth();
   const { user } = useUser();
   const { clerkOrgId, colors } = useMasjidConfig();
-  const primaryRgb = tripletToRgb(colors.primary);
-  const accentRgb = tripletToRgb(colors.accent);
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
-  const router = useRouter();
-  const passwordEnabled = (user as any)?.passwordEnabled ?? false;
 
-  const handleSignOut = useCallback(() => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          useOnboardingStore.getState().reset();
-          queryClient.clear();
-          await signOut();
-        },
-      },
-    ]);
-  }, [signOut, queryClient]);
+  const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
+  const depthRgb = `rgb(${colors.depth.replace(/ /g, ',')})`;
+  const fgRgb = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [editVisible, setEditVisible] = useState(false);
   const [fontsLoaded] = useFonts({
     CormorantGaramond_500Medium,
     CormorantGaramond_600SemiBold,
@@ -58,7 +40,7 @@ export default function ProfileHeader() {
         className="w-full items-center justify-center bg-primary"
         style={{ paddingTop: insets.top, minHeight: 160 }}
       >
-        <ActivityIndicator size="large" color="#D4AF37" />
+        <ActivityIndicator size="large" color={accentRgb} />
       </View>
     );
   }
@@ -71,7 +53,6 @@ export default function ProfileHeader() {
     );
   }
 
-  // Resolve user info: Supabase profile → Clerk metadata (org-keyed) → onboarding store → Clerk user
   const meta = user?.publicMetadata as Record<string, any> | undefined;
   const metaFirstName = clerkOrgId ? meta?.[clerkOrgId]?.firstName : null;
   const storedFirstName = useOnboardingStore.getState().firstName;
@@ -98,133 +79,131 @@ export default function ProfileHeader() {
 
   const initial = firstName?.charAt(0) ?? '?';
 
+  const vectorHeight =
+    headerHeight > 0 ? Math.round(headerHeight * 0.60) : undefined;
+
   return (
     <View className="relative w-full overflow-hidden bg-primary">
       <LinearGradient
-        colors={[primaryRgb, primaryRgb]}
+        colors={[depthRgb, primaryRgb]}
         className="w-full"
-        style={{ paddingTop: insets.top + 5, paddingBottom: 28 }}
+        style={{ paddingTop: insets.top + 5, paddingBottom: 48 }}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0) setHeaderHeight(h);
+        }}
       >
-        <Image
-          source={require('@/assets/islamic-pattern.png')}
-          tintColor={accentRgb}
+        <ImageBackground
+          source={require('@/assets/images/Vector.png')}
+          resizeMode="cover"
+          className="absolute left-0 right-0 top-0 w-full"
           style={{
-            position: 'absolute',
-            top: -10,
-            left: 0,
-            right: 0,
-            height: 340,
-            opacity: 0.35,
-            transform: [{ rotate: '180deg' }],
+            height: vectorHeight ?? 200,
+            opacity: 0.78,
+            zIndex: 1,
+            pointerEvents: 'none',
           }}
-          contentFit="cover"
-          pointerEvents="none"
         />
 
         <View className="relative z-10 w-full items-center px-4">
-        {/* Avatar */}
-        <Pressable className="relative h-20 w-20">
-          {hasPhoto && url ? (
-            <Image
-              source={{ uri: url }}
-              style={{ width: 80, height: 80, borderRadius: 40 }}
-              contentFit="cover"
-            />
-          ) : (
-            <View className="h-full w-full items-center justify-center rounded-full bg-[#5A6652]">
-              <Text
-                className="text-5xl text-primary-foreground text-center "
-                style={{
-                  fontFamily: 'CormorantGaramond_500Medium',
-                  lineHeight: 48,
-                  marginLeft: 5,
-                  marginTop: 3,
-                }}
+          {/* Avatar */}
+          <Pressable onPress={() => setEditVisible(true)} style={{ width: 57, height: 57, position: 'relative' }}>
+            {hasPhoto && url ? (
+              <Image
+                source={{ uri: url }}
+                style={{ width: 57, height: 57, borderRadius: 28.5 }}
+                contentFit="cover"
+              />
+            ) : (
+              <View
+                style={{ width: 57, height: 57, borderRadius: 28.5 }}
+                className="items-center justify-center bg-muted-foreground"
               >
-                {initial}
-              </Text>
+                <Text
+                  className="text-primary-foreground text-center"
+                  style={{
+                    fontFamily: 'CormorantGaramond_500Medium',
+                    fontSize: 30,
+                    lineHeight: 34,
+                  }}
+                >
+                  {initial}
+                </Text>
+              </View>
+            )}
+            <View
+              className="absolute rounded-full bg-accent items-center justify-center"
+              style={{ width: 15, height: 15, top: -2, right: -8 }}
+            >
+              <EvilIcons name="pencil" size={11} color={fgRgb} />
             </View>
-          )}
-          <View className="absolute -bottom-2 -right-2 rounded-full bg-accent p-1">
-            <EvilIcons name="pencil" size={14} color="#FFFBF2" />
-          </View>
-        </Pressable>
+          </Pressable>
 
-        {/* Name */}
-        <Text
-          className="mt-2 text-center text-3xl text-primary-foreground"
-          style={{ fontFamily: 'CormorantGaramond_600SemiBold' }}
-        >
-          {fullName}
-        </Text>
-
-        {/* Signed-in email */}
-        {user?.primaryEmailAddress?.emailAddress && (
+          {/* Name */}
           <Text
-            className="mt-0.5 text-center text-xs text-[#FFFBF280]"
-            style={{ fontWeight: '400' }}
-          >
-            {user.primaryEmailAddress.emailAddress}
-          </Text>
-        )}
-
-        {/* Member since */}
-        {createdYear && (
-          <Text
-            className="mb-0.5 text-center text-xs text-[#FFFBF260]"
+            className="mt-1.5 text-center text-primary-foreground"
             style={{
-              fontFamily: Platform.select({
-                android: 'Roboto',
-                default: 'sans-serif',
-              }),
-              fontWeight: '400',
+              fontFamily: 'CormorantGaramond_600SemiBold',
+              fontSize: 20,
             }}
           >
-            Member Since {createdYear}
+            {fullName}
           </Text>
-        )}
 
-        {/* Action buttons */}
-        <View className="mt-3 flex-row items-center justify-center gap-3">
-  {!isProfileComplete && (
-    <Pressable className="flex-row items-center justify-center rounded-full border border-accent px-5 py-2.5" style={{ minWidth: 130 }}>
-      <View className="mr-2 items-center justify-center">
-    {/* Glow */}
-    <View className="absolute h-4 w-4 rounded-full bg-accent opacity-20" />
-    {/* Dot */}
-    <View className="h-2.5 w-2.5 rounded-full bg-accent" />
-  </View>
-      <Text className="text-xs font-medium text-accent">Complete Profile</Text>
-    </Pressable>
-  )}
-  <Pressable
-    className="items-center justify-center rounded-full border border-[#FFFBF280] px-5 py-2.5 "
-    style={{ minWidth: 130 }}
-  >
-    <Text className="text-xs font-medium text-[#FFFBF2]">Edit Profile</Text>
-  </Pressable>
-</View>
-
-        <View className="mt-3 flex-row items-center justify-center gap-3">
-          {passwordEnabled && (
-            <Pressable
-              onPress={() => router.push('/change-password')}
-              className="items-center justify-center rounded-full border border-[#FFFBF280] px-5 py-2.5"
-              style={{ minWidth: 130 }}
+          {/* Member since */}
+          {createdYear && (
+            <Text
+              className="text-center text-primary-foreground/60"
+              style={{
+                fontFamily: Platform.select({
+                  android: 'Roboto',
+                  default: undefined,
+                }),
+                fontWeight: '400',
+                fontSize: 8,
+              }}
             >
-              <Text className="text-xs font-medium text-[#FFFBF2]">Change Password</Text>
-            </Pressable>
+              Member Since {createdYear}
+            </Text>
           )}
-          <Pressable
-            onPress={handleSignOut}
-            className="items-center justify-center rounded-full border border-red-500/50 px-5 py-2.5"
-            style={{ minWidth: 130 }}
-          >
-            <Text className="text-xs font-medium text-red-400">Sign Out</Text>
-          </Pressable>
-        </View>
+
+          {/* Action buttons */}
+          <View className="mt-2 flex-row items-center justify-center gap-2">
+            {!isProfileComplete && (
+              <Pressable
+                className="flex-row items-center justify-center rounded-full border-accent/50"
+                style={{
+                  borderWidth: 0.5,
+                  paddingHorizontal: 14,
+                  paddingVertical: 4,
+                }}
+              >
+                <View className="mr-1.5 items-center justify-center">
+                  <View className="absolute h-3 w-3 rounded-full bg-accent opacity-20" />
+                  <View className="rounded-full bg-accent" style={{ width: 4, height: 4 }} />
+                </View>
+                <Text className="text-accent" style={{ fontSize: 8, fontWeight: '400' }}>
+                  Complete Profile
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => setEditVisible(true)}
+              className="items-center justify-center rounded-full border-primary-foreground/50"
+              style={{
+                borderWidth: 0.5,
+                paddingHorizontal: 14,
+                paddingVertical: 4,
+              }}
+            >
+              <Text className="text-primary-foreground" style={{ fontSize: 8, fontWeight: '400' }}>
+                Edit Profile
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </LinearGradient>
+      <EditProfileSheet visible={editVisible} onClose={() => setEditVisible(false)} />
     </View>
   );
 }

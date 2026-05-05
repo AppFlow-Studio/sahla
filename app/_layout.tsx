@@ -1,5 +1,8 @@
 import '../global.css';
 
+// import { LogBox } from 'react-native';
+// LogBox.ignoreLogs(['forwardRef render functions']);
+
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
@@ -14,6 +17,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
@@ -53,9 +58,6 @@ function RootNavigator() {
   const showAuth = !authenticated;
   const showOnboarding = authenticated && !onboardingComplete && !devBypass;
   const showMain = authenticated && (onboardingComplete || devBypass);
-
-  console.log('[RootNav] isSignedIn:', isSignedIn, 'onboardingComplete:', onboardingComplete, 'devBypass:', devBypass);
-  console.log('[RootNav] → showAuth:', showAuth, 'showOnboarding:', showOnboarding, 'showMain:', showMain);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -107,12 +109,14 @@ export default function RootLayout() {
           <QueryProvider>
             <SupabaseProvider>
               <ConfigProvider>
-                <ThemeRoot>
-                  <DonationProvider>
-                    <RootNavigator />
-                    <StatusBar style="auto" />
-                  </DonationProvider>
-                </ThemeRoot>
+                {/* <StripeProvider publishableKey={env.STRIPE_PUBLISHABLE_KEY}> */}
+                  <ThemeRoot>
+                    <DonationProvider>
+                      <RootNavigator />
+                      <StatusBar style="auto" />
+                    </DonationProvider>
+                  </ThemeRoot>
+                {/* </StripeProvider> */}
               </ConfigProvider>
             </SupabaseProvider>
           </QueryProvider>

@@ -8,7 +8,8 @@ type Props = {
 
 export default function PersonalizedCard({ onPress }: Props) {
   return (
-    <Pressable className="py-2.5 w-full flex-row justify-between items-center bg-[#B8922A33] rounded-full px-4"
+    <Pressable className="w-full flex-row justify-between items-center bg-accent/20 rounded-[30px] px-5"
+    style={{ minHeight: 53, paddingVertical: 12 }}
     onPress={onPress}
     >
         <View className="flex-row items-center gap-1">
@@ -22,38 +23,33 @@ export default function PersonalizedCard({ onPress }: Props) {
             />
             <View className="flex-col ml-2">
                 <Text
+                className="text-foreground"
                 style = {{
                     fontFamily: Platform.select({ android: "Roboto", default: undefined }),
                     fontWeight: "600",
                     fontSize: 11,
                     lineHeight: 18,
-                    color: "#0A261E",
                     letterSpacing: 0,
-                    
                 }}
                 >
                 Personalize Preferences
                 </Text>
                 <Text
+                className="text-foreground/60"
                 style = {{
                     fontFamily: Platform.select({ android: "Roboto", default: undefined }),
                     fontWeight: "400",
                     fontSize: 10,
                     lineHeight: 18,
-                    color: "#0A261E99",
                     letterSpacing: 0,
                 }}
                 >
                     Get your content recommended just for you
                 </Text>
-
             </View>
-
-
         </View>
 
-        <IconSymbol name="chevron.right" size={10} color="#0A261E99" />
-
+        <IconSymbol name="chevron.right" size={8} className="text-foreground/40" />
     </Pressable>
   )
 }

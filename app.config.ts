@@ -65,10 +65,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
-    'expo-secure-store',
     'expo-sqlite',
     'expo-asset',
     'expo-apple-authentication',
+    [
+      '@stripe/stripe-react-native',
+      {
+        merchantIdentifier: `merchant.${IOS_BUNDLE_ID}`,
+        enableGooglePay: true,
+      },
+    ],
     [
       'expo-splash-screen',
       {

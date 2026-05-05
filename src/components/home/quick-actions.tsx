@@ -3,8 +3,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { MOCK_QUICK_ACTIONS } from '@/src/data/mock-home';
 import { useDonation } from '@/src/providers/donation-provider';
+
+const QUICK_ACTIONS = [
+  { id: 'donate', icon: 'heart', label: 'DONATE' },
+  { id: 'volunteer', icon: 'account-group', label: 'VOLUNTEER' },
+  { id: 'advertise', icon: 'bullhorn', label: 'ADVERTISE' },
+  { id: 'prayers', icon: 'clock', label: 'PRAYERS' },
+] as const;
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -21,7 +27,7 @@ export function QuickActions() {
 
   return (
     <View className="flex-row justify-center gap-4">
-      {MOCK_QUICK_ACTIONS.map((action) => (
+      {QUICK_ACTIONS.map((action) => (
         <TouchableOpacity
           key={action.id}
           className="items-center"
