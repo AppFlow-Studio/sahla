@@ -1,9 +1,8 @@
 import { createContext, lazy, Suspense, useContext, useState } from 'react';
 
-// TODO: uncomment after rebuilding dev client with Stripe native module (npx expo run:ios)
-// const DonationModal = lazy(() =>
-//   import('@/src/components/donation-modal').then((m) => ({ default: m.DonationModal })),
-// );
+const DonationModal = lazy(() =>
+  import('@/src/components/donation-modal').then((m) => ({ default: m.DonationModal })),
+);
 
 type DonationContextValue = {
   open: () => void;
@@ -23,11 +22,9 @@ export function DonationProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-      {/* TODO: uncomment after rebuilding dev client with Stripe native module
       <Suspense fallback={null}>
         {visible && <DonationModal visible={visible} onClose={() => setVisible(false)} />}
       </Suspense>
-      */}
     </DonationContext.Provider>
   );
 }

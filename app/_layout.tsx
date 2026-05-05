@@ -18,7 +18,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// import { StripeProvider } from '@stripe/stripe-react-native';
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
@@ -109,14 +109,14 @@ export default function RootLayout() {
           <QueryProvider>
             <SupabaseProvider>
               <ConfigProvider>
-                {/* <StripeProvider publishableKey={env.STRIPE_PUBLISHABLE_KEY}> */}
+                <StripeProvider publishableKey={env.STRIPE_PUBLISHABLE_KEY}>
                   <ThemeRoot>
                     <DonationProvider>
                       <RootNavigator />
                       <StatusBar style="auto" />
                     </DonationProvider>
                   </ThemeRoot>
-                {/* </StripeProvider> */}
+                </StripeProvider>
               </ConfigProvider>
             </SupabaseProvider>
           </QueryProvider>
