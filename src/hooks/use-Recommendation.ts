@@ -39,12 +39,16 @@ export function useRecommendation() {
   const supabase = useSupabase();
   const config = useMasjidConfig();
 
+  console.log('[useRecommendation] gate:', { isLoaded, userId, configId: config.id, enabled: isLoaded && !!userId });
+
   const query = useQuery({
     queryKey: ['recommendations', userId, config.id],
     queryFn: async (): Promise<RecommendationItem[]> => {
+      console.log('[useRecommendation] invoking recommend with:', { user_id: userId, mosque_slug: config.id });
       const { data, error } = await supabase.functions.invoke<EdgeResponse>('recommend', {
-        body: { user_id: userId, mosque_slug: config.id },
+        body: { user_id: userId, mosque_slug: config.id, force: true },
       });
+      console.log('[useRecommendation] response:', { hasData: !!data, count: data?.count, itemCount: data?.items?.length, error: error?.message });
 
       if (error) throw new Error(error.message);
       if (!data) throw new Error('Empty response from recommend function');

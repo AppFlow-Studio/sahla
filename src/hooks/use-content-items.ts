@@ -14,10 +14,16 @@ export type ContentItem = {
   end_date: string | null;
   start_time: string | null;
   days: string[] | null;
+  speakers: string[] | null;
+  is_kids: boolean | null;
+  is_fourteen_plus: boolean | null;
+  is_young_professionals: boolean;
+  is_pace: boolean;
+  is_quran: boolean;
 };
 
 const SELECT =
-  'content_id, name, description, image, type, start_date, end_date, start_time, days' as const;
+  'content_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_kids, is_fourteen_plus, is_young_professionals, is_pace, is_quran' as const;
 
 export function useContentItems() {
   const supabase = useSupabase();

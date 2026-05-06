@@ -8,6 +8,7 @@ const TABS = ["All", "For You", "Events", "Programs"] as const;
 type Tab = (typeof TABS)[number];
 
 type Props = {
+  title?: string;
   active?: Tab;
   onSelect?: (tab: Tab) => void;
   onPressSearch?: () => void;
@@ -20,6 +21,7 @@ const platformUiFont = Platform.select({
 });
 
 export default function DiscoverHeader({
+  title = "Discover",
   active = "All",
   onSelect,
   onPressSearch,
@@ -34,7 +36,7 @@ export default function DiscoverHeader({
           color: BUSH,
         }}
       >
-        Discover
+        {title}
       </Text>
 
       <View className="mt-4 flex-row items-center">

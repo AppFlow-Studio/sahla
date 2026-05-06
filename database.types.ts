@@ -493,6 +493,9 @@ export type Database = {
           is_fourteen_plus: boolean | null
           is_kids: boolean | null
           is_paid: boolean | null
+          is_pace: boolean
+          is_quran: boolean
+          is_young_professionals: boolean
           max_capacity: number | null
           mosque_id: string
           name: string | null
@@ -519,6 +522,9 @@ export type Database = {
           is_fourteen_plus?: boolean | null
           is_kids?: boolean | null
           is_paid?: boolean | null
+          is_pace?: boolean
+          is_quran?: boolean
+          is_young_professionals?: boolean
           max_capacity?: number | null
           mosque_id: string
           name?: string | null
@@ -545,6 +551,9 @@ export type Database = {
           is_fourteen_plus?: boolean | null
           is_kids?: boolean | null
           is_paid?: boolean | null
+          is_pace?: boolean
+          is_quran?: boolean
+          is_young_professionals?: boolean
           max_capacity?: number | null
           mosque_id?: string
           name?: string | null
@@ -2933,6 +2942,9 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          additional_preferences: string[]
+          attendance_reasons: string[]
+          attendance_windows: string[]
           birth_year: number | null
           children_ages: number[] | null
           gender: string | null
@@ -2943,9 +2955,13 @@ export type Database = {
           mosque_id: string
           preferred_days: string[] | null
           preferred_times: string[] | null
+          programs_for: string[]
           user_id: string
         }
         Insert: {
+          additional_preferences?: string[]
+          attendance_reasons?: string[]
+          attendance_windows?: string[]
           birth_year?: number | null
           children_ages?: number[] | null
           gender?: string | null
@@ -2956,9 +2972,13 @@ export type Database = {
           mosque_id: string
           preferred_days?: string[] | null
           preferred_times?: string[] | null
+          programs_for?: string[]
           user_id: string
         }
         Update: {
+          additional_preferences?: string[]
+          attendance_reasons?: string[]
+          attendance_windows?: string[]
           birth_year?: number | null
           children_ages?: number[] | null
           gender?: string | null
@@ -2969,6 +2989,7 @@ export type Database = {
           mosque_id?: string
           preferred_days?: string[] | null
           preferred_times?: string[] | null
+          programs_for?: string[]
           user_id?: string
         }
         Relationships: [

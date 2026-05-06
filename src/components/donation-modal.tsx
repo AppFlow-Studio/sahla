@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import ThankYouOrnament from '@/assets/thank-you-ornament.svg';
 
+
 const PRESETS = [25, 50, 100];
 const SCREEN_H = Dimensions.get('window').height;
 const KEYPAD_HEIGHT = 200;

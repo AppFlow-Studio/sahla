@@ -1,4 +1,6 @@
 import { useAuth } from '@clerk/clerk-expo';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Platform,
@@ -23,6 +25,7 @@ type SavedEvent = {
   content_id: string;
   name: string | null;
   image: string | null;
+  type: string | null;
   start_date: string | null;
   start_time: string | null;
   local_image?: number;
@@ -33,6 +36,7 @@ const FALLBACK_EVENTS: SavedEvent[] = Array.from({ length: 5 }, (_, i) => ({
   content_id: `fallback-post-fajir-breakfast-${i}`,
   name: 'Post-Fajir Breakfast',
   image: null,
+  type: null,
   start_date: 'April 19, 2026',
   start_time: '2 hours',
   local_image: require('@/assets/images/Aboodi.png'),
@@ -89,25 +93,30 @@ export default function Saved_Events() {
 
       if (cancelled || !mosque) return;
 
-      const { data } = await supabaseRef.current
+      const { data, error } = await supabaseRef.current
         .from('saved_content')
         .select(
           'content_id, content_items!inner(name, image, type, start_date, start_time)',
         )
         .eq('user_id', userId)
-        .eq('mosque_id', mosque.id)
-        .eq('content_items.type', 'event');
+        .eq('mosque_id', mosque.id);
 
       if (cancelled) return;
+      if (error) {
+        console.warn('[Saved_Events] fetch failed', error);
+        return;
+      }
 
       const rows = (data ?? [])
         .map((r: any) => ({
           content_id: r.content_id,
           name: r.content_items?.name ?? null,
           image: r.content_items?.image ?? null,
+          type: r.content_items?.type ?? null,
           start_date: r.content_items?.start_date ?? null,
           start_time: r.content_items?.start_time ?? null,
-        }));
+        }))
+        .filter((r) => r.type === 'event' || r.type === 'program');
 
       setEvents(rows);
     })();
@@ -125,7 +134,20 @@ export default function Saved_Events() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
-          <View className="px-6 pt-4">
+          <View className="px-6 pt-2">
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{
+                width: 36,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: -8,
+              }}
+            >
+              <Ionicons name="chevron-back" size={26} color={INK} />
+            </Pressable>
             <Text
               style={{
                 fontFamily: 'PlayfairDisplay_500Medium',
@@ -138,39 +160,55 @@ export default function Saved_Events() {
             </Text>
           </View>
 
-          <StatsCard total={24} lectures={11} events={8} />
+          {(() => {
+            const eventItems = events.filter((e) => e.type === 'event');
+            const programItems = events.filter((e) => e.type === 'program');
+            return (
+              <>
+                <StatsCard
+                  total={events.length}
+                  events={eventItems.length}
+                  programs={programItems.length}
+                />
 
-          <SegmentedTabs value={tab} onChange={setTab} />
+                <SegmentedTabs value={tab} onChange={setTab} />
 
-          <View style={{ marginTop: 24, overflow: 'hidden' }}>
-            <Animated.View
-              style={[
-                { flexDirection: 'row', width: screenWidth * 2 },
-                slideStyle,
-              ]}
-            >
-              <View style={{ width: screenWidth }}>
-                {(events.length > 0 ? events : FALLBACK_EVENTS).map(
-                  (item, idx, arr) => (
-                    <SavedRow
-                      key={`events-${item.content_id}`}
-                      item={item}
-                      isLast={idx === arr.length - 1}
-                    />
-                  ),
-                )}
-              </View>
-              <View style={{ width: screenWidth }}>
-                {FALLBACK_EVENTS.map((item, idx, arr) => (
-                  <SavedRow
-                    key={`programs-${item.content_id}`}
-                    item={item}
-                    isLast={idx === arr.length - 1}
-                  />
-                ))}
-              </View>
-            </Animated.View>
-          </View>
+                <View style={{ marginTop: 24, overflow: 'hidden' }}>
+                  <Animated.View
+                    style={[
+                      { flexDirection: 'row', width: screenWidth * 2 },
+                      slideStyle,
+                    ]}
+                  >
+                    <View style={{ width: screenWidth }}>
+                      {(eventItems.length > 0
+                        ? eventItems
+                        : FALLBACK_EVENTS
+                      ).map((item, idx, arr) => (
+                        <SavedRow
+                          key={`events-${item.content_id}`}
+                          item={item}
+                          isLast={idx === arr.length - 1}
+                        />
+                      ))}
+                    </View>
+                    <View style={{ width: screenWidth }}>
+                      {(programItems.length > 0
+                        ? programItems
+                        : FALLBACK_EVENTS
+                      ).map((item, idx, arr) => (
+                        <SavedRow
+                          key={`programs-${item.content_id}`}
+                          item={item}
+                          isLast={idx === arr.length - 1}
+                        />
+                      ))}
+                    </View>
+                  </Animated.View>
+                </View>
+              </>
+            );
+          })()}
         </ScrollView>
       </View>
     </View>
@@ -179,12 +217,12 @@ export default function Saved_Events() {
 
 function StatsCard({
   total,
-  lectures,
   events,
+  programs,
 }: {
   total: number;
-  lectures: number;
   events: number;
+  programs: number;
 }) {
   return (
     <View className="mt-2 px-5">
@@ -219,10 +257,10 @@ function StatsCard({
           <Stat label="TOTAL" value={total} />
         </View>
         <View style={{ marginLeft: 60 }}>
-          <Stat label="LECTURES" value={lectures} />
+          <Stat label="EVENTS" value={events} />
         </View>
         <View style={{ marginLeft: 75 }}>
-          <Stat label="EVENTS" value={events} />
+          <Stat label="PROGRAMS" value={programs} />
         </View>
       </View>
     </View>

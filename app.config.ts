@@ -70,6 +70,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-asset',
     'expo-apple-authentication',
     [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'Allow $(PRODUCT_NAME) to access your photos to set your profile picture.',
+        cameraPermission:
+          'Allow $(PRODUCT_NAME) to access your camera to take a profile picture.',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/images/splash-icon.png',
