@@ -5,11 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
-import {
-  MOCK_CURRENT_TIME,
-  MOCK_HIJRI_DATE,
-  MOCK_NEXT_PRAYER,
-} from '@/src/data/mock-home';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 import { PrayerTimesBar } from './prayer-times-bar';
 
 const patternSource = require('@/assets/islamic-pattern.png');
@@ -20,6 +16,7 @@ export function HomeHeader() {
   const { user } = useUser();
   const storedFirstName = useOnboardingStore((s) => s.firstName);
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const { currentTime, hijriDate, nextPrayer } = usePrayerTimes();
 
   // Read firstName: Clerk metadata (org-keyed) → onboarding store → Clerk user
   const meta = user?.publicMetadata as Record<string, any> | undefined;
@@ -70,29 +67,33 @@ export function HomeHeader() {
             fontFamily: 'PlayfairDisplay_400Regular',
           }}
         >
-          {MOCK_CURRENT_TIME}
+          {currentTime}
         </Text>
 
-        <Text
-          className="text-primary-foreground"
-          style={{ fontSize: 13, fontWeight: '600', marginTop: 4 }}
-        >
-          {MOCK_HIJRI_DATE}
-        </Text>
-
-        <View className="mt-3 flex-row items-center">
-          <View
-            className="mr-1.5 bg-accent"
-            style={{ height: 6, width: 6, borderRadius: 3 }}
-          />
-          <Text style={{ fontSize: 13 }}>
-            <Text className="text-primary-foreground/50">{MOCK_NEXT_PRAYER.name}</Text>
-            <Text className="text-primary-foreground/80">
-              {' '}
-              {MOCK_NEXT_PRAYER.type} in {MOCK_NEXT_PRAYER.timeRemaining}
-            </Text>
+        {hijriDate ? (
+          <Text
+            className="text-primary-foreground"
+            style={{ fontSize: 13, fontWeight: '600', marginTop: 4 }}
+          >
+            {hijriDate}
           </Text>
-        </View>
+        ) : null}
+
+        {nextPrayer && (
+          <View className="mt-3 flex-row items-center">
+            <View
+              className="mr-1.5 bg-accent"
+              style={{ height: 6, width: 6, borderRadius: 3 }}
+            />
+            <Text style={{ fontSize: 13 }}>
+              <Text className="text-primary-foreground/50">{nextPrayer.name}</Text>
+              <Text className="text-primary-foreground/80">
+                {' '}
+                {nextPrayer.type} in {nextPrayer.timeRemaining}
+              </Text>
+            </Text>
+          </View>
+        )}
       </View>
 
       <View className="mt-6 pb-6">

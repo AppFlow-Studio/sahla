@@ -10,7 +10,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFonts } from 'expo-font';
 import TopOrnament from '../../assets/quran-top-ornament.svg';
 import {
   getPageForAyah,
@@ -59,10 +58,6 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
     setSelected(s);
     setInitialMushafOverride(null);
   };
-
-  const [fontsLoaded] = useFonts({
-    UthmanicHafs: require('../../assets/fonts/UthmanicHafs_V22.ttf'),
-  });
 
   const insets = useSafeAreaInsets();
 
@@ -177,7 +172,7 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
 
   function renderSurahList() {
 
-  if (loading || !fontsLoaded) {
+  if (loading) {
     return (
       <View style={[styles.root, styles.center]}>
         <ActivityIndicator size="large" color={palette.gold} />

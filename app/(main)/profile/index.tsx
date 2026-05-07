@@ -10,7 +10,7 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   return (
-    <View className="flex-1" style={{ backgroundColor: "#0D2B1A" }}>
+    <View className="flex-1 bg-depth">
       <Image
         source={require("@/assets/images/islamic-pattern.png")}
         style={{
@@ -27,6 +27,8 @@ export default function ProfileScreen() {
       <ScrollView
         className="flex-1"
         style={{ backgroundColor: "transparent" }}
+        bounces={false}
+        overScrollMode="never"
         contentInsetAdjustmentBehavior={
           Platform.OS === "ios" ? "never" : undefined
         }
@@ -35,7 +37,6 @@ export default function ProfileScreen() {
           <ProfileHeader />
           <ProfileBody
             onPressPersonalized={() => router.push("/(personalization)/reasons")}
-            onPressDonate={openDonate}
             onPressNotifications={() => Linking.openSettings()}
           />
         </View>

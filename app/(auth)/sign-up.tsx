@@ -37,10 +37,21 @@ export default function SignUpScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await signUp.create({ emailAddress: email, password });
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      setPendingVerification(true);
-    } catch (err) {
+      console.log('[SignUp] creating with:', email);
+      const created = await signUp.create({ emailAddress: email, password });
+      console.log('[SignUp] create result status:', created.status);
+      if (created.status === 'missing_requirements') {
+        await created.prepareEmailAddressVerification({ strategy: 'email_code' });
+        setPendingVerification(true);
+      } else if (created.status === 'complete') {
+        await setActive({ session: created.createdSessionId });
+        const userId = clerk.user?.id;
+        if (userId) await joinAndActivateOrg(userId);
+      } else {
+        setError(`Unexpected status: ${created.status}`);
+      }
+    } catch (err: any) {
+      console.error('[SignUp] full error:', JSON.stringify(err?.errors ?? err, null, 2));
       setError(clerkError(err));
     } finally {
       setSubmitting(false);

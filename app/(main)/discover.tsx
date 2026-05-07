@@ -183,6 +183,14 @@ export default function DiscoverScreen() {
   const { items, status, error } = useContentItems();
   const { recommendations, status: recStatus, error: recError } = useRecommendation();
 
+  const filtered = useMemo(() => {
+    if (activeTab === "All") return items;
+    if (activeTab === "Events") return items.filter((i) => i.type === "event");
+    if (activeTab === "Programs") return items.filter((i) => i.type === "program");
+    // "For You" — show a curated subset (first 4)
+    return items.filter((_, idx) => idx % 2 === 0);
+  }, [items, activeTab]);
+
   const recommendedItems: RecommendedItem[] = useMemo(
     () =>
       recommendations.map((r) => ({
@@ -196,14 +204,17 @@ export default function DiscoverScreen() {
 
   const upcomingItems: EventItem[] = useMemo(
     () =>
-      items.slice(0, 3).map((r) => ({
-        id: r.content_id,
-        title: r.name ?? "Untitled",
-        dateLabel: formatScheduleLabel(r.type, r.start_date, r.end_date, r.start_time, r.days),
-        description: r.description ?? "",
-        thumbnail: r.image ? { uri: r.image } : undefined,
-      })),
-    [items],
+      filtered
+        .filter((r) => activeTab === "Programs" ? r.type === "program" : true)
+        .slice(0, 3)
+        .map((r) => ({
+          id: r.content_id,
+          title: r.name ?? "Untitled",
+          dateLabel: formatScheduleLabel(r.type, r.start_date, r.end_date, r.start_time, r.days),
+          description: r.description ?? "",
+          thumbnail: r.image ? { uri: r.image } : undefined,
+        })),
+    [filtered, activeTab],
   );
 
   const itemsById = useMemo(() => {
@@ -318,7 +329,7 @@ export default function DiscoverScreen() {
       <View className="flex-1" style={{ backgroundColor: "#FFFBF2" }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <DiscoverHeader
           title={
@@ -386,7 +397,7 @@ export default function DiscoverScreen() {
                   onPressItem={openContent}
                 />
                 <View className="px-6" style={{ marginTop: 24 }}>
-                  <DonateCard onPress={openDonate} />
+                  <DonateCard />
                 </View>
               </>
             ) : activeTab === "Programs" ? (
@@ -398,7 +409,7 @@ export default function DiscoverScreen() {
                 onPressSeeAll={(audience) =>
                   setProgramsInitialFilter(audience)
                 }
-                allTabFooter={<DonateCard onPress={openDonate} />}
+                allTabFooter={<DonateCard />}
               />
             ) : (
               <>

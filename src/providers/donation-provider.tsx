@@ -1,6 +1,8 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, lazy, Suspense, useContext, useState } from 'react';
 
-import { DonationModal } from '@/src/components/donation-modal';
+const DonationModal = lazy(() =>
+  import('@/src/components/donation-modal').then((m) => ({ default: m.DonationModal })),
+);
 
 type DonationContextValue = {
   open: () => void;
@@ -20,7 +22,9 @@ export function DonationProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-      <DonationModal visible={visible} onClose={() => setVisible(false)} />
+      <Suspense fallback={null}>
+        {visible && <DonationModal visible={visible} onClose={() => setVisible(false)} />}
+      </Suspense>
     </DonationContext.Provider>
   );
 }

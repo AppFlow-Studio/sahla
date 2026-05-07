@@ -1,8 +1,12 @@
 import { View, Text } from 'react-native';
 
-import { MOCK_EVENTS, MOCK_EVENTS_DATE } from '@/src/data/mock-home';
+import { useTodaysEvents } from '@/src/hooks/use-todays-events';
 
 export function TodaysEvents() {
+  const { events, date } = useTodaysEvents();
+
+  if (events.length === 0) return null;
+
   return (
     <View>
       <View className="flex-row items-end justify-between pb-2">
@@ -10,16 +14,16 @@ export function TodaysEvents() {
           Today&apos;s Events
         </Text>
         <Text className="text-[11px] font-semibold text-accent">
-          {MOCK_EVENTS_DATE}
+          {date}
         </Text>
       </View>
 
       <View className="border-t border-foreground">
-        {MOCK_EVENTS.map((event, index) => (
+        {events.map((event, index) => (
           <View
             key={event.id}
             className={`flex-row items-center ${
-              index < MOCK_EVENTS.length - 1
+              index < events.length - 1
                 ? 'border-b border-foreground/15'
                 : ''
             }`}

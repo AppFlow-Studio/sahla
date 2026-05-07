@@ -14,7 +14,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import type { JummahSlot } from '@/src/data/mock-home';
+import type { JummahSlot } from '@/src/hooks/use-jummah-schedule';
 
 const SCREEN_H = Dimensions.get('window').height;
 

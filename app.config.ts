@@ -65,7 +65,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
-    'expo-secure-store',
     'expo-sqlite',
     'expo-asset',
     'expo-apple-authentication',
@@ -76,6 +75,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'Allow $(PRODUCT_NAME) to access your photos to set your profile picture.',
         cameraPermission:
           'Allow $(PRODUCT_NAME) to access your camera to take a profile picture.',
+      },
+    ],
+    [
+      '@stripe/stripe-react-native',
+      {
+        merchantIdentifier: `merchant.${IOS_BUNDLE_ID}`,
+        enableGooglePay: true,
       },
     ],
     [

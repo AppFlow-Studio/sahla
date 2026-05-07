@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useRecommendation } from '@/src/hooks/use-Recommendation';
@@ -17,6 +18,8 @@ export function RecommendedForYou() {
   const { recommendations, status, error } = useRecommendation();
   const primary = colors.primary.replace(/ /g, ',');
   const fg = colors.primaryForeground.replace(/ /g, ',');
+
+  if (recommendations.length === 0) return null;
 
   return (
     <View>
@@ -49,11 +52,19 @@ export function RecommendedForYou() {
                 className="mb-2 h-[196px] w-[220px] items-center justify-center overflow-hidden rounded-2xl"
                 style={{ backgroundColor: `rgb(${primary})` }}
               >
-                <MaterialCommunityIcons
-                  name={ICON_BY_TYPE[item.type ?? ''] ?? 'star-outline'}
-                  size={64}
-                  color={`rgba(${fg},0.85)`}
-                />
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <MaterialCommunityIcons
+                    name={ICON_BY_TYPE[item.type ?? ''] ?? 'star-outline'}
+                    size={64}
+                    color={`rgba(${fg},0.85)`}
+                  />
+                )}
               </View>
               <Text className="w-[220px] text-[13px] font-semibold text-foreground" numberOfLines={1}>
                 {item.name ?? 'Untitled'}

@@ -25,6 +25,7 @@ export function ThemeRoot({ children }: { children: React.ReactNode }) {
     '--color-border': config.colors.border,
     '--color-card': config.colors.card,
     '--color-card-foreground': config.colors.cardForeground,
+    '--color-depth': config.colors.depth,
     '--color-onboarding-bg': config.colors.onboardingBackground,
     '--color-onboarding-surface': config.colors.onboardingSurface,
     '--color-onboarding-accent': config.colors.onboardingAccent,

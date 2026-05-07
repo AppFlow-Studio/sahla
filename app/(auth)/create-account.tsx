@@ -5,6 +5,7 @@ import { Link, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
@@ -113,7 +114,7 @@ export default function CreateAccountScreen() {
       if (Platform.OS === 'ios') {
         result = await startAppleAuthenticationFlow();
       } else {
-        result = await startSSOFlow({ strategy: 'oauth_apple' });
+        result = await startSSOFlow({ strategy: 'oauth_apple', redirectUrl: Linking.createURL('/') });
         if (result.authSessionResult?.type === 'dismiss') return;
       }
       await activateOAuthSession(result);
@@ -130,7 +131,7 @@ export default function CreateAccountScreen() {
     if (isSignedIn) await signOut().catch(() => {});
     setLoading('google');
     try {
-      const result = await startSSOFlow({ strategy: 'oauth_google' });
+      const result = await startSSOFlow({ strategy: 'oauth_google', redirectUrl: Linking.createURL('/') });
       if (result.authSessionResult?.type === 'dismiss') return;
       await activateOAuthSession(result);
     } catch (err) {
