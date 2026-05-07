@@ -1,3 +1,4 @@
+import { useAuth } from "@clerk/clerk-expo";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
@@ -21,7 +22,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import SpeakerInfoModal from "@/components/Discover/SpeakerInfoModal";
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useConfigStore } from "@/src/stores/config-store";
 
 const BUSH = "#0A261E";
 const TRAY_BG = "#EFEDE6";
@@ -80,11 +83,16 @@ export default function ContentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const supabase = useSupabase();
   const insets = useSafeAreaInsets();
+  const { userId } = useAuth();
+  const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
   );
   const [error, setError] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [speakerModalOpen, setSpeakerModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +124,56 @@ export default function ContentDetailScreen() {
       cancelled = true;
     };
   }, [id, supabase]);
+
+  useEffect(() => {
+    if (!userId || !id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("saved_content")
+        .select("content_id")
+        .eq("user_id", userId)
+        .eq("content_id", id)
+        .maybeSingle();
+      if (cancelled) return;
+      setIsSaved(!!data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, supabase, userId]);
+
+  const toggleSave = async () => {
+    if (!userId || !mosqueUuid || !detail?.content_id || isSaving) return;
+    setIsSaving(true);
+    const wasSaved = isSaved;
+    setIsSaved(!wasSaved);
+    try {
+      if (wasSaved) {
+        const { error: delErr } = await supabase
+          .from("saved_content")
+          .delete()
+          .eq("user_id", userId)
+          .eq("content_id", detail.content_id);
+        if (delErr) throw delErr;
+      } else {
+        const { error: insErr } = await supabase.from("saved_content").upsert(
+          {
+            user_id: userId,
+            content_id: detail.content_id,
+            mosque_id: mosqueUuid,
+          },
+          { onConflict: "user_id,content_id" },
+        );
+        if (insErr) throw insErr;
+      }
+    } catch (err) {
+      console.warn("[ContentDetail] save toggle failed", err);
+      setIsSaved(wasSaved);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const firstSpeaker = detail?.speakers?.[0];
   const [imageAspect, setImageAspect] = useState(1);
@@ -288,6 +346,9 @@ export default function ContentDetailScreen() {
 
                 {firstSpeaker ? (
                   <Pressable
+                    onPress={() => setSpeakerModalOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View bio for ${firstSpeaker}`}
                     className="mt-4 flex-row items-center self-start rounded-full px-4 py-2"
                     style={{ backgroundColor: CHIP_BG }}
                   >
@@ -356,10 +417,19 @@ export default function ContentDetailScreen() {
               }}
             >
               <Pressable
+                onPress={toggleSave}
+                disabled={isSaving || !userId || !mosqueUuid}
                 className="flex-row items-center justify-center rounded-2xl py-4"
-                style={{ backgroundColor: CARD_BG }}
+                style={{
+                  backgroundColor: CARD_BG,
+                  opacity: isSaving ? 0.6 : 1,
+                }}
               >
-                <Feather name="heart" size={18} color={BUSH} />
+                <Feather
+                  name="heart"
+                  size={18}
+                  color={isSaved ? "#C03A3A" : BUSH}
+                />
                 <Text
                   style={{
                     marginLeft: 8,
@@ -369,13 +439,20 @@ export default function ContentDetailScreen() {
                     color: BUSH,
                   }}
                 >
-                  Save to Library
+                  {isSaved ? "Saved to Library" : "Save to Library"}
                 </Text>
               </Pressable>
             </View>
           </>
         )}
       </Animated.View>
+
+      <SpeakerInfoModal
+        visible={speakerModalOpen}
+        speakerName={firstSpeaker ?? null}
+        mosqueUuid={mosqueUuid}
+        onClose={() => setSpeakerModalOpen(false)}
+      />
     </View>
   );
 }

@@ -15,10 +15,9 @@ const platformUiFont = Platform.select({
 
 export default function DonateCard({ onPress }: Props) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Donate, support your masjid"
+    <View
+      accessibilityRole="summary"
+      accessibilityLabel="Support your masjid"
       className="w-full flex-row items-center justify-between rounded-full bg-[#0A261E] px-5 py-5 z-10"
     >
       <View className="flex-row items-center gap-2">
@@ -77,7 +76,13 @@ export default function DonateCard({ onPress }: Props) {
           </Text>
         </View>
       </View>
-      <View className="ml-2 mt-1.5 flex-row items-center gap-1 rounded-full bg-[#B8922A] px-[14px] py-[7px] justify-center">
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel="Donate"
+        hitSlop={8}
+        className="ml-2 mt-1.5 flex-row items-center gap-1 rounded-full bg-[#B8922A] px-[14px] py-[7px] justify-center"
+      >
         <Text
           style={{
             fontFamily: "Inter_800ExtraBold",
@@ -92,9 +97,9 @@ export default function DonateCard({ onPress }: Props) {
         >
           DONATE
         </Text>
-        <AntDesign name="arrow-right" size={13} color="#0A261E" 
+        <AntDesign name="arrow-right" size={13} color="#0A261E"
         />
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }

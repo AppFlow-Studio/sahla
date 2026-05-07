@@ -7,7 +7,7 @@ import type { MasjidConfig } from "./types";
  *   - A Supabase row omits a field that a screen needs
  */
 export const defaultConfig: MasjidConfig = {
-  id: "sahla",
+  id: "12345",
   displayName: "Sahla",
   tagline: "Your masjid, in your pocket",
   colors: {

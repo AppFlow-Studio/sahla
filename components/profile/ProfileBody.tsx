@@ -1,4 +1,8 @@
-import { Platform, View } from "react-native";
+import { SendFeedback } from "@/src/components/send_feedback";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { router, type Href } from "expo-router";
+import { useCallback, useState } from "react";
+import { Platform, Share, View } from "react-native";
 import DonateCard from "./DonateCard";
 import Notifications from "./Notifications";
 import PersonalizedCard from "./PersonalizedCard";
@@ -35,6 +39,23 @@ export default function ProfileBody({
   onPressDonate,
   onPressNotifications,
 }: Props) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const config = useMasjidConfig();
+
+  const handleInviteFriends = useCallback(async () => {
+    try {
+      // TODO: replace with the real download URL once we have an App Store /
+      // landing-page link. The share sheet works fine with text alone, but a
+      // URL gives recipients something to tap.
+      await Share.share({
+        message: `Join me at ${config.displayName} on Sahla — https://sahla.app`,
+        url: 'https://sahla.app',
+      });
+    } catch {
+      // User dismissed or platform error — nothing actionable to show.
+    }
+  }, [config.displayName]);
+
   return (
     <View
       className="-mt-4 w-full flex-col rounded-t-[32px] bg-[#FFFBF2] px-4 pt-6"
@@ -50,7 +71,7 @@ export default function ProfileBody({
           <RowItem
             icon={COMMUNITY_ICON}
             title="Invite friends"
-            onPress={() => {}}
+            onPress={handleInviteFriends}
           />
         </View>
       </View>
@@ -60,7 +81,7 @@ export default function ProfileBody({
           <RowItem
             icon={SAVED_PROGRAMS_AND_EVENTS_ICON}
             title="Saved Programs & Events"
-            onPress={() => {}}
+            onPress={() => router.push("/saved-events" as Href)}
           />
           <RowItem
             icon={SAVED_CLIPS_ICON}
@@ -89,9 +110,15 @@ export default function ProfileBody({
           <RowItem
             icon={PRAYER_ALERTS_ICON}
             title="Prayer Alerts"
-            onPress={() => {}}
+            onPress={() => router.push("/notification-center" as Href)}
           />
-          <RowItem icon={PROGRAMS_ICON} title="Programs" onPress={() => {}} />
+          <RowItem
+            icon={PROGRAMS_ICON}
+            title="Programs"
+            onPress={() =>
+              router.push("/notification-center?tab=Programs" as Href)
+            }
+          />
           <RowItem icon={EVENTS_ICON} title="Events" onPress={() => {}} />
         </View>
         <SectionRule />
@@ -134,7 +161,7 @@ export default function ProfileBody({
           <RowItem
             icon={FEEDBACK_ICON}
             title="Send Feedback"
-            onPress={() => {}}
+            onPress={() => setFeedbackOpen(true)}
           />
         </View>
         <SectionRule />
@@ -145,6 +172,10 @@ export default function ProfileBody({
           <RowItem icon={ADMIN_ICON} title="Admin Portal" onPress={() => {}} />
         </View>
       </View>
+      <SendFeedback
+        visible={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </View>
   );
 }

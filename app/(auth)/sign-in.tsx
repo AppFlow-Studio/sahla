@@ -44,6 +44,7 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
+      await clerk.signOut().catch(() => {});
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === 'complete') {
         await setActive({ session: attempt.createdSessionId });

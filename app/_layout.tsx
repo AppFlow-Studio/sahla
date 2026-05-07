@@ -61,6 +61,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={showMain}>
         <Stack.Screen name="(main)" />
+        <Stack.Screen name="(personalization)" />
         <Stack.Screen
           name="content/[id]"
           options={{
@@ -71,6 +72,34 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="change-password"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="saved-events"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="notification-center"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="notification-settings"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="prayer-alerts"
           options={{
             headerShown: false,
             animation: 'slide_from_right',

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -56,7 +56,14 @@ export type Database = {
             foreignKeyName: "activity_log_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "activity_log_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -116,7 +123,14 @@ export type Database = {
             foreignKeyName: "ad_pricing_config_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: true
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "ad_pricing_config_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: true
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -185,7 +199,14 @@ export type Database = {
             foreignKeyName: "ad_subscriptions_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "ad_subscriptions_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -228,7 +249,14 @@ export type Database = {
             foreignKeyName: "approved_business_ads_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "approved_business_ads_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -301,7 +329,14 @@ export type Database = {
             foreignKeyName: "business_ads_submissions_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "business_ads_submissions_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -341,7 +376,14 @@ export type Database = {
             foreignKeyName: "capacity_alert_subscribers_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "capacity_alert_subscribers_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -400,7 +442,14 @@ export type Database = {
             foreignKeyName: "content_forms_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "content_forms_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -492,7 +541,11 @@ export type Database = {
           image: string | null
           is_fourteen_plus: boolean | null
           is_kids: boolean | null
+          is_pace: boolean
           is_paid: boolean | null
+          is_quran: boolean
+          is_weekly_program: boolean
+          is_young_professionals: boolean
           max_capacity: number | null
           mosque_id: string
           name: string | null
@@ -518,7 +571,11 @@ export type Database = {
           image?: string | null
           is_fourteen_plus?: boolean | null
           is_kids?: boolean | null
+          is_pace?: boolean
           is_paid?: boolean | null
+          is_quran?: boolean
+          is_weekly_program?: boolean
+          is_young_professionals?: boolean
           max_capacity?: number | null
           mosque_id: string
           name?: string | null
@@ -544,7 +601,11 @@ export type Database = {
           image?: string | null
           is_fourteen_plus?: boolean | null
           is_kids?: boolean | null
+          is_pace?: boolean
           is_paid?: boolean | null
+          is_quran?: boolean
+          is_weekly_program?: boolean
+          is_young_professionals?: boolean
           max_capacity?: number | null
           mosque_id?: string
           name?: string | null
@@ -562,7 +623,14 @@ export type Database = {
             foreignKeyName: "content_items_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "content_items_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -620,7 +688,14 @@ export type Database = {
             foreignKeyName: "content_notification_schedule_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "content_notification_schedule_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -666,7 +741,14 @@ export type Database = {
             foreignKeyName: "content_notification_settings_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "content_notification_settings_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -712,7 +794,14 @@ export type Database = {
             foreignKeyName: "content_notifications_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "content_notifications_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -800,10 +889,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "content_tags_maps_to_interest_id_fkey"
+            columns: ["maps_to_interest_id"]
+            isOneToOne: false
+            referencedRelation: "islamic_interest_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "content_tags_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "content_tags_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -811,13 +914,6 @@ export type Database = {
             columns: ["mosque_id"]
             isOneToOne: false
             referencedRelation: "mosques"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_content_tags_interest"
-            columns: ["maps_to_interest_id"]
-            isOneToOne: false
-            referencedRelation: "islamic_interest_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -858,7 +954,14 @@ export type Database = {
             foreignKeyName: "display_categories_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "display_categories_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -873,31 +976,56 @@ export type Database = {
       donations: {
         Row: {
           amountGiven: number | null
+          currency: string
           date: string
           id: number
           mosque_id: string
           project_donated_to: string[] | null
+          project_id: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          user_id: string | null
         }
         Insert: {
           amountGiven?: number | null
+          currency?: string
           date?: string
           id?: never
           mosque_id: string
           project_donated_to?: string[] | null
+          project_id?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          user_id?: string | null
         }
         Update: {
           amountGiven?: number | null
+          currency?: string
           date?: string
           id?: never
           mosque_id?: string
           project_donated_to?: string[] | null
+          project_id?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "donations_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "donations_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -905,6 +1033,20 @@ export type Database = {
             columns: ["mosque_id"]
             isOneToOne: false
             referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "donations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -975,7 +1117,14 @@ export type Database = {
             foreignKeyName: "iqamah_config_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "iqamah_config_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1052,6 +1201,7 @@ export type Database = {
           prayer_time: string | null
           speaker: string | null
           topic: string | null
+          updated_at: string | null
         }
         Insert: {
           capacity_status?: string | null
@@ -1061,6 +1211,7 @@ export type Database = {
           prayer_time?: string | null
           speaker?: string | null
           topic?: string | null
+          updated_at?: string | null
         }
         Update: {
           capacity_status?: string | null
@@ -1070,13 +1221,21 @@ export type Database = {
           prayer_time?: string | null
           speaker?: string | null
           topic?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "jummah_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "jummah_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1125,7 +1284,14 @@ export type Database = {
             foreignKeyName: "jummah_notifications_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "jummah_notifications_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1202,7 +1368,14 @@ export type Database = {
             foreignKeyName: "lectures_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "lectures_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1248,7 +1421,14 @@ export type Database = {
             foreignKeyName: "liked_lectures_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "liked_lectures_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1302,7 +1482,14 @@ export type Database = {
             foreignKeyName: "mosque_health_scores_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "mosque_health_scores_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1344,7 +1531,14 @@ export type Database = {
             foreignKeyName: "mosque_notes_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "mosque_notes_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1389,7 +1583,14 @@ export type Database = {
             foreignKeyName: "mosque_notification_config_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: true
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "mosque_notification_config_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: true
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1447,7 +1648,14 @@ export type Database = {
             foreignKeyName: "mosque_onboarding_steps_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "mosque_onboarding_steps_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1471,24 +1679,38 @@ export type Database = {
           calculation_method: number | null
           city: string | null
           clerk_org_id: string | null
+          country: string | null
           created_at: string
+          current_period_end: string | null
           eas_project_id: string | null
+          email: string | null
           id: string
+          latitude_adjustment_method: number | null
           launched_at: string | null
           logo_url: string | null
           masjidal_id: string | null
           masjidal_sync_enabled: boolean | null
+          midnight_mode: number | null
           name: string
           onboarding_progress: Json | null
           onboarding_status: string | null
           package_name: string | null
+          prayer_tune: string | null
+          resume_email_sent_at: string | null
+          saas_stripe_customer_id: string | null
+          saas_stripe_subscription_id: string | null
           school: number | null
           secondary_color: string | null
+          shafaq: string | null
           slug: string
           state: string | null
           stripe_account_id: string | null
+          stripe_charges_enabled: boolean
+          stripe_onboarding_completed_at: string | null
+          stripe_payouts_enabled: boolean
           subscription_id: string | null
           subscription_status: string | null
+          subscription_tier: string | null
           timezone: string | null
           updated_at: string
         }
@@ -1503,24 +1725,38 @@ export type Database = {
           calculation_method?: number | null
           city?: string | null
           clerk_org_id?: string | null
+          country?: string | null
           created_at?: string
+          current_period_end?: string | null
           eas_project_id?: string | null
+          email?: string | null
           id: string
+          latitude_adjustment_method?: number | null
           launched_at?: string | null
           logo_url?: string | null
           masjidal_id?: string | null
           masjidal_sync_enabled?: boolean | null
+          midnight_mode?: number | null
           name: string
           onboarding_progress?: Json | null
           onboarding_status?: string | null
           package_name?: string | null
+          prayer_tune?: string | null
+          resume_email_sent_at?: string | null
+          saas_stripe_customer_id?: string | null
+          saas_stripe_subscription_id?: string | null
           school?: number | null
           secondary_color?: string | null
+          shafaq?: string | null
           slug: string
           state?: string | null
           stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_onboarding_completed_at?: string | null
+          stripe_payouts_enabled?: boolean
           subscription_id?: string | null
           subscription_status?: string | null
+          subscription_tier?: string | null
           timezone?: string | null
           updated_at?: string
         }
@@ -1535,28 +1771,109 @@ export type Database = {
           calculation_method?: number | null
           city?: string | null
           clerk_org_id?: string | null
+          country?: string | null
           created_at?: string
+          current_period_end?: string | null
           eas_project_id?: string | null
+          email?: string | null
           id?: string
+          latitude_adjustment_method?: number | null
           launched_at?: string | null
           logo_url?: string | null
           masjidal_id?: string | null
           masjidal_sync_enabled?: boolean | null
+          midnight_mode?: number | null
           name?: string
           onboarding_progress?: Json | null
           onboarding_status?: string | null
           package_name?: string | null
+          prayer_tune?: string | null
+          resume_email_sent_at?: string | null
+          saas_stripe_customer_id?: string | null
+          saas_stripe_subscription_id?: string | null
           school?: number | null
           secondary_color?: string | null
+          shafaq?: string | null
           slug?: string
           state?: string | null
           stripe_account_id?: string | null
+          stripe_charges_enabled?: boolean
+          stripe_onboarding_completed_at?: string | null
+          stripe_payouts_enabled?: boolean
           subscription_id?: string | null
           subscription_status?: string | null
+          subscription_tier?: string | null
           timezone?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      notification_templates: {
+        Row: {
+          audience_filter: Json | null
+          body: string
+          created_at: string | null
+          created_by: string | null
+          default_audience: string | null
+          id: number
+          last_used_at: string | null
+          mosque_id: string
+          name: string
+          title: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          audience_filter?: Json | null
+          body: string
+          created_at?: string | null
+          created_by?: string | null
+          default_audience?: string | null
+          id?: never
+          last_used_at?: string | null
+          mosque_id: string
+          name: string
+          title: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          audience_filter?: Json | null
+          body?: string
+          created_at?: string | null
+          created_by?: string | null
+          default_audience?: string | null
+          id?: never
+          last_used_at?: string | null
+          mosque_id?: string
+          name?: string
+          title?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_templates_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "notification_templates_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "notification_templates_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nudge_dismissals: {
         Row: {
@@ -1588,7 +1905,14 @@ export type Database = {
             foreignKeyName: "nudge_dismissals_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "nudge_dismissals_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1687,7 +2011,14 @@ export type Database = {
             foreignKeyName: "pipeline_stages_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: true
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "pipeline_stages_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: true
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1747,7 +2078,14 @@ export type Database = {
             foreignKeyName: "prayer_display_config_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: true
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "prayer_display_config_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: true
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1792,7 +2130,14 @@ export type Database = {
             foreignKeyName: "prayer_notification_schedule_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "prayer_notification_schedule_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1831,7 +2176,14 @@ export type Database = {
             foreignKeyName: "prayer_notification_settings_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "prayer_notification_settings_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1849,25 +2201,35 @@ export type Database = {
           iqamahData: Json | null
           mosque_id: string
           prayerData: Json | null
+          updated_at: string | null
         }
         Insert: {
           id?: never
           iqamahData?: Json | null
           mosque_id: string
           prayerData?: Json | null
+          updated_at?: string | null
         }
         Update: {
           id?: never
           iqamahData?: Json | null
           mosque_id?: string
           prayerData?: Json | null
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "prayers_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "prayers_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1945,7 +2307,14 @@ export type Database = {
             foreignKeyName: "projects_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "projects_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -1997,7 +2366,14 @@ export type Database = {
             foreignKeyName: "push_tokens_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "push_tokens_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2042,7 +2418,14 @@ export type Database = {
             foreignKeyName: "quran_playlist_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "quran_playlist_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2094,7 +2477,14 @@ export type Database = {
             foreignKeyName: "ramadan_quran_tracker_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "ramadan_quran_tracker_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2155,7 +2545,14 @@ export type Database = {
             foreignKeyName: "recommendation_log_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "recommendation_log_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2167,6 +2564,160 @@ export type Database = {
           },
           {
             foreignKeyName: "recommendation_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reels: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          display_order: number | null
+          duration_sec: number | null
+          id: number
+          is_published: boolean | null
+          mosque_id: string
+          reel_id: string | null
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string | null
+          video_url: string
+          view_count: number | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          duration_sec?: number | null
+          id?: never
+          is_published?: boolean | null
+          mosque_id: string
+          reel_id?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+          video_url: string
+          view_count?: number | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          duration_sec?: number | null
+          id?: never
+          is_published?: boolean | null
+          mosque_id?: string
+          reel_id?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+          video_url?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reels_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "reels_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "reels_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rsvps: {
+        Row: {
+          amount_paid: number | null
+          attended_at: string | null
+          canceled_at: string | null
+          content_id: string
+          id: number
+          mosque_id: string
+          notes: string | null
+          paid_at: string | null
+          payment_intent_id: string | null
+          refund_id: string | null
+          reserved_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid?: number | null
+          attended_at?: string | null
+          canceled_at?: string | null
+          content_id: string
+          id?: never
+          mosque_id: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_intent_id?: string | null
+          refund_id?: string | null
+          reserved_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number | null
+          attended_at?: string | null
+          canceled_at?: string | null
+          content_id?: string
+          id?: never
+          mosque_id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_intent_id?: string | null
+          refund_id?: string | null
+          reserved_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rsvps_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["content_id"]
+          },
+          {
+            foreignKeyName: "rsvps_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "rsvps_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "rsvps_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rsvps_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2277,7 +2828,14 @@ export type Database = {
             foreignKeyName: "saved_content_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "saved_content_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2297,6 +2855,7 @@ export type Database = {
           speaker_id: string
           speaker_img: string | null
           speaker_name: string | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string
@@ -2305,6 +2864,7 @@ export type Database = {
           speaker_id?: string
           speaker_img?: string | null
           speaker_name?: string | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string
@@ -2313,13 +2873,21 @@ export type Database = {
           speaker_id?: string
           speaker_img?: string | null
           speaker_name?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "speaker_data_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "speaker_data_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2330,6 +2898,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stripe_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          processed_at: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          processed_at?: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          processed_at?: string
+        }
+        Relationships: []
       }
       taraweeh_lineup: {
         Row: {
@@ -2361,7 +2947,14 @@ export type Database = {
             foreignKeyName: "taraweeh_lineup_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "taraweeh_lineup_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2376,31 +2969,44 @@ export type Database = {
       todays_prayers: {
         Row: {
           athan_time: string | null
+          date: string
           id: number
           iqamah_time: string | null
           mosque_id: string
           prayer_name: string | null
+          updated_at: string | null
         }
         Insert: {
           athan_time?: string | null
+          date: string
           id?: never
           iqamah_time?: string | null
           mosque_id: string
           prayer_name?: string | null
+          updated_at?: string | null
         }
         Update: {
           athan_time?: string | null
+          date?: string
           id?: never
           iqamah_time?: string | null
           mosque_id?: string
           prayer_name?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "todays_prayers_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "todays_prayers_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2442,7 +3048,14 @@ export type Database = {
             foreignKeyName: "user_bookmarked_ayahs_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_bookmarked_ayahs_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2481,7 +3094,14 @@ export type Database = {
             foreignKeyName: "user_bookmarked_surahs_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_bookmarked_surahs_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2533,7 +3153,14 @@ export type Database = {
             foreignKeyName: "user_cart_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_cart_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2582,7 +3209,14 @@ export type Database = {
             foreignKeyName: "user_content_interactions_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_content_interactions_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2634,7 +3268,14 @@ export type Database = {
             foreignKeyName: "user_continue_read_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_continue_read_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2680,7 +3321,14 @@ export type Database = {
             foreignKeyName: "user_islamic_goals_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_islamic_goals_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2733,7 +3381,14 @@ export type Database = {
             foreignKeyName: "user_islamic_interests_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_islamic_interests_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2782,7 +3437,14 @@ export type Database = {
             foreignKeyName: "user_liked_ayahs_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_liked_ayahs_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2821,11 +3483,70 @@ export type Database = {
             foreignKeyName: "user_liked_surahs_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
             referencedColumns: ["mosque_id"]
           },
           {
             foreignKeyName: "user_liked_surahs_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_liked_surahs_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notification_preferences: {
+        Row: {
+          created_at: string
+          event_reminders_enabled: boolean
+          masjid_announcements_enabled: boolean
+          mosque_id: string
+          new_programs_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_reminders_enabled?: boolean
+          masjid_announcements_enabled?: boolean
+          mosque_id: string
+          new_programs_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_reminders_enabled?: boolean
+          masjid_announcements_enabled?: boolean
+          mosque_id?: string
+          new_programs_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notification_preferences_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_notification_preferences_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
             referencedRelation: "mosques"
@@ -2863,7 +3584,14 @@ export type Database = {
             foreignKeyName: "user_playlist_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_playlist_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2912,7 +3640,14 @@ export type Database = {
             foreignKeyName: "user_playlist_lectures_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_playlist_lectures_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2933,6 +3668,9 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          additional_preferences: string[]
+          attendance_reasons: string[]
+          attendance_windows: string[]
           birth_year: number | null
           children_ages: number[] | null
           gender: string | null
@@ -2943,9 +3681,13 @@ export type Database = {
           mosque_id: string
           preferred_days: string[] | null
           preferred_times: string[] | null
+          programs_for: string[]
           user_id: string
         }
         Insert: {
+          additional_preferences?: string[]
+          attendance_reasons?: string[]
+          attendance_windows?: string[]
           birth_year?: number | null
           children_ages?: number[] | null
           gender?: string | null
@@ -2956,9 +3698,13 @@ export type Database = {
           mosque_id: string
           preferred_days?: string[] | null
           preferred_times?: string[] | null
+          programs_for?: string[]
           user_id: string
         }
         Update: {
+          additional_preferences?: string[]
+          attendance_reasons?: string[]
+          attendance_windows?: string[]
           birth_year?: number | null
           children_ages?: number[] | null
           gender?: string | null
@@ -2969,6 +3715,7 @@ export type Database = {
           mosque_id?: string
           preferred_days?: string[] | null
           preferred_times?: string[] | null
+          programs_for?: string[]
           user_id?: string
         }
         Relationships: [
@@ -2976,7 +3723,14 @@ export type Database = {
             foreignKeyName: "user_preferences_mosque_id_fkey"
             columns: ["mosque_id"]
             isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "user_preferences_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
             referencedColumns: ["mosque_id"]
           },
           {
@@ -2997,95 +3751,43 @@ export type Database = {
       }
     }
     Views: {
-      latest_health_scores: {
+      mosque_dashboard_stats: {
         Row: {
-          admin_activity: number | null
-          badge: string | null
-          business_ads: number | null
+          active_ads: number | null
+          active_members_30d: number | null
           computed_at: string | null
-          content_freshness: number | null
-          id: string | null
+          donations_mtd: number | null
+          donations_ytd: number | null
           mosque_id: string | null
           mosque_name: string | null
-          mosque_slug: string | null
-          overall_score: number | null
-          payment_health: number | null
-          push_coverage: number | null
-          subscription_status: string | null
-          user_engagement: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mosque_health_scores_mosque_id_fkey"
-            columns: ["mosque_id"]
-            isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
-            referencedColumns: ["mosque_id"]
-          },
-          {
-            foreignKeyName: "mosque_health_scores_mosque_id_fkey"
-            columns: ["mosque_id"]
-            isOneToOne: false
-            referencedRelation: "mosques"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mosque_onboarding_summary: {
-        Row: {
-          completed_steps: number | null
-          completion_pct: number | null
-          in_progress_steps: number | null
-          last_step_completed_at: string | null
-          mosque_id: string | null
-          mosque_name: string | null
-          onboarding_started_at: string | null
-          onboarding_status: string | null
-          total_steps: number | null
+          notifications_sent_30d: number | null
+          rsvps_last_7d: number | null
         }
         Relationships: []
       }
-      platform_overview: {
+      mosque_feature_flags: {
         Row: {
-          active_mosques: number | null
-          churned_mosques: number | null
-          onboarding_mosques: number | null
-          past_due_mosques: number | null
-          total_mosques: number | null
+          account_type: string | null
+          has_crm_access: boolean | null
+          is_active: boolean | null
+          is_stripe_connected: boolean | null
+          mosque_id: string | null
+        }
+        Insert: {
+          account_type?: string | null
+          has_crm_access?: never
+          is_active?: never
+          is_stripe_connected?: never
+          mosque_id?: string | null
+        }
+        Update: {
+          account_type?: string | null
+          has_crm_access?: never
+          is_active?: never
+          is_stripe_connected?: never
+          mosque_id?: string | null
         }
         Relationships: []
-      }
-      recent_activity: {
-        Row: {
-          action: string | null
-          actor_id: string | null
-          actor_name: string | null
-          created_at: string | null
-          entity_id: string | null
-          entity_name: string | null
-          entity_type: string | null
-          id: string | null
-          metadata: Json | null
-          mosque_id: string | null
-          mosque_name: string | null
-          mosque_slug: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_log_mosque_id_fkey"
-            columns: ["mosque_id"]
-            isOneToOne: false
-            referencedRelation: "mosque_onboarding_summary"
-            referencedColumns: ["mosque_id"]
-          },
-          {
-            foreignKeyName: "activity_log_mosque_id_fkey"
-            columns: ["mosque_id"]
-            isOneToOne: false
-            referencedRelation: "mosques"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Functions: {
@@ -3093,12 +3795,18 @@ export type Database = {
         Args: { p_mosque_id: string }
         Returns: undefined
       }
+      is_mosque_admin: { Args: never; Returns: boolean }
       is_sahla_org: { Args: never; Returns: boolean }
       is_sahla_team: { Args: never; Returns: boolean }
       requesting_mosque_id: { Args: never; Returns: string }
+      requesting_mosque_uuid: { Args: never; Returns: string }
       requesting_user_id: { Args: never; Returns: string }
       requesting_user_role: { Args: never; Returns: string }
       sahla_team_role: { Args: never; Returns: string }
+      upsert_recommendations: {
+        Args: { p_mosque_id: string; p_rows: Json; p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
