@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
+import { useConfigStore } from '@/src/stores/config-store';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ export default function PaymentMethodsScreen() {
   const supabase = useSupabase();
   const { profile } = useProfile();
   const { colors } = useMasjidConfig();
+  const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
@@ -88,9 +90,10 @@ export default function PaymentMethodsScreen() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadCards = useCallback(async () => {
+    if (!profile?.id || !mosqueUuid) return;
     try {
       const { data, error } = await supabase.functions.invoke('get-payment-methods', {
-        body: { user_id: profile?.id },
+        body: { user_id: profile.id, mosque_id: mosqueUuid },
       });
       if (error) {
         console.log('Error loading payment methods:', error);
@@ -102,7 +105,7 @@ export default function PaymentMethodsScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, profile?.id, mosqueUuid]);
 
   useEffect(() => {
     loadCards();
@@ -134,7 +137,7 @@ export default function PaymentMethodsScreen() {
             setDeletingId(card.id);
             try {
               const { error } = await supabase.functions.invoke('delete-payment-method', {
-                body: { user_id: profile?.id, paymentMethodId: card.id },
+                body: { user_id: profile?.id, paymentMethodId: card.id, mosque_id: mosqueUuid },
               });
               if (error) throw error;
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

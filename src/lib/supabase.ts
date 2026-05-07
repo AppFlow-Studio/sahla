@@ -19,11 +19,14 @@ type TokenSource = { getToken: () => Promise<string | null> };
 export function createAuthenticatedSupabaseClient(
   session: TokenSource | null,
 ): TypedSupabaseClient {
-  return createClient<Database>(env.SUPABASE_URL, env.SUPABASE_PUB_KEY, {
+  return createClient<Database>(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
+    },
+    global: {
+      headers: { apikey: env.SUPABASE_ANON_KEY },
     },
     async accessToken() {
       return (await session?.getToken()) ?? null;
@@ -33,5 +36,5 @@ export function createAuthenticatedSupabaseClient(
 
 /** Anonymous Supabase client — used before the user is signed in. */
 export function createSupabaseClient(): TypedSupabaseClient {
-  return createClient<Database>(env.SUPABASE_URL, env.SUPABASE_PUB_KEY);
+  return createClient<Database>(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 }

@@ -23,10 +23,10 @@ serve(async (req: Request) => {
       );
     }
 
-    const { user_id } = await req.json();
-    if (!user_id) {
+    const { user_id, mosque_id } = await req.json();
+    if (!user_id || !mosque_id) {
       return new Response(
-        JSON.stringify({ error: "user_id is required" }),
+        JSON.stringify({ error: "user_id and mosque_id are required" }),
         { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
       );
     }
@@ -36,6 +36,7 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Look up user's Stripe customer ID
     const { data: profile } = await supabase
       .from("profiles")
       .select("stripe_id")
@@ -49,16 +50,34 @@ serve(async (req: Request) => {
       );
     }
 
+    // Look up mosque's connected Stripe account
+    const { data: mosque, error: mosqueError } = await supabase
+      .from("mosques")
+      .select("stripe_account_id")
+      .eq("id", mosque_id)
+      .single();
+
+    if (mosqueError || !mosque?.stripe_account_id) {
+      return new Response(
+        JSON.stringify({ error: "Mosque not found or Stripe not configured" }),
+        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
+    const connectedAccountId = mosque.stripe_account_id;
+
     const stripe = new Stripe(stripeSecret, {
       apiVersion: "2025-03-31.basil",
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    // Fetch payment intents for this customer
-    const paymentIntents = await stripe.paymentIntents.list({
-      customer: profile.stripe_id,
-      limit: 100,
-    });
+    const stripeAccountOpts = { stripeAccount: connectedAccountId };
+
+    // Fetch payment intents for this customer on the connected account
+    const paymentIntents = await stripe.paymentIntents.list(
+      { customer: profile.stripe_id, limit: 100 },
+      stripeAccountOpts,
+    );
 
     const payments = await Promise.all(
       paymentIntents.data.map(async (pi) => {
@@ -66,7 +85,7 @@ serve(async (req: Request) => {
 
         if (pi.payment_method && typeof pi.payment_method === "string") {
           try {
-            const pm = await stripe.paymentMethods.retrieve(pi.payment_method);
+            const pm = await stripe.paymentMethods.retrieve(pi.payment_method, stripeAccountOpts);
             paymentMethod = {
               type: pm.type,
               brand: pm.card?.brand ?? null,
@@ -81,10 +100,10 @@ serve(async (req: Request) => {
         let amount_refunded = 0;
         if (pi.status === "succeeded") {
           try {
-            const charges = await stripe.charges.list({
-              payment_intent: pi.id,
-              limit: 1,
-            });
+            const charges = await stripe.charges.list(
+              { payment_intent: pi.id, limit: 1 },
+              stripeAccountOpts,
+            );
             if (charges.data.length > 0) {
               amount_refunded = charges.data[0].amount_refunded ?? 0;
             }

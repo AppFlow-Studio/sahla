@@ -148,7 +148,7 @@ export default function ProfileBody({
 
       {/* MAS SHOP */}
       <View className="flex-col">
-        <SectionHeader title="MAS SHOP" />
+        <SectionHeader title="SHOP" />
         <View>
           <RowItem
             icon={MAS_BAG_ICON}

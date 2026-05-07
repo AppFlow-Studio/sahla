@@ -238,8 +238,11 @@ export function usePrayerTimes(): UsePrayerTimesResult {
     if (nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
 
     const nextPrayer = nextIdx >= 0 ? items[nextIdx] : null;
-    const secondsToIqamah = nextPrayer
-      ? timeToSeconds(nextPrayer.iqamahTimeRaw) - now.totalSeconds
+    const nextTimeRaw = nextPrayer
+      ? (nextPrayer.iqamahTimeRaw || nextPrayer.athanTimeRaw)
+      : null;
+    const secondsToIqamah = nextTimeRaw
+      ? timeToSeconds(nextTimeRaw) - now.totalSeconds
       : null;
     const countdownLabel =
       secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;

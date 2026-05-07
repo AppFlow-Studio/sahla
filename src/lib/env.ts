@@ -34,6 +34,8 @@ export const env = {
   // Supabase renamed "anon key" to "publishable key" in 2025 — the env var
   // name here tracks the newer naming used in the dashboard.
   SUPABASE_PUB_KEY: required('EXPO_PUBLIC_SUPABASE_PUB_KEY'),
+  /** Legacy JWT anon key — required by edge functions (gateway rejects publishable keys). */
+  SUPABASE_ANON_KEY: required('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
   STRIPE_PUBLISHABLE_KEY: required('EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
   /** Set `EXPO_PUBLIC_DEV_BYPASS_AUTH=true` in `.env`; only honored when `__DEV__` is true. */
   DEV_BYPASS_AUTH: devBypassAuth,

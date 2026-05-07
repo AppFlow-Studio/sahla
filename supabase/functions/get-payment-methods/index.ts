@@ -23,10 +23,10 @@ serve(async (req: Request) => {
       );
     }
 
-    const { user_id } = await req.json();
-    if (!user_id) {
+    const { user_id, mosque_id } = await req.json();
+    if (!user_id || !mosque_id) {
       return new Response(
-        JSON.stringify({ error: "user_id is required" }),
+        JSON.stringify({ error: "user_id and mosque_id are required" }),
         { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
       );
     }
@@ -50,15 +50,31 @@ serve(async (req: Request) => {
       );
     }
 
+    // Look up mosque's connected Stripe account
+    const { data: mosque, error: mosqueError } = await supabase
+      .from("mosques")
+      .select("stripe_account_id")
+      .eq("id", mosque_id)
+      .single();
+
+    if (mosqueError || !mosque?.stripe_account_id) {
+      return new Response(
+        JSON.stringify({ error: "Mosque not found or Stripe not configured" }),
+        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
     const stripe = new Stripe(stripeSecret, {
       apiVersion: "2025-03-31.basil",
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    const paymentMethods = await stripe.paymentMethods.list({
-      customer: profile.stripe_id,
-      type: "card",
-    });
+    const stripeAccountOpts = { stripeAccount: mosque.stripe_account_id };
+
+    const paymentMethods = await stripe.paymentMethods.list(
+      { customer: profile.stripe_id, type: "card" },
+      stripeAccountOpts,
+    );
 
     const methods = paymentMethods.data.map((pm) => ({
       id: pm.id,

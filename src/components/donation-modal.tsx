@@ -5,13 +5,30 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Keyboard,
+  LayoutAnimation,
   Modal,
+  Platform,
   Pressable,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
-import { CardField, usePaymentSheet, initStripe } from '@stripe/stripe-react-native';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+import { BlurView } from 'expo-blur';
+import {
+  CardField,
+  useConfirmPayment,
+  usePlatformPay,
+  PlatformPayButton,
+  PlatformPay,
+} from '@stripe/stripe-react-native';
+import { useStripeAccount } from '@/src/providers/stripe-account-provider';
 // CardField onCardChange details type
 type CardDetails = { complete: boolean; brand?: string; last4?: string };
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -312,7 +329,9 @@ export function DonationModal({
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const supabase = useSupabase();
   const { profile } = useProfile();
-  const { initPaymentSheet, presentPaymentSheet } = usePaymentSheet();
+  const { confirmPayment } = useConfirmPayment();
+  const { isPlatformPaySupported, confirmPlatformPayPayment } = usePlatformPay();
+  const { setStripeAccountId } = useStripeAccount();
 
   const fg = colors.foreground.replace(/ /g, ',');
   const bg = colors.background.replace(/ /g, ',');
@@ -335,22 +354,22 @@ export function DonationModal({
   const [cvcFilled, setCvcFilled] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
 
+  // The step that is currently rendered inside the sheet.
+  // `step` is the *target*; `visibleStep` is what's on screen until the swap animation completes.
+  const [visibleStep, setVisibleStep] = useState<Step>('amount');
+
   // -- Animations --
   const sheetY = useRef(new Animated.Value(SCREEN_H)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
   const keypadH = useRef(new Animated.Value(0)).current;
   const keypadOpacity = useRef(new Animated.Value(0)).current;
 
-  // Step cross-fade: amount ↔ card
-  const amountOpacity = useRef(new Animated.Value(1)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-  const amountSlide = useRef(new Animated.Value(0)).current;
-  const cardSlide = useRef(new Animated.Value(40)).current;
+  // Content fade for step transitions
+  const contentOpacity = useRef(new Animated.Value(1)).current;
 
-  // Processing & thanks
-  const processingOpacity = useRef(new Animated.Value(0)).current;
+  // Thanks step sequenced entrance
   const thanksOpacity = useRef(new Animated.Value(0)).current;
-  const thanksScale = useRef(new Animated.Value(0.85)).current;
   const checkScale = useRef(new Animated.Value(0)).current;
   const thanksTextY = useRef(new Animated.Value(20)).current;
   const thanksTextOpacity = useRef(new Animated.Value(0)).current;
@@ -359,99 +378,164 @@ export function DonationModal({
   const displayAmount =
     customMode && customValue ? Number(customValue) || 0 : amount;
 
-  // Animate step transitions
+  // Fade-out → swap → animate height → fade-in step transitions
   const prevStep = useRef<Step>('amount');
+  const transitioning = useRef(false);
+
+  // LayoutAnimation config for smooth height changes
+  const heightAnim: LayoutAnimation.Config = {
+    duration: 550,
+    update: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+  };
+
   useEffect(() => {
     const prev = prevStep.current;
     prevStep.current = step;
 
-    const dur = 280;
-    const ease = Easing.out(Easing.cubic);
+    if (prev === step) return;
 
-    if (step === 'amount') {
-      Animated.parallel([
-        Animated.timing(amountOpacity, { toValue: 1, duration: dur, easing: ease, useNativeDriver: true }),
-        Animated.timing(amountSlide, { toValue: 0, duration: dur, easing: ease, useNativeDriver: true }),
-        Animated.timing(cardOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-        Animated.timing(cardSlide, { toValue: 40, duration: 180, useNativeDriver: true }),
-        Animated.timing(processingOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-      ]).start();
-    } else if (step === 'card') {
-      Animated.parallel([
-        Animated.timing(amountOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-        Animated.timing(amountSlide, { toValue: -40, duration: 180, useNativeDriver: true }),
-        Animated.timing(cardOpacity, { toValue: 1, duration: dur, easing: ease, useNativeDriver: true }),
-        Animated.timing(cardSlide, { toValue: 0, duration: dur, easing: ease, useNativeDriver: true }),
-        Animated.timing(processingOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-      ]).start();
-    } else if (step === 'processing') {
-      Animated.parallel([
-        Animated.timing(amountOpacity, { toValue: 0, duration: 160, useNativeDriver: true }),
-        Animated.timing(cardOpacity, { toValue: 0, duration: 160, useNativeDriver: true }),
-        Animated.timing(processingOpacity, { toValue: 1, duration: 240, easing: ease, useNativeDriver: true }),
-      ]).start();
-    } else if (step === 'thanks') {
-      Animated.sequence([
-        // Fade out processing
-        Animated.timing(processingOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-        // Fade in container
-        Animated.timing(thanksOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        // Pop in checkmark
-        Animated.spring(checkScale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }),
-        // Slide up text
-        Animated.parallel([
-          Animated.timing(thanksTextOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
-          Animated.timing(thanksTextY, { toValue: 0, duration: 350, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        ]),
-        // Fade in dua
-        Animated.timing(thanksDuaOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ]).start();
-      const id = setTimeout(onClose, 3000);
-      return () => clearTimeout(id);
+    // Thanks: fade out then sequenced entrance
+    if (step === 'thanks') {
+      Animated.timing(contentOpacity, { toValue: 0, duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
+        LayoutAnimation.configureNext(heightAnim);
+        setVisibleStep('thanks');
+        contentOpacity.setValue(1);
+
+        // Reset & run thanks sequence
+        thanksOpacity.setValue(0);
+        checkScale.setValue(0);
+        thanksTextY.setValue(20);
+        thanksTextOpacity.setValue(0);
+        thanksDuaOpacity.setValue(0);
+
+        Animated.sequence([
+          Animated.timing(thanksOpacity, { toValue: 1, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.spring(checkScale, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }),
+          Animated.parallel([
+            Animated.timing(thanksTextOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+            Animated.timing(thanksTextY, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          ]),
+          Animated.timing(thanksDuaOpacity, { toValue: 1, duration: 550, useNativeDriver: true }),
+        ]).start();
+
+        const id = setTimeout(() => {
+          Animated.parallel([
+            Animated.timing(sheetY, { toValue: SCREEN_H, duration: 900, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(backdrop, { toValue: 0, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          ]).start(() => resetState());
+        }, 3200);
+        return () => clearTimeout(id);
+      });
+      return;
     }
+
+    // Processing: fade out → swap → fade in
+    if (step === 'processing') {
+      Animated.timing(contentOpacity, { toValue: 0, duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
+        LayoutAnimation.configureNext(heightAnim);
+        setVisibleStep('processing');
+        Animated.timing(contentOpacity, { toValue: 1, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      });
+      return;
+    }
+
+    // Amount ↔ Card: fade out content → swap & animate height → fade in
+    if (transitioning.current) return;
+    transitioning.current = true;
+
+    Animated.timing(contentOpacity, {
+      toValue: 0,
+      duration: 380,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      LayoutAnimation.configureNext(heightAnim);
+      setVisibleStep(step);
+      Animated.timing(contentOpacity, {
+        toValue: 1,
+        duration: 450,
+        delay: 150,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(() => {
+        transitioning.current = false;
+      });
+    });
   }, [step]);
+
+  const resetState = () => {
+    setStripeAccountId(undefined);
+    setMounted(false);
+    setCustomMode(false);
+    setCustomValue('');
+    setStep('amount');
+    setVisibleStep('amount');
+    setCardComplete(false);
+    setClientSecret(null);
+    setCardBrand('Unknown');
+    setCardLast4(undefined);
+    setCardExpMonth(undefined);
+    setCardExpYear(undefined);
+    setCvcFilled(false);
+    setCardFlipped(false);
+    keypadH.setValue(0);
+    keypadOpacity.setValue(0);
+    keyboardOffset.setValue(0);
+    contentOpacity.setValue(1);
+    thanksOpacity.setValue(0);
+    checkScale.setValue(0);
+    thanksTextY.setValue(20);
+    thanksTextOpacity.setValue(0);
+    thanksDuaOpacity.setValue(0);
+    sheetY.setValue(SCREEN_H);
+  };
 
   // Sheet open / close
   useEffect(() => {
     if (visible) {
       setMounted(true);
-      Animated.parallel([
-        Animated.spring(sheetY, { toValue: 0, damping: 28, stiffness: 260, mass: 1, useNativeDriver: true }),
-        Animated.timing(backdrop, { toValue: 1, duration: 400, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      ]).start();
+      // Sheet slides up, backdrop blur fades in shortly after
+      Animated.spring(sheetY, { toValue: 0, damping: 34, stiffness: 150, mass: 1.1, useNativeDriver: true }).start();
+      Animated.timing(backdrop, { toValue: 1, duration: 500, delay: 150, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
     } else if (mounted) {
-      Animated.parallel([
-        Animated.timing(backdrop, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(sheetY, { toValue: SCREEN_H, duration: 280, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-      ]).start(() => {
-        setMounted(false);
-        setCustomMode(false);
-        setCustomValue('');
-        setStep('amount');
-        setCardComplete(false);
-        setClientSecret(null);
-        setCardBrand('Unknown');
-        setCardLast4(undefined);
-        setCardExpMonth(undefined);
-        setCardExpYear(undefined);
-        setCvcFilled(false);
-        setCardFlipped(false);
-        keypadH.setValue(0);
-        keypadOpacity.setValue(0);
-        amountOpacity.setValue(1);
-        amountSlide.setValue(0);
-        cardOpacity.setValue(0);
-        cardSlide.setValue(40);
-        processingOpacity.setValue(0);
-        thanksOpacity.setValue(0);
-        thanksScale.setValue(0.85);
-        checkScale.setValue(0);
-        thanksTextY.setValue(20);
-        thanksTextOpacity.setValue(0);
-        thanksDuaOpacity.setValue(0);
+      Keyboard.dismiss();
+      Animated.timing(backdrop, { toValue: 0, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      Animated.timing(sheetY, { toValue: SCREEN_H, duration: 550, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(() => {
+        resetState();
       });
     }
   }, [visible]);
+
+  // Keyboard-aware sheet offset
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      Animated.spring(keyboardOffset, {
+        toValue: -e.endCoordinates.height + 20,
+        damping: 34,
+        stiffness: 150,
+        mass: 1.1,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      Animated.spring(keyboardOffset, {
+        toValue: 0,
+        damping: 34,
+        stiffness: 150,
+        mass: 1.1,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
 
   // Keypad expand / collapse
   useEffect(() => {
@@ -497,6 +581,9 @@ export function DonationModal({
       const { data, error: fnError } = await supabase.functions.invoke(
         'create-donation-intent',
         {
+          headers: {
+            Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+          },
           body: {
             amount: displayAmount,
             mosque_id: mosqueUuid,
@@ -508,34 +595,34 @@ export function DonationModal({
       );
 
       if (fnError || !data?.clientSecret) {
-        throw new Error(fnError?.message ?? 'Failed to create payment intent');
+        let detail = 'Failed to create payment intent';
+        try {
+          if (fnError?.context?.text) {
+            const raw = await fnError.context.text();
+            console.error('[donation] Edge fn error body:', raw);
+            try {
+              const body = JSON.parse(raw);
+              detail = body?.error ?? body?.detail ?? raw;
+            } catch { detail = raw || fnError.message; }
+          } else {
+            console.error('[donation] fnError:', fnError, 'data:', data);
+            detail = data?.error ?? fnError?.message ?? detail;
+          }
+        } catch (e) {
+          console.error('[donation] Error reading context:', e);
+          detail = fnError?.message ?? 'Unknown error';
+        }
+        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
       }
 
-      // Re-init Stripe with the connected account so PaymentSheet routes correctly
-      await initStripe({
-        publishableKey: data.publishableKey ?? env.STRIPE_PUBLISHABLE_KEY,
-        stripeAccountId: data.stripeAccountId,
-      });
-
-      // Initialize the PaymentSheet
-      const { error: initError } = await initPaymentSheet({
-        paymentIntentClientSecret: data.clientSecret,
-        customerEphemeralKeySecret: data.ephemeralKey,
-        customerId: data.customerId,
-        merchantDisplayName: displayName,
-        returnURL: 'sahla://donation-complete',
-      });
-
-      if (initError) {
-        throw new Error(initError.message);
-      }
-
+      setStripeAccountId(data.stripeAccountId);
       setClientSecret(data.clientSecret);
       setCardFlipped(false);
-      setStep('card');
+      // Delay showing card step by one frame so StripeProvider re-renders
+      // with the new stripeAccountId before CardField mounts
+      requestAnimationFrame(() => setStep('card'));
     } catch (err: any) {
-      // Restore Stripe to platform key on error
-      await initStripe({ publishableKey: env.STRIPE_PUBLISHABLE_KEY }).catch(() => {});
+      setStripeAccountId(undefined);
       setStep('amount');
       Alert.alert('Error', err.message ?? 'Something went wrong.');
     }
@@ -546,22 +633,57 @@ export function DonationModal({
     setStep('processing');
 
     try {
-      const { error: presentError } = await presentPaymentSheet();
+      const { paymentIntent, error } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+      });
 
-      if (presentError) {
-        if (presentError.code === 'Canceled') {
-          setStep('card');
-          return;
-        }
-        throw new Error(presentError.message);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      // Restore Stripe to platform key after success
-      await initStripe({ publishableKey: env.STRIPE_PUBLISHABLE_KEY }).catch(() => {});
+      if (paymentIntent?.status === 'Succeeded') {
+        setStripeAccountId(undefined);
+        setStep('thanks');
+      } else {
+        throw new Error('Payment was not completed.');
+      }
+    } catch (err: any) {
+      setStep('card');
+      Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
+    }
+  };
+
+  const handlePlatformPay = async () => {
+    if (!clientSecret) return;
+    setStep('processing');
+
+    try {
+      const { error } = await confirmPlatformPayPayment(clientSecret, {
+        applePay: {
+          cartItems: [
+            {
+              label: displayName,
+              amount: String(displayAmount),
+              paymentType: PlatformPay.PaymentType.Immediate,
+            },
+          ],
+          merchantCountryCode: 'US',
+          currencyCode: 'USD',
+        },
+        googlePay: {
+          testEnv: __DEV__,
+          merchantName: displayName,
+          merchantCountryCode: 'US',
+          currencyCode: 'USD',
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
       setStep('thanks');
     } catch (err: any) {
-      // Restore Stripe to platform key on error
-      await initStripe({ publishableKey: env.STRIPE_PUBLISHABLE_KEY }).catch(() => {});
       setStep('card');
       Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
     }
@@ -572,16 +694,17 @@ export function DonationModal({
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <View className="flex-1 justify-end px-2 pb-3">
-        {/* Backdrop */}
+        {/* Backdrop blur */}
         <Animated.View
           pointerEvents={visible ? 'auto' : 'none'}
           style={{
             ...StyleSheet.absoluteFillObject,
-            backgroundColor: `rgba(${fg},0.4)`,
             opacity: backdrop,
           }}
         >
-          <Pressable style={{ flex: 1 }} onPress={onClose} />
+          <BlurView intensity={40} tint="dark" style={{ flex: 1 }}>
+            <Pressable style={{ flex: 1, backgroundColor: `rgba(${fg},0.15)` }} onPress={onClose} />
+          </BlurView>
         </Animated.View>
 
         {/* Sheet */}
@@ -589,8 +712,7 @@ export function DonationModal({
           className="bg-background overflow-hidden"
           style={{
             borderRadius: 44,
-            minHeight: step === 'thanks' || step === 'processing' ? 380 : undefined,
-            transform: [{ translateY: sheetY }],
+            transform: [{ translateY: sheetY }, { translateY: keyboardOffset }],
             shadowColor: fgRgb,
             shadowOffset: { width: 0, height: -4 },
             shadowOpacity: 0.1,
@@ -603,17 +725,12 @@ export function DonationModal({
             <View className="h-[4px] w-9 rounded-full bg-foreground/15" />
           </View>
 
+          {/* Step content — fades between steps, height animates via LayoutAnimation */}
+          <Animated.View style={{ opacity: contentOpacity }}>
+
           {/* ─── Amount Step ─── */}
-          <Animated.View
-            pointerEvents={step === 'amount' ? 'auto' : 'none'}
-            style={{
-              opacity: amountOpacity,
-              transform: [{ translateX: amountSlide }],
-              position: step === 'amount' ? 'relative' : 'absolute',
-              left: 0,
-              right: 0,
-            }}
-          >
+          {visibleStep === 'amount' && (
+          <View>
             <View className="px-6 pt-5">
               <Text className="text-center text-[11px] font-semibold uppercase tracking-[2px] text-foreground/35">
                 Donate
@@ -711,30 +828,6 @@ export function DonationModal({
               <View style={{ height: 1, backgroundColor: `rgba(${fg},0.06)` }} />
 
               <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setSaveCard((v) => !v)}
-                className="flex-row items-center justify-center gap-2 py-4"
-              >
-                <View
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 4,
-                    borderWidth: 1.5,
-                    borderColor: saveCard ? accentRgb : `rgba(${fg},0.25)`,
-                    backgroundColor: saveCard ? accentRgb : 'transparent',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {saveCard && <Ionicons name="checkmark" size={10} color={bgRgb} />}
-                </View>
-                <Text style={{ fontSize: 11, color: `rgba(${fg},0.5)` }}>
-                  Save card for future donations
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={handleContinueToCard}
                 style={{
@@ -754,19 +847,12 @@ export function DonationModal({
                 Secured by Stripe
               </Text>
             </View>
-          </Animated.View>
+          </View>
+          )}
 
           {/* ─── Card Step ─── */}
-          <Animated.View
-            pointerEvents={step === 'card' ? 'auto' : 'none'}
-            style={{
-              opacity: cardOpacity,
-              transform: [{ translateX: cardSlide }],
-              position: step === 'card' ? 'relative' : 'absolute',
-              left: 0,
-              right: 0,
-            }}
-          >
+          {visibleStep === 'card' && (
+          <View>
             <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 }}>
               {/* Header row */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
@@ -835,6 +921,30 @@ export function DonationModal({
                 </View>
               </View>
 
+              {/* Express pay */}
+              {isPlatformPaySupported && (
+                <>
+                  <PlatformPayButton
+                    type={
+                      Platform.OS === 'ios'
+                        ? PlatformPay.ButtonType.Donate
+                        : PlatformPay.ButtonType.Donate
+                    }
+                    appearance={PlatformPay.ButtonStyle.Black}
+                    borderRadius={26}
+                    onPress={handlePlatformPay}
+                    style={{ width: '100%', height: 52 }}
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16 }}>
+                    <View style={{ flex: 1, height: 1, backgroundColor: `rgba(${fg},0.08)` }} />
+                    <Text style={{ marginHorizontal: 14, fontSize: 11, color: `rgba(${fg},0.3)`, fontWeight: '500' }}>
+                      or pay with card
+                    </Text>
+                    <View style={{ flex: 1, height: 1, backgroundColor: `rgba(${fg},0.08)` }} />
+                  </View>
+                </>
+              )}
+
               {/* Interactive card with embedded input */}
               <CardVisual
                 brand={cardBrand}
@@ -870,6 +980,31 @@ export function DonationModal({
                 accentRgb={accentRgb}
               />
 
+              {/* Save card toggle */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setSaveCard((v) => !v)}
+                className="flex-row items-center justify-center gap-2 py-4"
+              >
+                <View
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 4,
+                    borderWidth: 1.5,
+                    borderColor: saveCard ? accentRgb : `rgba(${fg},0.25)`,
+                    backgroundColor: saveCard ? accentRgb : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {saveCard && <Ionicons name="checkmark" size={10} color={bgRgb} />}
+                </View>
+                <Text style={{ fontSize: 11, color: `rgba(${fg},0.5)` }}>
+                  Save card for future donations
+                </Text>
+              </TouchableOpacity>
+
               {/* Pay button */}
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -898,16 +1033,13 @@ export function DonationModal({
                 </Text>
               </View>
             </View>
-          </Animated.View>
+          </View>
+          )}
 
           {/* ─── Processing ─── */}
-          <Animated.View
-            pointerEvents="none"
+          {visibleStep === 'processing' && (
+          <View
             style={{
-              position: step === 'processing' ? 'relative' : 'absolute',
-              left: 0,
-              right: 0,
-              opacity: processingOpacity,
               alignItems: 'center',
               justifyContent: 'center',
               paddingVertical: 60,
@@ -918,17 +1050,13 @@ export function DonationModal({
             <Text style={{ marginTop: 16, fontSize: 13, color: `rgba(${fg},0.4)`, fontWeight: '500' }}>
               Processing payment...
             </Text>
-          </Animated.View>
+          </View>
+          )}
 
           {/* ─── Thank You ─── */}
-          {step === 'thanks' && (
+          {visibleStep === 'thanks' && (
             <Animated.View
               style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                top: 0,
-                bottom: 0,
                 opacity: thanksOpacity,
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1006,6 +1134,8 @@ export function DonationModal({
               </Animated.View>
             </Animated.View>
           )}
+
+          </Animated.View>
         </Animated.View>
       </View>
     </Modal>

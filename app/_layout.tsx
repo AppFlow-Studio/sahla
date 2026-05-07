@@ -1,7 +1,7 @@
 import '../global.css';
 
-// import { LogBox } from 'react-native';
-// LogBox.ignoreLogs(['forwardRef render functions']);
+import { LogBox } from 'react-native';
+LogBox.ignoreLogs(['forwardRef render functions']);
 
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
@@ -16,20 +16,38 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { StripeProvider } from '@stripe/stripe-react-native';
+const StripeProvider =
+  Platform.OS !== 'web'
+    ? require('@stripe/stripe-react-native').StripeProvider
+    : ({ children }: { children: React.ReactNode }) => children;
 
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { DonationProvider } from '@/src/providers/donation-provider';
+import { StripeAccountProvider, useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
 import { useOnboardingSync } from '@/src/hooks/use-onboarding-sync';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 SplashScreen.preventAutoHideAsync();
+
+function StripeProviderWithConnect({ children }: { children: React.ReactNode }) {
+  const { stripeAccountId } = useStripeAccount();
+  return (
+    <StripeProvider
+      publishableKey={env.STRIPE_PUBLISHABLE_KEY}
+      stripeAccountId={stripeAccountId}
+      merchantIdentifier="merchant.com.sahla"
+    >
+      {children}
+    </StripeProvider>
+  );
+}
 
 export const unstable_settings = {
   anchor: '(auth)',
@@ -94,6 +112,7 @@ export default function RootLayout() {
     PlayfairDisplay_400Regular,
     PlayfairDisplay_500Medium,
     CormorantGaramond_400Regular,
+    UthmanicHafs: require('../assets/fonts/UthmanicHafs_V22.ttf'),
   });
 
   useEffect(() => {
@@ -109,14 +128,16 @@ export default function RootLayout() {
           <QueryProvider>
             <SupabaseProvider>
               <ConfigProvider>
-                <StripeProvider publishableKey={env.STRIPE_PUBLISHABLE_KEY}>
-                  <ThemeRoot>
-                    <DonationProvider>
-                      <RootNavigator />
-                      <StatusBar style="auto" />
-                    </DonationProvider>
-                  </ThemeRoot>
-                </StripeProvider>
+                <StripeAccountProvider>
+                  <StripeProviderWithConnect>
+                    <ThemeRoot>
+                      <DonationProvider>
+                        <RootNavigator />
+                        <StatusBar style="auto" />
+                      </DonationProvider>
+                    </ThemeRoot>
+                  </StripeProviderWithConnect>
+                </StripeAccountProvider>
               </ConfigProvider>
             </SupabaseProvider>
           </QueryProvider>

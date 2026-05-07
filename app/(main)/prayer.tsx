@@ -44,23 +44,19 @@ type PrayerRow = {
 };
 
 function buildPrayerRows(
-  prayers: { name: string; time: string; isActive: boolean }[],
+  items: { name: string; athan: string; iqamah: string; status: Status }[],
   nextPrayer: { name: string; timeRemaining: string } | null
 ): PrayerRow[] {
-  let passedNext = false;
-  return prayers.map((p) => {
-    const isNext = p.isActive;
-    if (isNext) passedNext = true;
-    const status: Status = isNext ? 'next' : !passedNext && !isNext ? 'passed' : 'upcoming';
+  return items.map((p) => {
     let statusLabel = '';
-    if (status === 'passed') statusLabel = 'Passed';
-    if (status === 'next' && nextPrayer)
+    if (p.status === 'passed') statusLabel = 'Passed';
+    if (p.status === 'next' && nextPrayer)
       statusLabel = `Next in ${nextPrayer.timeRemaining}`;
     return {
       name: p.name,
-      athan: p.time,
-      iqamah: '--',
-      status,
+      athan: p.athan,
+      iqamah: p.iqamah,
+      status: p.status,
       statusLabel,
     };
   });
@@ -908,13 +904,9 @@ export default function PrayerScreen() {
   const [quranOpen, setQuranOpen] = useState(false);
   const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
   const { items: prayerItems, nextPrayer, countdownLabel, countdownClock } = usePrayerTimes();
-  const prayerData = useMemo(
-    () => prayerItems.map((p) => ({ name: p.name, time: p.athan, isActive: p.status === 'next' })),
-    [prayerItems]
-  );
   const prayerRows = useMemo(
-    () => buildPrayerRows(prayerData, nextPrayer),
-    [prayerData, nextPrayer]
+    () => buildPrayerRows(prayerItems, nextPrayer),
+    [prayerItems, nextPrayer]
   );
 
   useEffect(() => {
@@ -925,7 +917,7 @@ export default function PrayerScreen() {
   const currentTime = now.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    hour12: true,
   });
 
   const todayFormatted = now

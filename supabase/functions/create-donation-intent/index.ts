@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import Stripe from "https://esm.sh/stripe@17.7.0?target=deno";
+import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -41,7 +41,7 @@ serve(async (req: Request) => {
     }
 
     const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2025-03-31.basil",
+      apiVersion: "2024-12-18.acacia",
       httpClient: Stripe.createFetchHttpClient(),
     });
 
@@ -142,9 +142,10 @@ serve(async (req: Request) => {
     }
 
     // Create an ephemeral key for the mobile SDK on the connected account
+    // apiVersion MUST match what @stripe/stripe-react-native expects (0.65.0 → 2024-12-18.acacia)
     const ephemeralKey = await stripe.ephemeralKeys.create(
       { customer: customer.id },
-      { apiVersion: "2025-03-31.basil", ...stripeAccountOpts },
+      { apiVersion: "2024-12-18.acacia", ...stripeAccountOpts },
     );
 
     // Create the PaymentIntent on the connected account
@@ -157,7 +158,8 @@ serve(async (req: Request) => {
           type: "donation",
           mosque_id,
         },
-        ...(save_card ? { setup_future_usage: "off_session" } : {}),
+        setup_future_usage: save_card ? "off_session" : undefined,
+        automatic_payment_methods: { enabled: true },
       },
       stripeAccountOpts,
     );

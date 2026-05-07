@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
+import { useConfigStore } from '@/src/stores/config-store';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -237,6 +238,7 @@ export default function PaymentHistoryScreen() {
   const supabase = useSupabase();
   const { profile } = useProfile();
   const { colors } = useMasjidConfig();
+  const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
@@ -254,9 +256,10 @@ export default function PaymentHistoryScreen() {
   const [showIncomplete, setShowIncomplete] = useState(false);
 
   const fetchPayments = useCallback(async () => {
+    if (!profile?.id || !mosqueUuid) return;
     try {
       const { data, error } = await supabase.functions.invoke('get-payment-history', {
-        body: { user_id: profile?.id },
+        body: { user_id: profile.id, mosque_id: mosqueUuid },
       });
       if (error) {
         console.log('Error fetching payment history:', error);
@@ -268,7 +271,7 @@ export default function PaymentHistoryScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, profile?.id, mosqueUuid]);
 
   useEffect(() => {
     fetchPayments();

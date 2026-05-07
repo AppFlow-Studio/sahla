@@ -83,27 +83,38 @@ export default function DiscoverScreen() {
   const [fontsLoaded] = useFonts({ PlayfairDisplay_500Medium });
   const { items, status, error } = useContentItems();
 
+  const filtered = useMemo(() => {
+    if (activeTab === "All") return items;
+    if (activeTab === "Events") return items.filter((i) => i.type === "event");
+    if (activeTab === "Programs") return items.filter((i) => i.type === "program");
+    // "For You" — show a curated subset (first 4)
+    return items.filter((_, idx) => idx % 2 === 0);
+  }, [items, activeTab]);
+
   const recommendedItems: RecommendedItem[] = useMemo(
     () =>
-      items.slice(0, 8).map((r) => ({
+      filtered.slice(0, 8).map((r) => ({
         id: r.content_id,
         title: r.name ?? "Untitled",
         category: r.type ?? "",
         image: r.image ? { uri: r.image } : undefined,
       })),
-    [items],
+    [filtered],
   );
 
   const upcomingItems: EventItem[] = useMemo(
     () =>
-      items.slice(0, 3).map((r) => ({
-        id: r.content_id,
-        title: r.name ?? "Untitled",
-        dateLabel: formatScheduleLabel(r.type, r.start_date, r.end_date, r.start_time, r.days),
-        description: r.description ?? "",
-        thumbnail: r.image ? { uri: r.image } : undefined,
-      })),
-    [items],
+      filtered
+        .filter((r) => activeTab === "Programs" ? r.type === "program" : true)
+        .slice(0, 3)
+        .map((r) => ({
+          id: r.content_id,
+          title: r.name ?? "Untitled",
+          dateLabel: formatScheduleLabel(r.type, r.start_date, r.end_date, r.start_time, r.days),
+          description: r.description ?? "",
+          thumbnail: r.image ? { uri: r.image } : undefined,
+        })),
+    [filtered, activeTab],
   );
 
   const openContent = useCallback((id: string) => {
@@ -154,16 +165,20 @@ export default function DiscoverScreen() {
           )}
         </View>
 
-        <View className="mt-4">
-          <UpcomingEventsSection
-            items={upcomingItems}
-            onPressItem={(item) => openContent(item.id)}
-          />
-        </View>
+        {activeTab !== "Programs" && (
+          <View className="mt-4">
+            <UpcomingEventsSection
+              items={upcomingItems}
+              onPressItem={(item) => openContent(item.id)}
+            />
+          </View>
+        )}
 
-        <View className="mt-4">
-          <ProgramsSection items={PROGRAMS} />
-        </View>
+        {activeTab !== "Events" && (
+          <View className="mt-4">
+            <ProgramsSection items={PROGRAMS} />
+          </View>
+        )}
 
         <View className="mt-6 px-6">
           <DonateCard onPress={() => {}} />
