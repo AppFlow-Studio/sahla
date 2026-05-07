@@ -20,10 +20,11 @@ export type ContentItem = {
   is_young_professionals: boolean;
   is_pace: boolean;
   is_quran: boolean;
+  is_weekly_program: boolean;
 };
 
 const SELECT =
-  'content_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_kids, is_fourteen_plus, is_young_professionals, is_pace, is_quran' as const;
+  'content_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_kids, is_fourteen_plus, is_young_professionals, is_pace, is_quran, is_weekly_program' as const;
 
 export function useContentItems() {
   const supabase = useSupabase();

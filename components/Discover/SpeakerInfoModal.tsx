@@ -7,7 +7,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -15,11 +14,12 @@ import {
 import { useSupabase } from "@/src/hooks/use-supabase";
 
 const BUSH = "#0A261E";
-const SHEET_BG = "#FFFFFF";
-const TRAY_BG = "#EFEDE6";
-const DIVIDER = "rgba(10,38,30,0.10)";
+const SHEET_BG = "#F4EFE2";
+const AVATAR_BG = "#E8E3D2";
+const DIVIDER = "#0A261E";
 const SUBLABEL = "rgba(10,38,30,0.55)";
-const CHIP_GOLD = "#8B6F1A";
+const BULLET_GOLD = "#C9A227";
+const HANDLE = "rgba(10,38,30,0.22)";
 
 const platformTitleFont = Platform.select({
   ios: "SF Pro Display",
@@ -31,6 +31,13 @@ const platformUiFont = Platform.select({
   android: "Roboto",
   default: "system-ui",
 });
+
+function splitIntoSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 type SpeakerRow = {
   speaker_name: string | null;
@@ -88,14 +95,14 @@ export default function SpeakerInfoModal({
     };
   }, [visible, speakerName, mosqueUuid, supabase]);
 
-  const credentials = data?.speaker_creds ?? [];
+  const credentials = (data?.speaker_creds ?? []).flatMap(splitIntoSentences);
   const displayName = data?.speaker_name ?? speakerName ?? "";
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
       statusBarTranslucent
     >
@@ -103,179 +110,158 @@ export default function SpeakerInfoModal({
         onPress={onClose}
         style={{
           flex: 1,
-          backgroundColor: "rgba(0,0,0,0.85)",
-          justifyContent: "center",
-          paddingHorizontal: 20,
+          backgroundColor: "rgba(0,0,0,0.55)",
+          justifyContent: "flex-end",
+          paddingHorizontal: 12,
+          paddingBottom: 16,
         }}
       >
         <Pressable onPress={() => {}}>
-          <View>
+          <View
+            style={{
+              backgroundColor: SHEET_BG,
+              borderRadius: 28,
+              paddingTop: 12,
+              paddingBottom: 28,
+              paddingHorizontal: 24,
+              overflow: "hidden",
+            }}
+          >
             <View
-              className="flex-row items-center justify-between"
-              style={{ marginBottom: 14 }}
-            >
+              style={{
+                alignSelf: "center",
+                width: 44,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: HANDLE,
+                marginBottom: 6,
+              }}
+            />
+
+            <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
               <Pressable
                 onPress={onClose}
                 hitSlop={12}
                 accessibilityRole="button"
                 accessibilityLabel="Close speaker info"
-                className="h-9 w-9 items-center justify-center rounded-full"
-                style={{ backgroundColor: "#FFFFFF" }}
+                style={{ padding: 4 }}
               >
-                <AntDesign name="close" size={16} color="#1A1A1A" />
-              </Pressable>
-              <Pressable
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel="Notifications"
-                className="h-9 w-9 items-center justify-center rounded-full"
-                style={{ backgroundColor: "#FFFFFF" }}
-              >
-                <Feather name="bell" size={16} color="#1A1A1A" />
+                <AntDesign name="close" size={22} color={BUSH} />
               </Pressable>
             </View>
 
-            <View
+            <Text
               style={{
-                backgroundColor: SHEET_BG,
-                borderRadius: 24,
-                padding: 20,
-                overflow: "hidden",
+                fontFamily: "SF Pro",
+                fontSize: 16,
+                fontStyle: "normal",
+                fontWeight: "600",
+                color: BUSH,
+                marginTop: 4,
               }}
             >
-              {status === "loading" ? (
-                <View style={{ paddingVertical: 36, alignItems: "center" }}>
-                  <ActivityIndicator color={BUSH} />
+              SPEAKER
+            </Text>
+            <View
+              style={{
+                height: 1,
+                backgroundColor: DIVIDER,
+                marginTop: 10,
+                marginBottom: 22,
+              }}
+            />
+
+            {status === "loading" ? (
+              <View style={{ paddingVertical: 36, alignItems: "center" }}>
+                <ActivityIndicator color={BUSH} />
+              </View>
+            ) : (
+              <>
+                <View
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    backgroundColor: AVATAR_BG,
+                    overflow: "hidden",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 14,
+                  }}
+                >
+                  {data?.speaker_img ? (
+                    <Image
+                      source={{ uri: data.speaker_img }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <Feather name="user" size={28} color={BUSH} />
+                  )}
                 </View>
-              ) : (
-                <>
-                  <View className="flex-row items-center">
-                    <View
-                      style={{
-                        width: 76,
-                        height: 76,
-                        borderRadius: 38,
-                        backgroundColor: TRAY_BG,
-                        overflow: "hidden",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {data?.speaker_img ? (
-                        <Image
-                          source={{ uri: data.speaker_img }}
-                          style={{ width: "100%", height: "100%" }}
-                          contentFit="cover"
+
+                <Text
+                  style={{
+                    fontFamily: platformTitleFont,
+                    fontSize: 19,
+                    lineHeight: 24,
+                    fontWeight: "700",
+                    color: BUSH,
+                    marginBottom: 22,
+                  }}
+                >
+                  {displayName}
+                </Text>
+
+                {credentials.length > 0 ? (
+                  <View>
+                    {credentials.map((cred, idx) => (
+                      <View
+                        key={`${cred}-${idx}`}
+                        style={{
+                          flexDirection: "row",
+                          marginBottom: idx === credentials.length - 1 ? 0 : 16,
+                          paddingRight: 8,
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: BULLET_GOLD,
+                            marginTop: 9,
+                            marginRight: 14,
+                          }}
                         />
-                      ) : (
-                        <Feather name="user" size={32} color={BUSH} />
-                      )}
-                    </View>
-
-                    <View
-                      style={{
-                        flex: 1,
-                        marginLeft: 16,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontFamily: platformUiFont,
-                          fontSize: 11,
-                          fontWeight: "700",
-                          letterSpacing: 1.6,
-                          textTransform: "uppercase",
-                          color: SUBLABEL,
-                        }}
-                      >
-                        Speaker
-                      </Text>
-                      <Text
-                        style={{
-                          marginTop: 4,
-                          fontFamily: platformTitleFont,
-                          fontSize: 22,
-                          lineHeight: 28,
-                          fontWeight: "700",
-                          color: BUSH,
-                        }}
-                      >
-                        {displayName}
-                      </Text>
-                    </View>
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontFamily: platformUiFont,
+                            fontSize: 15,
+                            lineHeight: 22,
+                            color: BUSH,
+                          }}
+                        >
+                          {cred}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-
-                  <View
-                    style={{
-                      height: 1,
-                      backgroundColor: DIVIDER,
-                      marginTop: 18,
-                      marginBottom: 16,
-                    }}
-                  />
-
+                ) : (
                   <Text
                     style={{
                       fontFamily: platformUiFont,
-                      fontSize: 15,
-                      fontWeight: "700",
-                      color: BUSH,
-                      marginBottom: 12,
+                      fontSize: 14,
+                      lineHeight: 22,
+                      color: SUBLABEL,
                     }}
                   >
-                    Credentials
+                    No credentials available.
                   </Text>
-
-                  {credentials.length > 0 ? (
-                    <ScrollView
-                      style={{ maxHeight: 260 }}
-                      showsVerticalScrollIndicator={false}
-                    >
-                      {credentials.map((cred, idx) => (
-                        <View
-                          key={`${cred}-${idx}`}
-                          className="flex-row"
-                          style={{ marginBottom: 10 }}
-                        >
-                          <Text
-                            style={{
-                              color: CHIP_GOLD,
-                              fontSize: 12,
-                              lineHeight: 22,
-                              marginRight: 10,
-                            }}
-                          >
-                            {"◆"}
-                          </Text>
-                          <Text
-                            style={{
-                              flex: 1,
-                              fontFamily: platformUiFont,
-                              fontSize: 14,
-                              lineHeight: 22,
-                              color: BUSH,
-                            }}
-                          >
-                            {cred}
-                          </Text>
-                        </View>
-                      ))}
-                    </ScrollView>
-                  ) : (
-                    <Text
-                      style={{
-                        fontFamily: platformUiFont,
-                        fontSize: 14,
-                        lineHeight: 22,
-                        color: SUBLABEL,
-                      }}
-                    >
-                      No credentials available.
-                    </Text>
-                  )}
-                </>
-              )}
-            </View>
+                )}
+              </>
+            )}
           </View>
         </Pressable>
       </Pressable>

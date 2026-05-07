@@ -1,5 +1,4 @@
-import AntDesign from "@expo/vector-icons/AntDesign";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Image, Platform, Pressable, Text, View } from "react-native";
 
 const BUSH = "#0A261E";
 const MUTED = "rgba(10,38,30,0.6)";
@@ -71,7 +70,11 @@ export default function DiscoverHeader({
           accessibilityRole="button"
           accessibilityLabel="Search"
         >
-          <AntDesign name="search" size={18} color={BUSH} />
+          <Image
+            source={require("@/assets/images/search_icon.png")}
+            style={{ width: 18, height: 18 }}
+            resizeMode="contain"
+          />
         </Pressable>
       </View>
     </View>

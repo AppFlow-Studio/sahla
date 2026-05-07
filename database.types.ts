@@ -544,6 +544,7 @@ export type Database = {
           is_pace: boolean
           is_paid: boolean | null
           is_quran: boolean
+          is_weekly_program: boolean
           is_young_professionals: boolean
           max_capacity: number | null
           mosque_id: string
@@ -573,6 +574,7 @@ export type Database = {
           is_pace?: boolean
           is_paid?: boolean | null
           is_quran?: boolean
+          is_weekly_program?: boolean
           is_young_professionals?: boolean
           max_capacity?: number | null
           mosque_id: string
@@ -602,6 +604,7 @@ export type Database = {
           is_pace?: boolean
           is_paid?: boolean | null
           is_quran?: boolean
+          is_weekly_program?: boolean
           is_young_professionals?: boolean
           max_capacity?: number | null
           mosque_id?: string

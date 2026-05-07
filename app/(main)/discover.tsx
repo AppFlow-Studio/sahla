@@ -3,16 +3,26 @@ import {
   useFonts,
 } from "@expo-google-fonts/playfair-display";
 import { router } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import Animated, {
+  SlideInLeft,
+  SlideInRight,
+  SlideOutLeft,
+  SlideOutRight,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AudienceBrowse, {
+  type AudienceFilter,
   type AudienceItem,
 } from "@/components/Discover/AudienceBrowse";
 import DiscoverHeader, {
   type DiscoverTab,
 } from "@/components/Discover/DiscoverHeader";
+import EventsCalendar, {
+  type EventCalendarItem,
+} from "@/components/Discover/EventsCalendar";
 import ForYouContent, {
   type ForYouRowItem,
 } from "@/components/Discover/ForYouContent";
@@ -116,9 +126,59 @@ function formatCardDate(
   return time ? `${start} • ${time}` : start;
 }
 
+const TAB_INDEX: Record<DiscoverTab, number> = {
+  All: 0,
+  "For You": 1,
+  Events: 2,
+  Programs: 3,
+};
+
 export default function DiscoverScreen() {
-  const [activeTab, setActiveTab] = useState<DiscoverTab>("All");
+  const [activeTab, setActiveTabState] = useState<DiscoverTab>("All");
+  const [direction, setDirection] = useState<"right" | "left">("right");
+  const [nextTab, setNextTab] = useState<DiscoverTab | null>(null);
+  const [programsInitialFilter, setProgramsInitialFilter] =
+    useState<AudienceFilter>("All");
+  const [hasMounted, setHasMounted] = useState(false);
   const [fontsLoaded] = useFonts({ PlayfairDisplay_500Medium });
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  const switchTab = useCallback(
+    (newTab: DiscoverTab) => {
+      if (newTab === activeTab) return;
+      const oldIdx = TAB_INDEX[activeTab];
+      const newIdx = TAB_INDEX[newTab];
+      setDirection(newIdx > oldIdx ? "right" : "left");
+      setNextTab(newTab);
+    },
+    [activeTab],
+  );
+
+  useEffect(() => {
+    if (nextTab && nextTab !== activeTab) {
+      setActiveTabState(nextTab);
+      setNextTab(null);
+    }
+  }, [nextTab, activeTab, direction]);
+
+  const handleHeaderSelect = useCallback(
+    (tab: DiscoverTab) => {
+      if (tab === "Programs") setProgramsInitialFilter("All");
+      switchTab(tab);
+    },
+    [switchTab],
+  );
+
+  const goToProgramsWithFilter = useCallback(
+    (audience: AudienceFilter) => {
+      setProgramsInitialFilter(audience);
+      switchTab("Programs");
+    },
+    [switchTab],
+  );
   const { open: openDonate } = useDonation();
   const { items, status, error } = useContentItems();
   const { recommendations, status: recStatus, error: recError } = useRecommendation();
@@ -152,26 +212,17 @@ export default function DiscoverScreen() {
     return map;
   }, [items]);
 
-  const formatType = (type: string | null): string | null => {
-    if (!type) return null;
-    return type
-      .split(/[\s_-]+/)
-      .map((s) => (s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : ""))
-      .join(" ");
-  };
-
   const deriveCategory = (
     item: (typeof items)[number] | undefined,
-    type: string | null,
   ): string | null => {
-    if (!item) return formatType(type);
+    if (!item) return null;
     const labels: string[] = [];
     if (item.is_kids) labels.push("Kids");
     if (item.is_fourteen_plus) labels.push("Youth");
     if (item.is_young_professionals) labels.push("Young Professionals");
     if (item.is_pace) labels.push("PACE");
     if (item.is_quran) labels.push("Quran");
-    if (labels.length === 0) return formatType(type);
+    if (labels.length === 0) return "For All";
     return labels.slice(0, 2).join(" & ");
   };
 
@@ -182,7 +233,7 @@ export default function DiscoverScreen() {
         id: r.content_id,
         title: r.name ?? "Untitled",
         speaker: matched?.speakers?.[0] ?? null,
-        category: deriveCategory(matched, r.type),
+        category: deriveCategory(matched),
         image: r.image ? { uri: r.image } : undefined,
       };
     },
@@ -218,17 +269,30 @@ export default function DiscoverScreen() {
           image: r.image ? { uri: r.image } : undefined,
           isKids: r.is_kids === true,
           isYouth: r.is_fourteen_plus === true,
+          category: deriveCategory(r),
+          isWeekly: r.is_weekly_program === true,
         })),
     [items],
   );
 
-  const eventBrowseItems = useMemo(
-    () => audienceItems("event"),
-    [audienceItems],
-  );
   const programBrowseItems = useMemo(
     () => audienceItems("program"),
     [audienceItems],
+  );
+
+  const eventsCalendarItems: EventCalendarItem[] = useMemo(
+    () =>
+      items
+        .filter((r) => r.type === "event")
+        .map((r) => ({
+          id: r.content_id,
+          title: r.name ?? "Untitled",
+          image: r.image ? { uri: r.image } : undefined,
+          startDate: r.start_date,
+          startTime: r.start_time,
+          category: deriveCategory(r),
+        })),
+    [items],
   );
 
   const openContent = useCallback((id: string) => {
@@ -267,7 +331,7 @@ export default function DiscoverScreen() {
                   : "Discover"
           }
           active={activeTab}
-          onSelect={setActiveTab}
+          onSelect={handleHeaderSelect}
         />
 
         {status === "error" ? (
@@ -286,62 +350,98 @@ export default function DiscoverScreen() {
           </View>
         ) : null}
 
-        {activeTab === "For You" ? (
-          isLoading ? (
-            <View className="px-6 py-8">
-              <ActivityIndicator color="#0A261E" />
-            </View>
-          ) : (
-            <ForYouContent
-              events={forYouEvents}
-              programs={forYouPrograms}
-              onPressItem={openContent}
-              onPressEdit={() => router.push("/(personalization)/reasons")}
-            />
-          )
-        ) : activeTab === "Events" ? (
-          <AudienceBrowse
-            items={eventBrowseItems}
-            onPressItem={openContent}
-            allTabFooter={<DonateCard onPress={openDonate} />}
-          />
-        ) : activeTab === "Programs" ? (
-          <AudienceBrowse
-            items={programBrowseItems}
-            onPressItem={openContent}
-            allTabFooter={<DonateCard onPress={openDonate} />}
-          />
-        ) : (
-          <>
-            <View className="mt-4">
-              {isLoading ? (
+        <View style={{ overflow: "hidden" }}>
+          <Animated.View
+            key={activeTab}
+            entering={
+              hasMounted
+                ? direction === "right"
+                  ? SlideInRight.duration(220)
+                  : SlideInLeft.duration(220)
+                : undefined
+            }
+            exiting={
+              direction === "right"
+                ? SlideOutLeft.duration(220)
+                : SlideOutRight.duration(220)
+            }
+          >
+            {activeTab === "For You" ? (
+              isLoading ? (
                 <View className="px-6 py-8">
                   <ActivityIndicator color="#0A261E" />
                 </View>
               ) : (
-                <RecommendedSection
-                  items={recommendedItems}
-                  onPressItem={(item) => openContent(item.id)}
+                <ForYouContent
+                  events={forYouEvents}
+                  programs={forYouPrograms}
+                  onPressItem={openContent}
+                  onPressEdit={() => router.push("/(personalization)/reasons")}
                 />
-              )}
-            </View>
-
-            <View className="mt-4">
-              <UpcomingEventsSection
-                items={upcomingItems}
-                onPressItem={(item) => openContent(item.id)}
+              )
+            ) : activeTab === "Events" ? (
+              <>
+                <EventsCalendar
+                  items={eventsCalendarItems}
+                  onPressItem={openContent}
+                />
+                <View className="px-6" style={{ marginTop: 24 }}>
+                  <DonateCard onPress={openDonate} />
+                </View>
+              </>
+            ) : activeTab === "Programs" ? (
+              <AudienceBrowse
+                kind="programs"
+                items={programBrowseItems}
+                onPressItem={openContent}
+                initialFilter={programsInitialFilter}
+                onPressSeeAll={(audience) =>
+                  setProgramsInitialFilter(audience)
+                }
+                allTabFooter={<DonateCard onPress={openDonate} />}
               />
-            </View>
+            ) : (
+              <>
+                <View className="mt-4">
+                  {isLoading ? (
+                    <View className="px-6 py-8">
+                      <ActivityIndicator color="#0A261E" />
+                    </View>
+                  ) : (
+                    <RecommendedSection
+                      items={recommendedItems}
+                      onPressItem={(item) => openContent(item.id)}
+                    />
+                  )}
+                </View>
 
-            <View className="mt-4">
-              <ProgramsSection items={PROGRAMS} />
-            </View>
+                <View className="mt-4">
+                  <UpcomingEventsSection
+                    items={upcomingItems}
+                    onPressItem={(item) => openContent(item.id)}
+                    onPressViewCalendar={() => switchTab("Events")}
+                  />
+                </View>
 
-            <View className="mt-6 px-6">
-              <DonateCard onPress={openDonate} />
-            </View>
-          </>
-        )}
+                <View className="mt-4">
+                  <ProgramsSection
+                    items={PROGRAMS}
+                    onPressItem={(item) =>
+                      goToProgramsWithFilter(
+                        item.title as AudienceFilter,
+                      )
+                    }
+                    onPressSeeAll={() => goToProgramsWithFilter("All")}
+                  />
+                </View>
+
+                <View className="mt-6 px-6">
+                  <DonateCard onPress={openDonate} />
+                </View>
+              </>
+            )}
+          </Animated.View>
+        </View>
       </ScrollView>
       </View>
     </View>
