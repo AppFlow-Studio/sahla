@@ -26,15 +26,16 @@ export function useContentNotifSettings(contentId: string) {
   return useQuery({
     queryKey: ['content-notif-settings', userId, contentId],
     queryFn: async (): Promise<string[] | null> => {
-      const { data, error } = await supabase
-        .from('content_notification_settings')
-        .select('notification_settings')
-        .eq('user_id', userId!)
-        .eq('content_id', contentId)
-        .maybeSingle();
+      // Demo-day workaround: see ct02-actions edge function header.
+      const { data, error } = await supabase.functions.invoke<{
+        settings: string[] | null;
+        error?: string;
+      }>('ct02-actions', {
+        body: { action: 'get_settings', user_id: userId, content_id: contentId },
+      });
       if (error) throw new Error(error.message);
-      if (!data) return null;
-      return data.notification_settings ?? [];
+      if (data?.error) throw new Error(data.error);
+      return data?.settings ?? null;
     },
     enabled: isLoaded && !!userId && !!contentId,
   });
@@ -57,33 +58,23 @@ export function useSaveContentNotifSettings(
     mutationFn: async (offsets: string[]): Promise<string[] | null> => {
       if (!userId) throw new Error('Not signed in');
       if (!mosqueId) throw new Error('No mosque resolved');
-
-      if (offsets.length === 0) {
-        // No selections = revert to default. DELETE the settings row.
-        // The user stays opted in (content_notifications row untouched);
-        // NT-BE's scheduler will fall back to mosque default_reminder_min.
-        const { error } = await supabase
-          .from('content_notification_settings')
-          .delete()
-          .eq('user_id', userId)
-          .eq('content_id', contentId);
-        if (error) throw new Error(error.message);
-        return null;
-      }
-
-      const { error } = await supabase
-        .from('content_notification_settings')
-        .upsert(
-          {
-            user_id: userId,
-            content_id: contentId,
-            mosque_id: mosqueId,
-            notification_settings: offsets,
-          },
-          { onConflict: 'user_id,content_id' },
-        );
+      // Demo-day workaround: see ct02-actions edge function header.
+      // Empty offsets array → edge function deletes the row (revert to default).
+      const { data, error } = await supabase.functions.invoke<{
+        settings: string[] | null;
+        error?: string;
+      }>('ct02-actions', {
+        body: {
+          action: 'set_timings',
+          user_id: userId,
+          mosque_id: mosqueId,
+          content_id: contentId,
+          offsets,
+        },
+      });
       if (error) throw new Error(error.message);
-      return offsets;
+      if (data?.error) throw new Error(data.error);
+      return data?.settings ?? null;
     },
     onSuccess: (next) => {
       queryClient.setQueryData(

@@ -42,12 +42,14 @@ function titleCase(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
-function timeToSeconds(hhmmss: string): number {
+function timeToSeconds(hhmmss: string | null | undefined): number {
+  if (typeof hhmmss !== 'string') return 0;
   const [hh = '0', mm = '0', ss = '0'] = hhmmss.split(':');
   return Number(hh) * 3600 + Number(mm) * 60 + Number(ss);
 }
 
-function formatTo12Hour(hhmmss: string): string {
+function formatTo12Hour(hhmmss: string | null | undefined): string {
+  if (typeof hhmmss !== 'string') return '';
   const [hh = '0', mm = '0'] = hhmmss.split(':');
   const h = Number(hh);
   const m = Number(mm);
@@ -147,10 +149,11 @@ export function usePrayerTimes(): UsePrayerTimesResult {
   const query = useQuery({
     queryKey: ['prayer-times', mosqueUuid, todayDateStr],
     queryFn: async (): Promise<TodaysPrayerRow[]> => {
-      // TEMPORARY: until F-RLS-01 lands an `org_members_select` policy on
-      // `todays_prayers`, route through the read-only `get-todays-prayers`
-      // edge function which uses the service-role key. Swap back to a
-      // direct table read once F-RLS-01 ships.
+      // Demo-day workaround: F-RLS-01 added per-org RLS on todays_prayers, but
+      // the Clerk → Supabase JWT bridge isn't returning a usable auth context
+      // to the helpers, so direct reads come back empty. Route through the
+      // service-role edge function until that's resolved (or until prayer
+      // times move to the external API per the team roadmap).
       const { data, error } = await supabase.functions.invoke<{
         rows: TodaysPrayerRow[];
         error?: string;
@@ -159,7 +162,14 @@ export function usePrayerTimes(): UsePrayerTimesResult {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      return data?.rows ?? [];
+      // Filter out rows with null fields — the edge function returns
+      // whatever's in the table and the schema allows nulls.
+      return (data?.rows ?? []).filter(
+        (r) =>
+          typeof r.prayer_name === 'string' &&
+          typeof r.athan_time === 'string' &&
+          typeof r.iqamah_time === 'string',
+      );
     },
     enabled: !!mosqueUuid,
   });

@@ -145,13 +145,15 @@ export default function ContentDetailScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error: qError } = await supabase
-        .from("content_items")
-        .select(
-          "content_id, name, description, image, type, start_date, start_time, speakers",
-        )
-        .eq("content_id", id)
-        .maybeSingle();
+      // Demo-day workaround: routed through ct02-actions edge function while
+      // the Clerk → Supabase JWT bridge is unverified. Direct content_items
+      // reads come back null under the new F-RLS-01 org_select policy.
+      const { data, error: qError } = await supabase.functions.invoke<{
+        row: Detail | null;
+        error?: string;
+      }>("ct02-actions", {
+        body: { action: "get_detail", content_id: id },
+      });
 
       if (cancelled) return;
       if (qError) {
@@ -159,12 +161,17 @@ export default function ContentDetailScreen() {
         setStatus("error");
         return;
       }
-      if (!data) {
+      if (data?.error) {
+        setError(data.error);
+        setStatus("error");
+        return;
+      }
+      if (!data?.row) {
         setError("Content not found");
         setStatus("error");
         return;
       }
-      setDetail(data as Detail);
+      setDetail(data.row);
       setStatus("success");
     })();
 

@@ -5,8 +5,11 @@ import { useSupabase } from '@/src/hooks/use-supabase';
 
 /**
  * Reads whether a single content item is saved by the current user.
- * Cache key matches CT-02's spec so the toggle mutation can do an
- * optimistic update without re-fetching.
+ *
+ * Demo-day workaround: routed through the `ct02-actions` service-role edge
+ * function while the Clerk → Supabase JWT bridge is unverified. Direct
+ * .from('saved_content') reads return empty under the new F-RLS-01 policies
+ * because requesting_user_id() resolves to NULL.
  */
 export function useIsSaved(contentId: string) {
   const supabase = useSupabase();
@@ -15,14 +18,15 @@ export function useIsSaved(contentId: string) {
   return useQuery({
     queryKey: ['saved-content', userId, contentId],
     queryFn: async (): Promise<boolean> => {
-      const { data, error } = await supabase
-        .from('saved_content')
-        .select('content_id')
-        .eq('user_id', userId!)
-        .eq('content_id', contentId)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke<{
+        is_saved: boolean;
+        error?: string;
+      }>('ct02-actions', {
+        body: { action: 'is_saved', user_id: userId, content_id: contentId },
+      });
       if (error) throw new Error(error.message);
-      return !!data;
+      if (data?.error) throw new Error(data.error);
+      return !!data?.is_saved;
     },
     enabled: isLoaded && !!userId && !!contentId,
   });
@@ -45,30 +49,23 @@ export function useToggleSave(contentId: string, mosqueId: string | null) {
     mutationFn: async (currentlySaved: boolean): Promise<boolean> => {
       if (!userId) throw new Error('Not signed in');
       if (!mosqueId) throw new Error('No mosque resolved');
-
-      if (currentlySaved) {
-        const { error } = await supabase
-          .from('saved_content')
-          .delete()
-          .eq('user_id', userId)
-          .eq('content_id', contentId);
-        if (error) throw new Error(error.message);
-      } else {
-        const { error } = await supabase
-          .from('saved_content')
-          .insert({ user_id: userId, content_id: contentId, mosque_id: mosqueId });
-        if (error) throw new Error(error.message);
-      }
-
-      // Fire-and-forget interaction log — don't block the UI.
-      void supabase.from('user_content_interactions').insert({
-        user_id: userId,
-        content_id: contentId,
-        mosque_id: mosqueId,
-        interaction_type: currentlySaved ? 'unsave' : 'save',
+      // Demo-day workaround: see useIsSaved for context. Edge function
+      // handles the saved_content write + interaction log in one call.
+      const { data, error } = await supabase.functions.invoke<{
+        is_saved: boolean;
+        error?: string;
+      }>('ct02-actions', {
+        body: {
+          action: 'toggle_save',
+          user_id: userId,
+          mosque_id: mosqueId,
+          content_id: contentId,
+          currently_saved: currentlySaved,
+        },
       });
-
-      return !currentlySaved;
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      return !!data?.is_saved;
     },
     onMutate: async (currentlySaved) => {
       await queryClient.cancelQueries({

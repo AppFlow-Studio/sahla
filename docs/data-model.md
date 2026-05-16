@@ -302,7 +302,7 @@ Cached scored recommendations. See [Recommendation Engine](./recommendation-engi
 | `user_bookmarked_surahs` | `(user_id, mosque_id, surah_number)` | Surah bookmarks |
 | `user_liked_surahs` | `(user_id, mosque_id, surah_number)` | Surah likes |
 | `user_continue_read` | `(user_id, mosque_id)` | Reading position |
-| `ramadan_quran_tracker` | `(user_id, mosque_id, surah_number)` | Ramadan progress |
+| `ramadan_quran_tracker` | `(id, mosque_id, surah)` | Ramadan progress (mosque-scoped, no user_id column) |
 
 ---
 
@@ -361,7 +361,19 @@ RLS is enabled on every table. The following helper functions are defined:
 | `is_sahla_team()` | boolean | User is in `sahla_team` table or is Sahla HQ |
 | `sahla_team_role()` | text | Returns `super_admin`, `admin`, etc. |
 
-**Current policy state:** Most tables currently only have `sahla_select` / `sahla_write` policies (Sahla admin team access). The `mosques` table has a `mosques_public_read` policy (anyone can read). Per-user or per-org-member policies for regular app users have not been implemented yet.
+**Current policy state** (after F-RLS-01, migration `20260425153145_user_rls_policies.sql`):
+
+The platform `sahla_select` / `sahla_write` policies remain on every table — Sahla admins continue to see and write everything cross-mosque. On top of those, regular app users now have:
+
+- **Mosque-scoped reads** (`*_org_select`, predicate `mosque_id = requesting_mosque_id()`): `content_items`, `prayers`, `todays_prayers`, `jummah`, `speaker_data`, `lectures`, `ramadan_quran_tracker`.
+- **Public reads** (`*_public_read`, predicate `true`): `mosques`, `islamic_interest_categories`, `islamic_goals`. RLS was enabled on the latter two as part of this migration to make the public read explicit.
+- **Own-row read/write** scoped by `(user_id, mosque_id)` with full `_user_select` / `_insert` / `_update` / `_delete` set: `user_preferences`, `user_islamic_interests`, `user_islamic_goals`, `user_content_interactions`, `liked_lectures`, `user_bookmarked_ayahs`, `user_liked_ayahs`, `user_bookmarked_surahs`, `user_liked_surahs`, `user_continue_read`.
+- **Own-row read/write** scoped by user only: `profiles` (predicate `id = requesting_user_id()`), `saved_content` (predicate `user_id = requesting_user_id()`; the table has a `mosque_id` column but the policy intentionally ignores it per the F-RLS-01 spec).
+- **Pre-existing user policy** (unchanged): `prayer_notification_settings_user_*` from migration `20260423195730`.
+
+Tables listed in the F-RLS-01 ticket but skipped: `community_partners` and `reels` (don't exist yet).
+
+Schema deviation noted during F-RLS-01: `ramadan_quran_tracker` is documented elsewhere as a per-user table but the actual schema has only `(id, mosque_id, surah, surah_name, ayah_num, num_of_ayahs, created_at)` — no `user_id`. It was placed in the mosque-scoped read bucket for now; per-user tracking would require a schema change first.
 
 The `recommend` edge function uses `SUPABASE_SERVICE_ROLE_KEY`, bypassing RLS entirely.
 
@@ -380,7 +392,7 @@ The `recommend` edge function uses `SUPABASE_SERVICE_ROLE_KEY`, bypassing RLS en
 
 1. **No auto-created `profiles` row** — After Clerk signup, no code inserts into the `profiles` table. `useProfile()` returns `null` for all new users.
 2. **No mutation hooks** — There are no hooks to create or update `user_preferences`, `user_islamic_interests`, or `user_islamic_goals` from the app.
-3. **RLS policies incomplete** — Per-user policies using `requesting_user_id()` and `requesting_mosque_id()` exist as functions but are not used in any SELECT/INSERT/UPDATE policies for regular app users.
+3. ~~**RLS policies incomplete**~~ — Closed by F-RLS-01 (`20260425153145_user_rls_policies.sql`). See Multi-Tenant Isolation → Current policy state.
 4. **No unique constraint on interactions** — `user_content_interactions` has no unique constraint on `(user_id, content_id, interaction_type)`, allowing duplicate events.
 5. **Tracking booleans unused** — `recommendation_log.was_shown`, `was_clicked`, `was_added` are always `false`.
 6. **Dual `first_name`** — Lives in both Clerk `publicMetadata` and `profiles.first_name` with no sync mechanism.
@@ -394,4 +406,6 @@ The `recommend` edge function uses `SUPABASE_SERVICE_ROLE_KEY`, bypassing RLS en
 | `supabase/migrations/20260419000000_baseline_schema.sql` | Complete schema definition (all tables, RLS, indexes) |
 | `supabase/migrations/20260421_add_clerk_org_id_to_mosques.sql` | Adds `clerk_org_id` column |
 | `supabase/migrations/20260421_mosques_public_read_policy.sql` | Public read policy for mosques |
+| `supabase/migrations/20260423195730_prayer_notification_settings_user_rls.sql` | Per-user RLS for prayer notification toggles |
+| `supabase/migrations/20260425153145_user_rls_policies.sql` | F-RLS-01 — per-user RLS across user-facing tables |
 | `database.types.ts` | Auto-generated TypeScript types from Supabase schema |
