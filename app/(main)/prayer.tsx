@@ -17,7 +17,9 @@ import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import QuranScreen from '@/src/screens/QuranScreen';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { usePrayerTimes, type PrayerEntry } from '@/src/hooks/use-prayer-times';
 import { useTrackerVersion } from '@/src/hooks/use-tracker';
+import { getHijriDate } from '@/src/lib/hijri';
 import { getLastViewed } from '@/src/lib/quran-tracker';
 import {
   getGoalForPeriod,
@@ -42,19 +44,23 @@ type PrayerRow = {
   statusLabel: string;
 };
 
-const PRAYERS: PrayerRow[] = [
-  { name: 'Fajr', athan: '5:50 AM', iqamah: '6:10 AM', status: 'passed', statusLabel: 'Passed' },
-  {
-    name: 'Dhuhr',
-    athan: '1:05 PM',
-    iqamah: '1:15 PM',
-    status: 'next',
-    statusLabel: 'Next in 0h 55m',
-  },
-  { name: 'Asr', athan: '4:28 PM', iqamah: '5:00 PM', status: 'upcoming', statusLabel: '' },
-  { name: 'Maghrib', athan: '7:05 PM', iqamah: '7:10 PM', status: 'upcoming', statusLabel: '' },
-  { name: 'Isha', athan: '8:20 PM', iqamah: '8:30 PM', status: 'upcoming', statusLabel: '' },
-];
+function buildPrayerRows(
+  items: PrayerEntry[],
+  countdownLabel: string | null,
+): PrayerRow[] {
+  return items.map((p) => ({
+    name: p.name,
+    athan: p.athan,
+    iqamah: p.iqamah,
+    status: p.status,
+    statusLabel:
+      p.status === 'passed'
+        ? 'Passed'
+        : p.status === 'next' && countdownLabel
+          ? `Next in ${countdownLabel}`
+          : '',
+  }));
+}
 
 type Palette = {
   bg: string;
@@ -894,20 +900,34 @@ function PrayerRowItem({
 
 export default function PrayerScreen() {
   const c = usePalette();
-  const [now, setNow] = useState(new Date());
+  const { timezone } = useMasjidConfig();
+  const {
+    items: prayerItems,
+    nextPrayer,
+    currentTimeFormatted,
+    countdownLabel,
+    countdownClock,
+    nowHours,
+  } = usePrayerTimes();
   const [quranOpen, setQuranOpen] = useState(false);
   const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
 
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const prayers = useMemo(
+    () => buildPrayerRows(prayerItems, countdownLabel),
+    [prayerItems, countdownLabel],
+  );
 
-  const currentTime = now.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  const dateStripGregorian = useMemo(() => {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone || 'UTC',
+      weekday: 'long',
+      month: 'short',
+      year: 'numeric',
+    })
+      .format(new Date())
+      .toUpperCase();
+  }, [timezone]);
+  const dateStripHijri = getHijriDate();
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -964,11 +984,11 @@ export default function PrayerScreen() {
                   }}
                 />
                 <CountdownRing
-                  prayers={PRAYERS}
-                  nowHours={now.getHours() + now.getMinutes() / 60}
+                  prayers={prayers}
+                  nowHours={nowHours}
                   c={c}
                 />
-                <PrayerDots prayers={PRAYERS} c={c} />
+                <PrayerDots prayers={prayers} c={c} />
                 <View
                   style={{
                     position: 'absolute',
@@ -985,7 +1005,7 @@ export default function PrayerScreen() {
                       marginBottom: 4,
                     }}
                   >
-                    ASR IN
+                    {nextPrayer ? `${nextPrayer.name.toUpperCase()} IN` : 'ALL DONE'}
                   </Text>
                   <Text
                     style={{
@@ -995,7 +1015,7 @@ export default function PrayerScreen() {
                       letterSpacing: 1,
                     }}
                   >
-                    00:55
+                    {countdownClock ?? '--:--'}
                   </Text>
                   <GlassView
                     glassEffectStyle="regular"
@@ -1008,7 +1028,7 @@ export default function PrayerScreen() {
                     }}
                   >
                     <Text style={{ color: c.gold, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
-                      {currentTime} CURRENT
+                      {currentTimeFormatted} CURRENT
                     </Text>
                   </GlassView>
                 </View>
@@ -1046,9 +1066,9 @@ export default function PrayerScreen() {
               </Pressable>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ color: c.text, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }}>
-                  THURSDAY, MAR, 2026
+                  {dateStripGregorian}
                 </Text>
-                <Text style={{ color: c.gold, fontSize: 10, marginTop: 2 }}>Ramadan 30, 1447</Text>
+                <Text style={{ color: c.gold, fontSize: 10, marginTop: 2 }}>{dateStripHijri}</Text>
               </View>
               <Pressable hitSlop={12}>
                 <MaterialCommunityIcons name="chevron-right" size={22} color={c.muted} />
@@ -1079,10 +1099,10 @@ export default function PrayerScreen() {
               <View style={{ width: 20 }} />
             </View>
 
-            {PRAYERS.map((p, i) => {
+            {prayers.map((p, i) => {
               const isPassed = p.status === 'passed';
               const isNext = p.status === 'next';
-              const nextRow = PRAYERS[i + 1];
+              const nextRow = prayers[i + 1];
               const showDivider = !isPassed && !isNext && nextRow?.status !== 'next';
               return <PrayerRowItem key={p.name} row={p} c={c} showDivider={showDivider} />;
             })}

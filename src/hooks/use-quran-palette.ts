@@ -33,7 +33,9 @@ export function useQuranPalette(): QuranPalette {
   return useMemo(
     () => ({
       brandDark: rgb(colors.primary),
-      cream: rgb(colors.background),
+      // Mushaf paper colour — overrides the per-masjid background so the
+      // Quran reader has its own warm cream regardless of tenant theme.
+      cream: '#f8f4e6',
       gold: rgb(colors.accent),
       goldTint: rgb(colors.accent, 0.2),
       goldTint10: rgb(colors.accent, 0.1),

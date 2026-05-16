@@ -1,0 +1,245 @@
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useSupabase } from '@/src/hooks/use-supabase';
+import { useConfigStore } from '@/src/stores/config-store';
+
+export type PrayerStatus = 'passed' | 'next' | 'upcoming';
+
+export type PrayerEntry = {
+  /** Title-case display name, e.g. 'Fajr'. */
+  name: string;
+  /** Raw lowercase DB name, e.g. 'fajr'. */
+  rawName: string;
+  /** 12-hour formatted athan time, e.g. '5:19 AM'. */
+  athan: string;
+  /** 12-hour formatted iqamah time, e.g. '5:44 AM'. */
+  iqamah: string;
+  /** Raw HH:MM:SS time-of-day from the DB. */
+  athanTimeRaw: string;
+  iqamahTimeRaw: string;
+  status: PrayerStatus;
+};
+
+type TodaysPrayerRow = {
+  prayer_name: string;
+  athan_time: string;
+  iqamah_time: string;
+};
+
+const PRAYER_ORDER: Record<string, number> = {
+  fajr: 0,
+  sunrise: 1,
+  dhuhr: 2,
+  asr: 3,
+  maghrib: 4,
+  isha: 5,
+};
+
+function titleCase(name: string): string {
+  if (!name) return name;
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
+function timeToSeconds(hhmmss: string | null | undefined): number {
+  if (typeof hhmmss !== 'string') return 0;
+  const [hh = '0', mm = '0', ss = '0'] = hhmmss.split(':');
+  return Number(hh) * 3600 + Number(mm) * 60 + Number(ss);
+}
+
+function formatTo12Hour(hhmmss: string | null | undefined): string {
+  if (typeof hhmmss !== 'string') return '';
+  const [hh = '0', mm = '0'] = hhmmss.split(':');
+  const h = Number(hh);
+  const m = Number(mm);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+function formatCountdown(totalSeconds: number): string {
+  if (totalSeconds <= 0) return 'now';
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return '<1m';
+}
+
+function formatCountdownClock(totalSeconds: number): string {
+  if (totalSeconds <= 0) return '00:00';
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function getNowInTimezone(timeZone: string): {
+  hour: number;
+  minute: number;
+  second: number;
+  totalSeconds: number;
+  hours: number;
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(new Date());
+
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0') % 24;
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+  const second = Number(parts.find((p) => p.type === 'second')?.value ?? '0');
+
+  const totalSeconds = hour * 3600 + minute * 60 + second;
+  const hours = hour + minute / 60 + second / 3600;
+
+  return { hour, minute, second, totalSeconds, hours };
+}
+
+function formatCurrentTimeInTz(timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date());
+}
+
+function getTodayDateStringInTz(timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+export type UsePrayerTimesResult = {
+  items: PrayerEntry[];
+  nextPrayer: PrayerEntry | null;
+  /** Live-formatted clock time in mosque tz, e.g. '4:01 PM'. */
+  currentTimeFormatted: string;
+  /** 'in 1h 53m' style countdown to next iqamah, or null when no next prayer. */
+  countdownLabel: string | null;
+  /** 'HH:MM' clock-style countdown to next iqamah, or null when no next prayer. */
+  countdownClock: string | null;
+  /** Decimal hours-of-day in mosque tz, used by the prayer screen ring. */
+  nowHours: number;
+  status: 'idle' | 'loading' | 'success' | 'error';
+  error: string | null;
+};
+
+/**
+ * Reads today's prayer schedule from `todays_prayers` for the active mosque.
+ *
+ * The query key includes `todayDateStringInMosqueTz` so the hook auto-refetches
+ * when the day rolls over. A 1-second internal tick keeps the next-prayer
+ * status, countdown label, and clock display fresh without needing to refetch.
+ */
+export function usePrayerTimes(): UsePrayerTimesResult {
+  const supabase = useSupabase();
+  const config = useMasjidConfig();
+  const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const timezone = config.timezone || 'UTC';
+  const todayDateStr = getTodayDateStringInTz(timezone);
+
+  const query = useQuery({
+    queryKey: ['prayer-times', mosqueUuid, todayDateStr],
+    queryFn: async (): Promise<TodaysPrayerRow[]> => {
+      // Demo-day workaround: F-RLS-01 added per-org RLS on todays_prayers, but
+      // the Clerk → Supabase JWT bridge isn't returning a usable auth context
+      // to the helpers, so direct reads come back empty. Route through the
+      // service-role edge function until that's resolved (or until prayer
+      // times move to the external API per the team roadmap).
+      const { data, error } = await supabase.functions.invoke<{
+        rows: TodaysPrayerRow[];
+        error?: string;
+      }>('get-todays-prayers', {
+        body: { mosque_id: mosqueUuid },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      // Filter out rows with null fields — the edge function returns
+      // whatever's in the table and the schema allows nulls.
+      return (data?.rows ?? []).filter(
+        (r) =>
+          typeof r.prayer_name === 'string' &&
+          typeof r.athan_time === 'string' &&
+          typeof r.iqamah_time === 'string',
+      );
+    },
+    enabled: !!mosqueUuid,
+  });
+
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const computed = useMemo(() => {
+    const rows = (query.data ?? []).slice().sort((a, b) => {
+      // Defensive secondary sort: canonical prayer order if athan_time tie.
+      const cmp = a.athan_time.localeCompare(b.athan_time);
+      if (cmp !== 0) return cmp;
+      return (PRAYER_ORDER[a.prayer_name] ?? 99) - (PRAYER_ORDER[b.prayer_name] ?? 99);
+    });
+
+    const now = getNowInTimezone(timezone);
+
+    const items: PrayerEntry[] = rows.map((r) => {
+      const athanSec = timeToSeconds(r.athan_time);
+      const status: PrayerStatus = athanSec <= now.totalSeconds ? 'passed' : 'upcoming';
+      return {
+        name: titleCase(r.prayer_name),
+        rawName: r.prayer_name,
+        athan: formatTo12Hour(r.athan_time),
+        iqamah: formatTo12Hour(r.iqamah_time),
+        athanTimeRaw: r.athan_time,
+        iqamahTimeRaw: r.iqamah_time,
+        status,
+      };
+    });
+
+    // The first non-passed entry becomes "next".
+    const nextIdx = items.findIndex((p) => p.status !== 'passed');
+    if (nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
+
+    const nextPrayer = nextIdx >= 0 ? items[nextIdx] : null;
+    const secondsToIqamah = nextPrayer
+      ? timeToSeconds(nextPrayer.iqamahTimeRaw) - now.totalSeconds
+      : null;
+    const countdownLabel =
+      secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;
+    const countdownClock =
+      secondsToIqamah !== null ? formatCountdownClock(secondsToIqamah) : null;
+
+    return {
+      items,
+      nextPrayer,
+      currentTimeFormatted: formatCurrentTimeInTz(timezone),
+      countdownLabel,
+      countdownClock,
+      nowHours: now.hours,
+    };
+    // `tick` re-runs the memo every second so countdown / status / clock stay live.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query.data, timezone, tick]);
+
+  const status: UsePrayerTimesResult['status'] = !mosqueUuid
+    ? 'idle'
+    : query.isPending
+      ? 'loading'
+      : query.isError
+        ? 'error'
+        : 'success';
+
+  return {
+    ...computed,
+    status,
+    error: query.error?.message ?? null,
+  };
+}

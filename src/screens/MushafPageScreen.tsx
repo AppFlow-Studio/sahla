@@ -11,8 +11,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import PagerView from 'react-native-pager-view';
 import { GlassView } from 'expo-glass-effect';
+import {
+  PageTurnView,
+  type PageTurnViewRef,
+} from '../components/quran/PageTurnView';
 import SurahOrnamentTop from '../../assets/surah-ornament-top.svg';
 import SurahOrnamentBottom from '../../assets/surah-ornament-bottom.svg';
 import Animated, {
@@ -43,14 +46,13 @@ type Props = {
 export default function MushafPageScreen({ initialPage, surahs, onBack }: Props) {
   const palette = useQuranPalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
-  const pagerRef = useRef<PagerView>(null);
+  const pageTurnRef = useRef<PageTurnViewRef>(null);
   const insets = useSafeAreaInsets();
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pickerOpen, setPickerOpen] = useState(false);
   // Synchronously set surah on jump so the footer updates instantly, then
   // the page→surah hook can correct it when the pager settles.
   const [surahOverride, setSurahOverride] = useState<Surah | null>(null);
-  const initialPosition = Math.max(0, initialPage - 1);
 
   const resolvedSurah = useSurahForPage(currentPage, surahs);
   const currentSurah = surahOverride ?? resolvedSurah;
@@ -63,8 +65,7 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
 
   function jumpToSurah(surah: Surah) {
     const target = getPageForAyah(surah.surah_number, 1) ?? 1;
-    const pos = Math.max(0, target - 1);
-    pagerRef.current?.setPage(pos);
+    pageTurnRef.current?.goToPage(target);
     setCurrentPage(target);
     setSurahOverride(surah);
     setPickerOpen(false);
@@ -82,24 +83,24 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
 
   return (
     <View style={styles.root}>
-      {/* Dark header with surah name + juz/hizb */}
-      <View style={[styles.topBandSafe, { paddingTop: insets.top }]}>
-        <View style={styles.topBand}>
-          <Text style={styles.topSurahName} numberOfLines={1}>
-            {currentSurah ? `سُورَةُ ${currentSurah.name_arabic}` : ''}
-          </Text>
-          <View style={styles.topRight}>
-            <Text style={styles.hizbText}>Hizb 1</Text>
-            <Text style={styles.juzText}>
-              <Text style={styles.juzLabel}>الجزء </Text>
-              <Text style={styles.juzNum}>1</Text>
-            </Text>
-          </View>
-        </View>
+      {/* Mushaf fills the entire screen — no dark header band. */}
+      <View style={{ flex: 1, backgroundColor: palette.cream }}>
+        <PageTurnView
+          ref={pageTurnRef}
+          pageNumber={currentPage}
+          totalPages={TOTAL_MUSHAF_PAGES}
+          direction="rtl"
+          onPageChange={setCurrentPage}
+          pageBackgroundColor={palette.cream}
+          renderPage={(p) => <MushafPage pageNumber={p} surahs={surahs} />}
+        />
       </View>
 
-      {/* Back + page count bar */}
-      <View style={styles.toolbar}>
+      {/* Floating toolbar over the mushaf — back button + page counter. */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.toolbar, { paddingTop: insets.top + 8 }]}
+      >
         <Pressable onPress={onBack} hitSlop={10} style={styles.backCircle}>
           <Text style={styles.backArrow}>←</Text>
         </Pressable>
@@ -108,28 +109,6 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
           {currentPage} / {TOTAL_MUSHAF_PAGES}
         </Text>
       </View>
-
-      <PagerView
-        ref={pagerRef}
-        style={{ flex: 1, backgroundColor: palette.cream }}
-        initialPage={initialPosition}
-        offscreenPageLimit={1}
-        onPageSelected={(e) => setCurrentPage(e.nativeEvent.position + 1)}
-      >
-        {Array.from({ length: TOTAL_MUSHAF_PAGES }, (_, i) => {
-          const pageNumber = i + 1;
-          const isNear = Math.abs(pageNumber - currentPage) <= 2;
-          return (
-            <View key={pageNumber} collapsable={false} style={{ flex: 1 }}>
-              {isNear ? (
-                <MushafPage pageNumber={pageNumber} surahs={surahs} />
-              ) : (
-                <View style={styles.pageBody} />
-              )}
-            </View>
-          );
-        })}
-      </PagerView>
 
       {/* Morphing footer → sheet */}
       <MorphingFooter
@@ -533,11 +512,16 @@ function makeStyles(p: QuranPalette) {
     juzNum: { fontSize: 12 },
 
     toolbar: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 20,
-      paddingTop: 12,
       paddingBottom: 8,
+      // Sits over the mushaf — no background so the page colour shows through.
+      backgroundColor: 'transparent',
     },
     backCircle: {
       width: 28,
@@ -558,8 +542,10 @@ function makeStyles(p: QuranPalette) {
     },
     pageBody: {
       flexGrow: 1,
-      paddingHorizontal: 24,
-      paddingTop: 12,
+      paddingHorizontal: 18,
+      // Top padding leaves room for the floating toolbar; bottom keeps clear
+      // of the morphing footer pill.
+      paddingTop: 64,
       paddingBottom: 110,
       backgroundColor: p.cream,
       justifyContent: 'space-between',
@@ -595,8 +581,8 @@ function makeStyles(p: QuranPalette) {
     centered: { alignItems: 'center' },
     ayahText: {
       fontFamily: 'UthmanicHafs',
-      fontSize: 20,
-      lineHeight: 40,
+      fontSize: 23,
+      lineHeight: 46,
       color: p.brandDark,
       textAlign: 'center',
       writingDirection: 'rtl',

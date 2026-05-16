@@ -124,7 +124,7 @@ export default function DiscoverScreen() {
   const isLoading = status === "loading" && items.length === 0;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: "#0A261E" }}>
+    <View className="flex-1 bg-primary">
       <SafeAreaView edges={["top"]} />
       <View className="flex-1" style={{ backgroundColor: "#FFFBF2" }}>
       <ScrollView

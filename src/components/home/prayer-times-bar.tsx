@@ -2,22 +2,37 @@ import { View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { MOCK_PRAYER_TIMES } from '@/src/data/mock-home';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
+const PRAYER_ICONS: Record<string, IconName> = {
+  fajr: 'weather-sunset-up',
+  sunrise: 'weather-sunny',
+  dhuhr: 'white-balance-sunny',
+  asr: 'weather-sunny',
+  maghrib: 'weather-sunset-down',
+  isha: 'moon-waning-crescent',
+};
+
 export function PrayerTimesBar() {
   const { colors } = useMasjidConfig();
+  const { items } = usePrayerTimes();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
   const fgFull = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
   const nameMuted = `rgba(${colors.primaryForeground.replace(/ /g, ',')},0.4)`;
 
+  if (items.length === 0) {
+    return <View className="px-5" style={{ height: 67 }} />;
+  }
+
   return (
     <View className="flex-row items-center px-5">
-      {MOCK_PRAYER_TIMES.map((prayer) => {
-        const isActive = prayer.isActive;
+      {items.map((prayer) => {
+        const isActive = prayer.status === 'next';
+        const icon = PRAYER_ICONS[prayer.rawName] ?? 'weather-sunny';
         return (
-          <View key={prayer.name} className="flex-1 items-center">
+          <View key={prayer.rawName} className="flex-1 items-center">
             <View
               style={{
                 width: 60,
@@ -46,7 +61,7 @@ export function PrayerTimesBar() {
                 {prayer.name}
               </Text>
               <MaterialCommunityIcons
-                name={prayer.icon as IconName}
+                name={icon}
                 size={18}
                 color={isActive ? accentRgb : fgFull}
               />
@@ -57,7 +72,7 @@ export function PrayerTimesBar() {
                   color: isActive ? accentRgb : fgFull,
                 }}
               >
-                {prayer.time}
+                {prayer.iqamah}
               </Text>
             </View>
           </View>

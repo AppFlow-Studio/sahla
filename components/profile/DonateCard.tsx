@@ -3,6 +3,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import AntDesign from "@expo/vector-icons/AntDesign";
+
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+
 type Props = {
   onPress: () => void;
 };
@@ -13,16 +16,24 @@ const platformUiFont = Platform.select({
   default: "system-ui",
 });
 
+function tripletToRgb(triplet: string) {
+  return `rgb(${triplet.replace(/ /g, ",")})`;
+}
+
 export default function DonateCard({ onPress }: Props) {
+  const { colors } = useMasjidConfig();
+  const accentRgb = tripletToRgb(colors.accent);
+  const accentFgRgb = tripletToRgb(colors.accentForeground);
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Donate, support your masjid"
-      className="w-full flex-row items-center justify-between rounded-full bg-[#0A261E] px-5 py-5 z-10"
+      className="w-full flex-row items-center justify-between rounded-full bg-primary px-5 py-5 z-10"
     >
       <View className="flex-row items-center gap-2">
-        <View className="relative h-10 w-10 overflow-hidden rounded-full bg-[#B8922A33]">
+        <View className="relative h-10 w-10 overflow-hidden rounded-full bg-accent/20">
           {/* Neumorphic-style rim: soft highlight top-left + soft shadow bottom-right */}
           <LinearGradient
             colors={["rgba(255, 255, 255, 0.38)", "transparent"]}
@@ -46,7 +57,7 @@ export default function DonateCard({ onPress }: Props) {
               source={require("@/assets/images/heart.png")}
               style={{ width: 16, height: 16 }}
               contentFit="contain"
-              tintColor="#B8922A"
+              tintColor={accentRgb}
             />
           </View>
         </View>
@@ -77,14 +88,14 @@ export default function DonateCard({ onPress }: Props) {
           </Text>
         </View>
       </View>
-      <View className="ml-2 mt-1.5 flex-row items-center gap-1 rounded-full bg-[#B8922A] px-[14px] py-[7px] justify-center">
+      <View className="ml-2 mt-1.5 flex-row items-center gap-1 rounded-full bg-accent px-[14px] py-[7px] justify-center">
         <Text
           style={{
             fontFamily: "Inter_800ExtraBold",
             fontWeight: "800",
             fontSize: 11,
             lineHeight: 11,
-            color: "#0A261E",
+            color: accentFgRgb,
             marginTop: 1,
             marginLeft: 0.5,
           }}
@@ -92,8 +103,7 @@ export default function DonateCard({ onPress }: Props) {
         >
           DONATE
         </Text>
-        <AntDesign name="arrow-right" size={13} color="#0A261E" 
-        />
+        <AntDesign name="arrow-right" size={13} color={accentFgRgb} />
       </View>
     </Pressable>
   );
