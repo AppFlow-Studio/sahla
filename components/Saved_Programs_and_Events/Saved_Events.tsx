@@ -53,9 +53,21 @@ const INK_MUTED = 'rgba(10,38,30,0.6)';
 const GOLD = '#B8922A';
 const DIVIDER = 'rgba(10,38,30,0.1)';
 
-const SF_MEDIUM = Platform.select({ ios: 'System', default: 'sans-serif-medium' });
-const SF_SEMIBOLD = Platform.select({ ios: 'System', default: 'sans-serif-medium' });
-const SF_REGULAR = Platform.select({ ios: 'System', default: 'sans-serif' });
+const SF_MEDIUM = Platform.select({
+  ios: 'SF Pro Text',
+  android: 'Roboto',
+  default: 'system-ui',
+});
+const SF_SEMIBOLD = Platform.select({
+  ios: 'SF Pro Text',
+  android: 'Roboto',
+  default: 'system-ui',
+});
+const SF_REGULAR = Platform.select({
+  ios: 'SF Pro Text',
+  android: 'Roboto',
+  default: 'system-ui',
+});
 
 type Tab = 'events' | 'programs';
 
@@ -181,16 +193,17 @@ export default function Saved_Events() {
                     ]}
                   >
                     <View style={{ width: screenWidth }}>
-                      {(eventItems.length > 0
-                        ? eventItems
-                        : FALLBACK_EVENTS
-                      ).map((item, idx, arr) => (
-                        <SavedRow
-                          key={`events-${item.content_id}`}
-                          item={item}
-                          isLast={idx === arr.length - 1}
-                        />
-                      ))}
+                      {eventItems.length > 0 ? (
+                        eventItems.map((item, idx, arr) => (
+                          <SavedRow
+                            key={`events-${item.content_id}`}
+                            item={item}
+                            isLast={idx === arr.length - 1}
+                          />
+                        ))
+                      ) : (
+                        <EmptyState label="No saved events yet" />
+                      )}
                     </View>
                     <View style={{ width: screenWidth }}>
                       {(programItems.length > 0
@@ -358,10 +371,44 @@ function SegmentButton({
   );
 }
 
+function EmptyState({ label }: { label: string }) {
+  return (
+    <View
+      className="px-5"
+      style={{ alignItems: 'center', paddingVertical: 48 }}
+    >
+      <Text
+        style={{
+          fontFamily: SF_REGULAR,
+          fontSize: 13,
+          lineHeight: 18,
+          color: INK_MUTED,
+          textAlign: 'center',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+const SHORT_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+function formatSavedDate(startDate: string | null): string {
+  if (!startDate) return '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(startDate);
+  if (!match) return startDate;
+  const [, y, m, d] = match;
+  const month = SHORT_MONTHS[Number(m) - 1];
+  if (!month) return startDate;
+  return `${month} ${Number(d)}, ${y}`;
+}
+
 function SavedRow({ item, isLast }: { item: SavedEvent; isLast: boolean }) {
-  const subtitle =
-    item.subtitle_override ??
-    [item.start_date, item.start_time].filter(Boolean).join(' • ');
+  const subtitle = item.subtitle_override ?? formatSavedDate(item.start_date);
   return (
     <View className="px-5">
       <Pressable className="flex-row items-center" style={{ paddingVertical: 14 }}>

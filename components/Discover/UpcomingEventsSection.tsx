@@ -15,7 +15,7 @@ export type EventItem = {
   id: string;
   title: string;
   dateLabel: string;
-  description: string;
+  category?: string | null;
   thumbnail?: ImageSourcePropType;
 };
 
@@ -67,28 +67,33 @@ function EventRow({
         >
           {item.title}
         </Text>
-        <Text
-          numberOfLines={1}
-          style={{
-            marginTop: 2,
-            fontFamily: platformUiFont,
-            fontSize: 11,
-            color: MUTED,
-          }}
-        >
-          {item.dateLabel}
-        </Text>
-        <Text
-          numberOfLines={2}
-          style={{
-            marginTop: 2,
-            fontFamily: platformUiFont,
-            fontSize: 11,
-            color: GOLD,
-          }}
-        >
-          {item.description}
-        </Text>
+        {item.dateLabel ? (
+          <Text
+            numberOfLines={1}
+            style={{
+              marginTop: 2,
+              fontFamily: platformUiFont,
+              fontSize: 11,
+              color: MUTED,
+            }}
+          >
+            {item.dateLabel}
+          </Text>
+        ) : null}
+        {item.category ? (
+          <Text
+            numberOfLines={1}
+            style={{
+              marginTop: 2,
+              fontFamily: platformUiFont,
+              fontSize: 11,
+              fontWeight: "500",
+              color: GOLD,
+            }}
+          >
+            {item.category}
+          </Text>
+        ) : null}
       </View>
       <IconSymbol name="chevron.right" size={14} color={CHEVRON_MUTED} />
     </Pressable>
@@ -105,6 +110,13 @@ export default function UpcomingEventsSection({
       <SectionTitle
         title="Upcoming events"
         actionLabel="View calendar"
+        actionLeading={
+          <Image
+            source={require("@/assets/images/discover_calendar_icon_next_to_search_bar.png")}
+            style={{ width: 12, height: 12, opacity: 0.6 }}
+            contentFit="contain"
+          />
+        }
         onPressAction={onPressViewCalendar}
       />
       <View className="mt-2">

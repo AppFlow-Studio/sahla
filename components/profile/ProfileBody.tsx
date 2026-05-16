@@ -81,7 +81,7 @@ export default function ProfileBody({
           <RowItem
             icon={SAVED_PROGRAMS_AND_EVENTS_ICON}
             title="Saved Programs & Events"
-            onPress={() => router.push("/saved-events" as Href)}
+            onPress={() => router.push("/profile/saved-events" as Href)}
           />
           <RowItem
             icon={SAVED_CLIPS_ICON}
@@ -110,13 +110,13 @@ export default function ProfileBody({
           <RowItem
             icon={PRAYER_ALERTS_ICON}
             title="Prayer Alerts"
-            onPress={() => router.push("/notification-center" as Href)}
+            onPress={() => router.push("/profile/notification-center" as Href)}
           />
           <RowItem
             icon={PROGRAMS_ICON}
             title="Programs"
             onPress={() =>
-              router.push("/notification-center?tab=Programs" as Href)
+              router.push("/profile/notification-center?tab=Programs" as Href)
             }
           />
           <RowItem icon={EVENTS_ICON} title="Events" onPress={() => {}} />

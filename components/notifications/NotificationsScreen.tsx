@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,11 +56,31 @@ export function NotificationsScreen({ items = [], onPressSettings }: Props) {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           paddingHorizontal: 24,
           paddingTop: 24,
+          position: 'relative',
         }}
       >
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          style={{
+            position: 'absolute',
+            left: 24,
+            top: 24,
+            bottom: 0,
+            justifyContent: 'center',
+          }}
+        >
+          <Image
+            source={require('@/assets/images/left_arrow.png')}
+            style={{ width: 16, height: 16 }}
+            contentFit="contain"
+          />
+        </Pressable>
         <Text
           style={{
             fontFamily: PLAYFAIR,
@@ -66,20 +88,33 @@ export function NotificationsScreen({ items = [], onPressSettings }: Props) {
             fontSize: 30,
             lineHeight: 38,
             color: INK,
+            textAlign: 'center',
           }}
         >
           Notifications
         </Text>
-        <Pressable onPress={onPressSettings} hitSlop={12}>
+        <Pressable
+          onPress={onPressSettings}
+          hitSlop={12}
+          style={{
+            position: 'absolute',
+            right: 24,
+            top: 24,
+            bottom: 0,
+            justifyContent: 'center',
+          }}
+        >
           <Ionicons name="settings-outline" size={22} color={INK} />
         </Pressable>
       </View>
 
-      <NotificationTabs
-        tabs={NOTIFICATION_TABS}
-        active={activeTab}
-        onChange={setActiveTab}
-      />
+      <View style={{ marginTop: 8 }}>
+        <NotificationTabs
+          tabs={NOTIFICATION_TABS}
+          active={activeTab}
+          onChange={setActiveTab}
+        />
+      </View>
 
       {isEmpty ? (
         <View style={{ flex: 1, marginTop: 32 }}>
