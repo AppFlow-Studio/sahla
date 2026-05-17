@@ -2,7 +2,7 @@ import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,14 +18,18 @@ import {
   CormorantGaramond_500Medium,
   CormorantGaramond_600SemiBold,
 } from '@expo-google-fonts/cormorant-garamond';
-const HEADER_BG_DARK = '#0A261E';
-const HEADER_BG_LIGHT = '#0D2B1A';
+
+function tripletToRgb(triplet: string) {
+  return `rgb(${triplet.replace(/ /g, ',')})`;
+}
 
 export default function ProfileHeader() {
   const { profile, status, error } = useProfile();
   const { signOut } = useAuth();
   const { user } = useUser();
-  const { clerkOrgId } = useMasjidConfig();
+  const { clerkOrgId, colors } = useMasjidConfig();
+  const primaryRgb = tripletToRgb(colors.primary);
+  const accentRgb = tripletToRgb(colors.accent);
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -45,8 +49,6 @@ export default function ProfileHeader() {
       },
     ]);
   }, [signOut, queryClient]);
-  /** Measured header height so the vector can be exactly half (RN % height on absolute children is unreliable). */
-  const [headerHeight, setHeaderHeight] = useState(0);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const { takePhoto, chooseFromGallery, isUploading } = useUploadProfilePhoto();
 
@@ -54,7 +56,6 @@ export default function ProfileHeader() {
     async (source: 'camera' | 'gallery') => {
       try {
         const result = source === 'camera' ? await takePhoto() : await chooseFromGallery();
-        // Close on success or cancel; only stay open on actual error.
         setPhotoModalOpen(false);
         return result;
       } catch (e) {
@@ -117,34 +118,27 @@ export default function ProfileHeader() {
 
   const initial = firstName?.charAt(0) ?? '?';
 
-  /** ~54% of header (~8% taller than half; tune 0.525–0.55 for 5–10% more than 50%). */
-  const vectorHeight =
-    headerHeight > 0 ? Math.round(headerHeight * 0.60) : undefined;
-
   return (
-    <View className="relative w-full overflow-hidden bg-[#0A261E]">
+    <View className="relative w-full overflow-hidden bg-primary">
       <LinearGradient
-        colors={[HEADER_BG_LIGHT, HEADER_BG_DARK]}
+        colors={[primaryRgb, primaryRgb]}
         className="w-full"
         style={{ paddingTop: insets.top + 5, paddingBottom: 28 }}
-        onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          if (h > 0) setHeaderHeight(h);
-        }}
       >
-        {/* Pattern overlay lives in the screen-level backdrop so it covers the status-bar area too. */}
-
-        {/* Vector art: top half of header only, behind content (not a separate block above) */}
-        <ImageBackground
-          source={require('@/assets/images/Vector.png')}
-          resizeMode="cover"
-          className="absolute left-0 right-0 top-0 w-full"
+        <Image
+          source={require('@/assets/islamic-pattern.png')}
+          tintColor={accentRgb}
           style={{
-            height: vectorHeight ?? 200,
-            opacity: 0.78,
-            zIndex: 1,
-            pointerEvents: 'none',
+            position: 'absolute',
+            top: -10,
+            left: 0,
+            right: 0,
+            height: 340,
+            opacity: 0.35,
+            transform: [{ rotate: '180deg' }],
           }}
+          contentFit="cover"
+          pointerEvents="none"
         />
 
         <View className="relative z-10 w-full items-center px-4">

@@ -1,10 +1,3 @@
-export type PrayerTime = {
-  name: string;
-  time: string;
-  icon: string;
-  isActive: boolean;
-};
-
 export type EventItem = {
   id: string;
   time: string;
@@ -25,24 +18,6 @@ export type QuickAction = {
 };
 
 export const MOCK_GREETING = 'Assalamu Alaikum Di';
-
-export const MOCK_CURRENT_TIME = '4:01 PM';
-
-export const MOCK_HIJRI_DATE = 'Ramadan 13, 1447';
-
-export const MOCK_NEXT_PRAYER = {
-  name: 'Maghrib',
-  timeRemaining: '1h 53m',
-  type: 'iqamah' as const,
-};
-
-export const MOCK_PRAYER_TIMES: PrayerTime[] = [
-  { name: 'Fajr', time: '5:14 AM', icon: 'weather-sunset-up', isActive: false },
-  { name: 'Dhuhr', time: '5:14 AM', icon: 'white-balance-sunny', isActive: false },
-  { name: 'Asr', time: '5:14 AM', icon: 'weather-sunny', isActive: false },
-  { name: 'Maghrib', time: '5:14 AM', icon: 'weather-sunset-down', isActive: true },
-  { name: 'Isha', time: '5:14 AM', icon: 'moon-waning-crescent', isActive: false },
-];
 
 export const MOCK_EVENTS_DATE = 'MAR 9, 2026';
 

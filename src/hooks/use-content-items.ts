@@ -34,14 +34,19 @@ export function useContentItems() {
   const query = useQuery({
     queryKey: ['content-items', mosqueUuid],
     queryFn: async (): Promise<ContentItem[]> => {
-      const { data, error } = await supabase
-        .from('content_items')
-        .select(SELECT)
-        .eq('mosque_id', mosqueUuid!)
-        .order('created_at', { ascending: false });
-
+      // Demo-day workaround: F-RLS-01 added per-org RLS on content_items, but
+      // the Clerk → Supabase JWT bridge isn't returning a usable auth context
+      // to the helpers, so direct reads come back empty. Route through the
+      // service-role edge function until that's resolved.
+      const { data, error } = await supabase.functions.invoke<{
+        rows: ContentItem[];
+        error?: string;
+      }>('get-content-items', {
+        body: { mosque_id: mosqueUuid },
+      });
       if (error) throw new Error(error.message);
-      return (data ?? []) as ContentItem[];
+      if (data?.error) throw new Error(data.error);
+      return data?.rows ?? [];
     },
     enabled: !!mosqueUuid,
   });

@@ -20,15 +20,15 @@ import { CommunityPartners } from '@/src/components/home/community-partners';
 import { CommunityPartnerCta } from '@/src/components/home/community-partner-cta';
 import { JummahScheduleCard } from '@/src/components/home/jummah-schedule';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { MOCK_PRAYER_TIMES } from '@/src/data/mock-home';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 
 const JUMMAH_HEIGHT = 360;
 
 export default function HomeScreen() {
   const { features } = useMasjidConfig();
+  const { nextPrayer } = usePrayerTimes();
   const showJummah = features.jumaahRegistration;
-  const isMaghribTime =
-    MOCK_PRAYER_TIMES.find((p) => p.name === 'Maghrib')?.isActive ?? false;
+  const isMaghribTime = nextPrayer?.rawName === 'maghrib';
   const progress = useSharedValue(0);
 
   useEffect(() => {

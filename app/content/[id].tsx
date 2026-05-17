@@ -1,6 +1,7 @@
 import { useAuth } from "@clerk/clerk-expo";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,6 +24,13 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import SpeakerInfoModal from "@/components/Discover/SpeakerInfoModal";
+import { ContentNotificationSettingsSheet } from "@/components/content/ContentNotificationSettingsSheet";
+import {
+  useIsNotifOptedIn,
+  useToggleContentNotif,
+} from "@/src/hooks/use-content-notification-opt-in";
+import { useContentNotifSettings } from "@/src/hooks/use-content-notification-settings";
+import { useIsSaved, useToggleSave } from "@/src/hooks/use-saved-content";
 import { useSupabase } from "@/src/hooks/use-supabase";
 import { useConfigStore } from "@/src/stores/config-store";
 
@@ -60,19 +68,23 @@ function CircleButton({
   children,
   onPress,
   accessibilityLabel,
+  disabled,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
   accessibilityLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       hitSlop={12}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      className="h-9 w-9 items-center justify-center rounded-full"
-      style={{ backgroundColor: "#FFFFFF" }}
+      accessibilityState={{ disabled: !!disabled }}
+      className="h-9 w-9 items-center justify-center rounded-full active:opacity-80"
+      style={{ backgroundColor: "#FFFFFF", opacity: disabled ? 0.5 : 1 }}
     >
       {children}
     </Pressable>
@@ -90,20 +102,60 @@ export default function ContentDetailScreen() {
     "loading",
   );
   const [error, setError] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [speakerModalOpen, setSpeakerModalOpen] = useState(false);
+
+  const { data: isSaved = false } = useIsSaved(id);
+  const toggleSave = useToggleSave(id, mosqueUuid);
+  const saveDisabled = !userId || !mosqueUuid || toggleSave.isPending;
+
+  const { data: isNotifOptedIn = false } = useIsNotifOptedIn(id);
+  const toggleNotif = useToggleContentNotif(id, mosqueUuid);
+
+  const isPast = (() => {
+    if (!detail?.start_date) return false;
+    const t = Date.parse(detail.start_date);
+    if (Number.isNaN(t)) return false;
+    return t < Date.now();
+  })();
+  const notifDisabled =
+    !userId || !mosqueUuid || isPast || toggleNotif.isPending;
+
+  const [showOptInToast, setShowOptInToast] = useState(false);
+  const toastOpacity = useSharedValue(0);
+  useEffect(() => {
+    if (!showOptInToast) return;
+    toastOpacity.value = withTiming(1, { duration: 200 });
+    const id = setTimeout(() => {
+      toastOpacity.value = withTiming(0, { duration: 200 }, (finished) => {
+        if (finished) runOnJS(setShowOptInToast)(false);
+      });
+    }, 2400);
+    return () => clearTimeout(id);
+  }, [showOptInToast, toastOpacity]);
+  const toastStyle = useAnimatedStyle(() => ({ opacity: toastOpacity.value }));
+
+  const handleToggleNotif = () => {
+    const willOptIn = !isNotifOptedIn;
+    toggleNotif.mutate(isNotifOptedIn);
+    if (willOptIn) setShowOptInToast(true);
+  };
+
+  const { data: notifSettings = null } = useContentNotifSettings(id);
+  const hasCustomTimings = (notifSettings?.length ?? 0) > 0;
+  const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error: qError } = await supabase
-        .from("content_items")
-        .select(
-          "content_id, name, description, image, type, start_date, start_time, speakers",
-        )
-        .eq("content_id", id)
-        .maybeSingle();
+      // Demo-day workaround: routed through ct02-actions edge function while
+      // the Clerk → Supabase JWT bridge is unverified. Direct content_items
+      // reads come back null under the new F-RLS-01 org_select policy.
+      const { data, error: qError } = await supabase.functions.invoke<{
+        row: Detail | null;
+        error?: string;
+      }>("ct02-actions", {
+        body: { action: "get_detail", content_id: id },
+      });
 
       if (cancelled) return;
       if (qError) {
@@ -111,12 +163,17 @@ export default function ContentDetailScreen() {
         setStatus("error");
         return;
       }
-      if (!data) {
+      if (data?.error) {
+        setError(data.error);
+        setStatus("error");
+        return;
+      }
+      if (!data?.row) {
         setError("Content not found");
         setStatus("error");
         return;
       }
-      setDetail(data as Detail);
+      setDetail(data.row);
       setStatus("success");
     })();
 
@@ -124,56 +181,6 @@ export default function ContentDetailScreen() {
       cancelled = true;
     };
   }, [id, supabase]);
-
-  useEffect(() => {
-    if (!userId || !id) return;
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("saved_content")
-        .select("content_id")
-        .eq("user_id", userId)
-        .eq("content_id", id)
-        .maybeSingle();
-      if (cancelled) return;
-      setIsSaved(!!data);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, supabase, userId]);
-
-  const toggleSave = async () => {
-    if (!userId || !mosqueUuid || !detail?.content_id || isSaving) return;
-    setIsSaving(true);
-    const wasSaved = isSaved;
-    setIsSaved(!wasSaved);
-    try {
-      if (wasSaved) {
-        const { error: delErr } = await supabase
-          .from("saved_content")
-          .delete()
-          .eq("user_id", userId)
-          .eq("content_id", detail.content_id);
-        if (delErr) throw delErr;
-      } else {
-        const { error: insErr } = await supabase.from("saved_content").upsert(
-          {
-            user_id: userId,
-            content_id: detail.content_id,
-            mosque_id: mosqueUuid,
-          },
-          { onConflict: "user_id,content_id" },
-        );
-        if (insErr) throw insErr;
-      }
-    } catch (err) {
-      console.warn("[ContentDetail] save toggle failed", err);
-      setIsSaved(wasSaved);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const firstSpeaker = detail?.speakers?.[0];
   const [imageAspect, setImageAspect] = useState(1);
@@ -242,6 +249,38 @@ export default function ContentDetailScreen() {
         className="absolute inset-0"
         accessibilityLabel="Close"
       />
+      {showOptInToast ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: "absolute",
+              top: insets.top + 12,
+              left: 24,
+              right: 24,
+              zIndex: 10,
+              backgroundColor: BUSH,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+            },
+            toastStyle,
+          ]}
+        >
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontSize: 13,
+              fontWeight: "600",
+              fontFamily: platformUiFont,
+              textAlign: "center",
+            }}
+          >
+            We&rsquo;ll remind you 30 minutes before {detail?.name ?? "this event"}
+          </Text>
+        </Animated.View>
+      ) : null}
+
       <Animated.View
         className="flex-1"
         style={[
@@ -296,9 +335,67 @@ export default function ContentDetailScreen() {
                   >
                     <AntDesign name="close" size={16} color="#1A1A1A" />
                   </CircleButton>
-                  <CircleButton accessibilityLabel="Notifications">
-                    <Feather name="bell" size={16} color="#1A1A1A" />
-                  </CircleButton>
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    {isNotifOptedIn && !isPast ? (
+                      <Pressable
+                        onPress={() => setSettingsSheetOpen(true)}
+                        hitSlop={8}
+                        className="flex-row items-center rounded-full px-3 active:opacity-80"
+                        style={{
+                          backgroundColor: "rgba(10,38,30,0.06)",
+                          height: 28,
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Customize reminder timing"
+                      >
+                        <Text
+                          style={{
+                            fontFamily: platformUiFont,
+                            fontSize: 12,
+                            fontWeight: "600",
+                            color: BUSH,
+                          }}
+                        >
+                          Customize
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    <View>
+                      <CircleButton
+                        onPress={notifDisabled ? undefined : handleToggleNotif}
+                        disabled={notifDisabled}
+                        accessibilityLabel={
+                          isPast
+                            ? "Notifications unavailable, event has passed"
+                            : isNotifOptedIn
+                              ? "Turn off reminders"
+                              : "Turn on reminders"
+                        }
+                      >
+                        <Ionicons
+                          name={isNotifOptedIn ? "notifications" : "notifications-outline"}
+                          size={16}
+                          color="#1A1A1A"
+                        />
+                      </CircleButton>
+                      {hasCustomTimings && isNotifOptedIn ? (
+                        <View
+                          pointerEvents="none"
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            right: 0,
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: BUSH,
+                            borderWidth: 1.5,
+                            borderColor: "#FFFFFF",
+                          }}
+                        />
+                      ) : null}
+                    </View>
+                  </View>
                 </View>
 
                 <View className="mt-4 items-center px-4">
@@ -373,6 +470,19 @@ export default function ContentDetailScreen() {
                   </Pressable>
                 ) : null}
 
+                {isPast ? (
+                  <Text
+                    style={{
+                      marginTop: 12,
+                      fontSize: 13,
+                      color: MUTED,
+                      fontFamily: platformUiFont,
+                    }}
+                  >
+                    This already happened
+                  </Text>
+                ) : null}
+
                 {detail.description ? (
                   <View
                     className="mt-5 rounded-2xl p-4"
@@ -417,18 +527,18 @@ export default function ContentDetailScreen() {
               }}
             >
               <Pressable
-                onPress={toggleSave}
-                disabled={isSaving || !userId || !mosqueUuid}
-                className="flex-row items-center justify-center rounded-2xl py-4"
-                style={{
-                  backgroundColor: CARD_BG,
-                  opacity: isSaving ? 0.6 : 1,
-                }}
+                onPress={() => toggleSave.mutate(isSaved)}
+                disabled={saveDisabled}
+                className="flex-row items-center justify-center rounded-2xl py-4 active:opacity-80"
+                style={{ backgroundColor: CARD_BG, opacity: saveDisabled ? 0.6 : 1 }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSaved, disabled: saveDisabled }}
+                accessibilityLabel={isSaved ? "Remove from Library" : "Save to Library"}
               >
-                <Feather
-                  name="heart"
+                <Ionicons
+                  name={isSaved ? "heart" : "heart-outline"}
                   size={18}
-                  color={isSaved ? "#C03A3A" : BUSH}
+                  color={BUSH}
                 />
                 <Text
                   style={{
@@ -452,6 +562,13 @@ export default function ContentDetailScreen() {
         speakerName={firstSpeaker ?? null}
         mosqueUuid={mosqueUuid}
         onClose={() => setSpeakerModalOpen(false)}
+      />
+      <ContentNotificationSettingsSheet
+        visible={settingsSheetOpen}
+        onClose={() => setSettingsSheetOpen(false)}
+        contentId={id}
+        mosqueId={mosqueUuid}
+        initialOffsets={notifSettings}
       />
     </View>
   );
