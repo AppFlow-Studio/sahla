@@ -53,7 +53,7 @@ export default function SectionTitle({
                 textTransform: "uppercase",
               }}
             >
-              {actionLabel} →
+              {actionLeading ? actionLabel : `${actionLabel} →`}
             </Text>
           </Pressable>
         ) : null}

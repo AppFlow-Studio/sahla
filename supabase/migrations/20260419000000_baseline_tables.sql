@@ -39,11 +39,15 @@ CREATE TABLE IF NOT EXISTS mosques (
   eas_project_id text,
   calculation_method integer DEFAULT 2,
   school integer DEFAULT 0,
+  clerk_org_id text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (id),
   CONSTRAINT mosques_slug_key UNIQUE (slug)
 );
+
+COMMENT ON COLUMN public.mosques.clerk_org_id IS
+  'Clerk Organization ID for this mosque tenant.';
 
 CREATE TABLE IF NOT EXISTS profiles (
   id text NOT NULL,

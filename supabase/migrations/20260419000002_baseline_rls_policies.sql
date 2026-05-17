@@ -125,7 +125,9 @@ CREATE POLICY "sahla_team_select" ON sahla_team FOR SELECT TO public USING (is_s
 DROP POLICY IF EXISTS "expenses_sahla_write" ON expenses;
 CREATE POLICY "expenses_sahla_write" ON expenses FOR ALL TO public USING (is_sahla_team() AND sahla_team_role() = ANY(ARRAY['super_admin'::text, 'admin'::text]));
 
--- mosques — only sahla_write
+-- mosques — public read (app config, not sensitive); sahla_write for admins
+DROP POLICY IF EXISTS "mosques_public_read" ON mosques;
+CREATE POLICY "mosques_public_read" ON mosques FOR SELECT USING (true);
 DROP POLICY IF EXISTS "mosques_sahla_write" ON mosques;
 CREATE POLICY "mosques_sahla_write" ON mosques FOR ALL TO public USING (is_sahla_team() AND sahla_team_role() = ANY(ARRAY['super_admin'::text, 'admin'::text]));
 

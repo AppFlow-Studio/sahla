@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { VideoView, useVideoPlayer } from 'expo-video';
 
 import MasjidLogo from '@/assets/masjid-logo.svg';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -41,7 +42,8 @@ type Reel = {
 const REELS: Reel[] = [
   {
     id: '1',
-    mediaUrl: 'https://picsum.photos/seed/sahla-moon/800/1600',
+    mediaUrl:
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     arabic: 'قَالَ لَا تَخَافَآ',
     urdu: 'اللہ نے فرمایا: ڈرو نہیں',
     translation: '[Allah] said, "Fear not."',
@@ -56,7 +58,8 @@ const REELS: Reel[] = [
   },
   {
     id: '2',
-    mediaUrl: 'https://picsum.photos/seed/sahla-mosque/800/1600',
+    mediaUrl:
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
     arabic: 'إِنَّ مَعَ ٱلْعُسْرِ يُسْرًۭا',
     translation: 'Indeed, with hardship comes ease.',
     source: 'Qur\u2019an 94:6',
@@ -70,7 +73,8 @@ const REELS: Reel[] = [
   },
   {
     id: '3',
-    mediaUrl: 'https://picsum.photos/seed/sahla-dome/800/1600',
+    mediaUrl:
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     arabic: 'وَذَكِّرْ فَإِنَّ ٱلذِّكْرَىٰ تَنفَعُ ٱلْمُؤْمِنِينَ',
     translation: 'And remind, for indeed, the reminder benefits the believers.',
     source: 'Qur\u2019an 51:55',
@@ -369,11 +373,32 @@ function StatDivider() {
   return <View style={{ width: 0.5, backgroundColor: 'rgba(10,38,30,0.15)', marginVertical: 4 }} />;
 }
 
-function ReelItem({ reel, height }: { reel: Reel; height: number }) {
+function ReelItem({
+  reel,
+  height,
+  isActive,
+}: {
+  reel: Reel;
+  height: number;
+  isActive: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const player = useVideoPlayer(reel.mediaUrl, (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
+
+  useEffect(() => {
+    if (isActive) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [isActive, player]);
 
   const handleShare = async () => {
     const message = [reel.arabic, reel.translation, reel.source ? `— ${reel.source}` : null]
@@ -388,10 +413,11 @@ function ReelItem({ reel, height }: { reel: Reel; height: number }) {
 
   return (
     <View style={{ height, width: '100%' }} className="bg-black">
-      <Image
-        source={{ uri: reel.mediaUrl }}
+      <VideoView
+        player={player}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         contentFit="cover"
+        nativeControls={false}
       />
 
       <View
@@ -531,13 +557,24 @@ function ReelItem({ reel, height }: { reel: Reel; height: number }) {
 export default function WatchScreen() {
   const { height } = useWindowDimensions();
   const listRef = useRef<FlatList<Reel>>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const renderItem = useCallback(
-    ({ item }: { item: Reel }) => <ReelItem reel={item} height={height} />,
-    [height],
+    ({ item, index }: { item: Reel; index: number }) => (
+      <ReelItem reel={item} height={height} isActive={index === activeIndex} />
+    ),
+    [height, activeIndex],
   );
 
   const keyExtractor = useCallback((item: Reel) => item.id, []);
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
+      const idx = viewableItems[0]?.index;
+      if (idx != null) setActiveIndex(idx);
+    },
+  );
 
   return (
     <View className="flex-1 bg-black">
@@ -552,6 +589,8 @@ export default function WatchScreen() {
         snapToInterval={height}
         snapToAlignment="start"
         getItemLayout={(_, index) => ({ length: height, offset: height * index, index })}
+        onViewableItemsChanged={onViewableItemsChanged.current}
+        viewabilityConfig={viewabilityConfig.current}
       />
     </View>
   );

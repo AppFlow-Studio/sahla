@@ -61,6 +61,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={showMain}>
         <Stack.Screen name="(main)" />
+        <Stack.Screen name="(personalization)" />
         <Stack.Screen
           name="content/[id]"
           options={{

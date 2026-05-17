@@ -147,7 +147,7 @@ function passesFilter(
   const childrenAges = user.children_ages ?? [];
   const hasChildrenInRange = (lo: number, hi: number) =>
     childrenAges.some((a) => a >= lo && a <= hi);
-
+  
   if (item.is_kids && age > KIDS_MAX) {
     if (!user.has_children || !hasChildrenInRange(0, KIDS_MAX)) return false;
   }
@@ -210,6 +210,8 @@ function score(user: User, item: ContentRow): { total: number; breakdown: Breakd
   return { total, breakdown };
 }
 
+
+
 async function recompute(
   supabase: SupabaseClient,
   userId: string,
@@ -237,8 +239,6 @@ async function recompute(
   const rows = filtered.map((it) => {
     const { total, breakdown } = score(user, it);
     return {
-      user_id: userId,
-      mosque_id: mosqueId,
       content_id: it.content_id,
       recommendation_score: total,
       score_breakdown: breakdown,
@@ -248,16 +248,11 @@ async function recompute(
     };
   });
 
-  const delRes = await supabase
-    .from("recommendation_log")
-    .delete()
-    .eq("user_id", userId)
-    .eq("mosque_id", mosqueId);
-  console.log("[recompute] delete result:", delRes.error?.message ?? "ok");
-
-  if (rows.length === 0) return 0;
-  const { error } = await supabase.from("recommendation_log").insert(rows);
-  console.log("[recompute] insert result:", error?.message ?? `ok (${rows.length} rows)`);
+  const {error} = await supabase.rpc('upsert_recommendations',{
+    p_user_id: userId,
+    p_mosque_id: mosqueId,
+    p_rows: rows,
+  });
   if (error) throw error;
   return rows.length;
 }

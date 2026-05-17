@@ -1,7 +1,7 @@
+import { useAuth } from "@clerk/clerk-expo";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,6 +23,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import SpeakerInfoModal from "@/components/Discover/SpeakerInfoModal";
 import { ContentNotificationSettingsSheet } from "@/components/content/ContentNotificationSettingsSheet";
 import {
   useIsNotifOptedIn,
@@ -101,6 +102,7 @@ export default function ContentDetailScreen() {
     "loading",
   );
   const [error, setError] = useState<string | null>(null);
+  const [speakerModalOpen, setSpeakerModalOpen] = useState(false);
 
   const { data: isSaved = false } = useIsSaved(id);
   const toggleSave = useToggleSave(id, mosqueUuid);
@@ -441,6 +443,9 @@ export default function ContentDetailScreen() {
 
                 {firstSpeaker ? (
                   <Pressable
+                    onPress={() => setSpeakerModalOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View bio for ${firstSpeaker}`}
                     className="mt-4 flex-row items-center self-start rounded-full px-4 py-2"
                     style={{ backgroundColor: CHIP_BG }}
                   >
@@ -544,7 +549,7 @@ export default function ContentDetailScreen() {
                     color: BUSH,
                   }}
                 >
-                  {isSaved ? "Saved" : "Save to Library"}
+                  {isSaved ? "Saved to Library" : "Save to Library"}
                 </Text>
               </Pressable>
             </View>
@@ -552,6 +557,12 @@ export default function ContentDetailScreen() {
         )}
       </Animated.View>
 
+      <SpeakerInfoModal
+        visible={speakerModalOpen}
+        speakerName={firstSpeaker ?? null}
+        mosqueUuid={mosqueUuid}
+        onClose={() => setSpeakerModalOpen(false)}
+      />
       <ContentNotificationSettingsSheet
         visible={settingsSheetOpen}
         onClose={() => setSettingsSheetOpen(false)}

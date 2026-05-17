@@ -1,14 +1,16 @@
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import EvilIcons from '@expo/vector-icons/EvilIcons';
+import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile } from '@/src/hooks/use-profile';
+import { useUploadProfilePhoto } from '@/src/hooks/use-upload-profile-photo';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 import {
@@ -47,6 +49,24 @@ export default function ProfileHeader() {
       },
     ]);
   }, [signOut, queryClient]);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const { takePhoto, chooseFromGallery, isUploading } = useUploadProfilePhoto();
+
+  const handlePhotoSource = useCallback(
+    async (source: 'camera' | 'gallery') => {
+      try {
+        const result = source === 'camera' ? await takePhoto() : await chooseFromGallery();
+        setPhotoModalOpen(false);
+        return result;
+      } catch (e) {
+        Alert.alert(
+          'Could not update photo',
+          e instanceof Error ? e.message : 'Unknown error',
+        );
+      }
+    },
+    [takePhoto, chooseFromGallery],
+  );
   const [fontsLoaded] = useFonts({
     CormorantGaramond_500Medium,
     CormorantGaramond_600SemiBold,
@@ -123,7 +143,7 @@ export default function ProfileHeader() {
 
         <View className="relative z-10 w-full items-center px-4">
         {/* Avatar */}
-        <Pressable className="relative h-20 w-20">
+        <View className="relative h-20 w-20">
           {hasPhoto && url ? (
             <Image
               source={{ uri: url }}
@@ -145,10 +165,14 @@ export default function ProfileHeader() {
               </Text>
             </View>
           )}
-          <View className="absolute -bottom-2 -right-2 rounded-full bg-accent p-1">
+          <Pressable
+            onPress={() => setPhotoModalOpen(true)}
+            hitSlop={10}
+            className="absolute -bottom-2 -right-2 rounded-full bg-[#B8922A] p-1 active:opacity-80"
+          >
             <EvilIcons name="pencil" size={14} color="#FFFBF2" />
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
 
         {/* Name */}
         <Text
@@ -225,6 +249,14 @@ export default function ProfileHeader() {
         </View>
         </View>
       </LinearGradient>
+
+      <ProfilePhotoModal
+        visible={photoModalOpen}
+        onClose={() => setPhotoModalOpen(false)}
+        onTakePhoto={() => handlePhotoSource('camera')}
+        onChooseFromGallery={() => handlePhotoSource('gallery')}
+        isUploading={isUploading}
+      />
     </View>
   );
 }
