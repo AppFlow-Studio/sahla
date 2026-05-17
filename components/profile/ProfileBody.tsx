@@ -58,7 +58,7 @@ export default function ProfileBody({
 
   return (
     <View
-      className="-mt-4 w-full flex-col rounded-t-[32px] bg-[#FFFBF2] px-4 pt-6"
+      className="-mt-4 w-full flex-col rounded-t-[32px] bg-[#FFFBF2] px-4 pt-6 pb-20"
       style={{
         zIndex: 1,
         ...(Platform.OS === "android" ? { elevation: 3 } : {}),

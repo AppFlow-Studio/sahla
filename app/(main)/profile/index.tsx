@@ -14,11 +14,12 @@ export default function ProfileScreen() {
       <ScrollView
         className="flex-1"
         style={{ backgroundColor: "transparent" }}
+        bounces={false}
         contentInsetAdjustmentBehavior={
           Platform.OS === "ios" ? "never" : undefined
         }
       >
-        <View className="w-full">
+        <View className="w-full ">
           <ProfileHeader />
           <ProfileBody
             onPressPersonalized={() => router.push("/(personalization)/reasons")}
