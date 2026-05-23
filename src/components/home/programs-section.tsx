@@ -49,6 +49,8 @@ export function ProgramsSection() {
   const { items, status, error } = useContentItems();
   const programs = items.filter((i) => i.type === 'program').slice(0, 3);
 
+  if (programs.length === 0) return null;
+
   return (
     <View>
       <View className="flex-row items-center justify-between pb-3">

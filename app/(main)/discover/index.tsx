@@ -35,7 +35,6 @@ import UpcomingEventsSection, {
 import DonateCard from "@/components/profile/DonateCard";
 import { useContentItems } from "@/src/hooks/use-content-items";
 import { useRecommendation } from "@/src/hooks/use-Recommendation";
-import { useDonation } from "@/src/providers/donation-provider";
 
 const PROGRAMS: ProgramItem[] = [
   {
@@ -152,7 +151,6 @@ export default function DiscoverScreen() {
     },
     [switchTab],
   );
-  const { open: openDonate } = useDonation();
   const { items, status, error } = useContentItems();
   const { recommendations, status: recStatus, error: recError } = useRecommendation();
 
@@ -307,7 +305,7 @@ export default function DiscoverScreen() {
       <View className="flex-1" style={{ backgroundColor: "#FFFBF2" }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <DiscoverHeader
           title={
@@ -376,7 +374,7 @@ export default function DiscoverScreen() {
                 kind="events"
                 items={eventBrowseItems}
                 onPressItem={openContent}
-                allTabFooter={<DonateCard onPress={openDonate} />}
+                allTabFooter={<DonateCard />}
               />
             ) : activeTab === "Programs" ? (
               <AudienceBrowse
@@ -387,7 +385,7 @@ export default function DiscoverScreen() {
                 onPressSeeAll={(audience) =>
                   setProgramsInitialFilter(audience)
                 }
-                allTabFooter={<DonateCard onPress={openDonate} />}
+                allTabFooter={<DonateCard />}
               />
             ) : (
               <>
@@ -427,7 +425,7 @@ export default function DiscoverScreen() {
                 </View>
 
                 <View className="mt-6 px-6">
-                  <DonateCard onPress={openDonate} />
+                  <DonateCard />
                 </View>
               </>
             )}

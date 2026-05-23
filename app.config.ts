@@ -65,7 +65,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
-    'expo-secure-store',
     'expo-sqlite',
     'expo-asset',
     'expo-apple-authentication',
@@ -79,6 +78,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-video',
+    [
+      '@stripe/stripe-react-native',
+      {
+        merchantIdentifier: `merchant.${IOS_BUNDLE_ID}`,
+        enableGooglePay: true,
+      },
+    ],
+    [
+      'expo-notifications',
+      {
+        icon: './assets/images/icon.png',
+        color: '#0A261E',
+      },
+    ],
     [
       'expo-splash-screen',
       {

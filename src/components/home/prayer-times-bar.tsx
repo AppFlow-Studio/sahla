@@ -6,33 +6,21 @@ import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-const PRAYER_ICONS: Record<string, IconName> = {
-  fajr: 'weather-sunset-up',
-  sunrise: 'weather-sunny',
-  dhuhr: 'white-balance-sunny',
-  asr: 'weather-sunny',
-  maghrib: 'weather-sunset-down',
-  isha: 'moon-waning-crescent',
-};
-
 export function PrayerTimesBar() {
   const { colors } = useMasjidConfig();
-  const { items } = usePrayerTimes();
+  const { prayers } = usePrayerTimes();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
   const fgFull = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
   const nameMuted = `rgba(${colors.primaryForeground.replace(/ /g, ',')},0.4)`;
 
-  if (items.length === 0) {
-    return <View className="px-5" style={{ height: 67 }} />;
-  }
+  if (prayers.length === 0) return null;
 
   return (
     <View className="flex-row items-center px-5">
-      {items.map((prayer) => {
-        const isActive = prayer.status === 'next';
-        const icon = PRAYER_ICONS[prayer.rawName] ?? 'weather-sunny';
+      {prayers.map((prayer, i) => {
+        const isActive = prayer.isActive;
         return (
-          <View key={prayer.rawName} className="flex-1 items-center">
+          <View key={`${prayer.name}-${i}`} className="flex-1 items-center">
             <View
               style={{
                 width: 60,
@@ -61,7 +49,7 @@ export function PrayerTimesBar() {
                 {prayer.name}
               </Text>
               <MaterialCommunityIcons
-                name={icon}
+                name={prayer.icon as IconName}
                 size={18}
                 color={isActive ? accentRgb : fgFull}
               />
@@ -72,7 +60,7 @@ export function PrayerTimesBar() {
                   color: isActive ? accentRgb : fgFull,
                 }}
               >
-                {prayer.iqamah}
+                {prayer.time}
               </Text>
             </View>
           </View>

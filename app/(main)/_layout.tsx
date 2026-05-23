@@ -1,6 +1,10 @@
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { useRegisterPushToken } from '@/src/hooks/use-register-push-token';
+
 export default function TabLayout() {
+  // Register/refresh push token on mount + every foreground event
+  useRegisterPushToken();
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">

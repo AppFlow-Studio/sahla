@@ -125,12 +125,12 @@ export default function ContentDetailScreen() {
   useEffect(() => {
     if (!showOptInToast) return;
     toastOpacity.value = withTiming(1, { duration: 200 });
-    const id = setTimeout(() => {
+    const tid = setTimeout(() => {
       toastOpacity.value = withTiming(0, { duration: 200 }, (finished) => {
         if (finished) runOnJS(setShowOptInToast)(false);
       });
     }, 2400);
-    return () => clearTimeout(id);
+    return () => clearTimeout(tid);
   }, [showOptInToast, toastOpacity]);
   const toastStyle = useAnimatedStyle(() => ({ opacity: toastOpacity.value }));
 
