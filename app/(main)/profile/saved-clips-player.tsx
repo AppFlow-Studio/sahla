@@ -1,0 +1,127 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { ReelItem } from '@/app/(main)/watch';
+import type { Reel } from '@/src/hooks/use-reels';
+import { useSavedReels } from '@/src/hooks/use-saved-reels';
+
+/**
+ * Full-screen player for the user's Saved Clips list — opened by tapping a
+ * cell in the saved-clips grid. Same TikTok-style vertical feed UX as the
+ * Watch tab, but the data source is `useSavedReels()` (the user's saved list)
+ * instead of the full feed. The tapped cell's index is passed as a route
+ * param so we open at that exact reel.
+ */
+export default function SavedClipsPlayerScreen() {
+  const { index } = useLocalSearchParams<{ index?: string }>();
+  // Floor + clamp the param so a malformed value can't break initialScrollIndex.
+  const initialIndex = Math.max(0, Math.floor(Number(index ?? 0)) || 0);
+
+  const { data, isPending } = useSavedReels();
+  const reels = data ?? [];
+
+  const isFocused = useIsFocused();
+  const { height } = useWindowDimensions();
+  const listRef = useRef<FlatList<Reel>>(null);
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+  // Same feed-level mute pattern as Watch — tap a reel to unmute, sticks.
+  const [muted, setMuted] = useState(true);
+  const toggleMuted = useCallback(() => setMuted((m) => !m), []);
+
+  const renderItem = useCallback(
+    ({ item, index: i }: { item: Reel; index: number }) => (
+      <ReelItem
+        reel={item}
+        height={height}
+        isActive={i === activeIndex && isFocused}
+        muted={muted}
+        onToggleMuted={toggleMuted}
+      />
+    ),
+    [height, activeIndex, isFocused, muted, toggleMuted],
+  );
+
+  const keyExtractor = useCallback((item: Reel) => item.reel_id, []);
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
+      const idx = viewableItems[0]?.index;
+      if (idx != null) setActiveIndex(idx);
+    },
+  );
+
+  if (isPending) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center">
+        <ActivityIndicator color="#fffbf2" />
+      </View>
+    );
+  }
+
+  if (!reels.length) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center px-8">
+        <Text style={{ color: '#fffbf2' }}>No saved clips</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1 bg-black">
+      <FlatList
+        ref={listRef}
+        data={reels}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={height}
+        snapToAlignment="start"
+        initialScrollIndex={initialIndex}
+        getItemLayout={(_, i) => ({
+          length: height,
+          offset: height * i,
+          index: i,
+        })}
+        onViewableItemsChanged={onViewableItemsChanged.current}
+        viewabilityConfig={viewabilityConfig.current}
+      />
+
+      {/* Back chevron — overlays the top-left corner of the feed. */}
+      <SafeAreaView
+        edges={['top']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={10}
+          className="active:opacity-70"
+          style={{
+            margin: 12,
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="chevron-back" size={22} color="#ffffff" />
+        </Pressable>
+      </SafeAreaView>
+    </View>
+  );
+}
