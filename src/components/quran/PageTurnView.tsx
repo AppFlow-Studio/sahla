@@ -4,7 +4,6 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -21,11 +20,13 @@ import {
   Vertices,
   type SkPoint,
 } from '@shopify/react-native-skia';
-import {
+import Animated, {
   runOnJS,
+  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import {
@@ -97,46 +98,92 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
     const pageWSV = useSharedValue(0);
     const pageHSV = useSharedValue(0);
 
-    const [gestureActive, setGestureActive] = useState(false);
+    // 3-phase state machine drives canvas + live-view visibility:
+    //   idle       — live view at full opacity; canvas unmounted
+    //   dragging   — live view hidden; canvas mounted at opacity 1
+    //   committing — live view at full opacity (new page rendering); canvas
+    //                still mounted but its opacity is animating 1→0
+    const [phase, setPhase] = useState<'idle' | 'dragging' | 'committing'>(
+      'idle',
+    );
     const [activeDir, setActiveDir] = useState<0 | 1 | -1>(0);
-    // Delayed-unmount handle. After commit we keep the Skia canvas mounted
-    // for a beat so the live RN view of the new page can finish its sqlite
-    // load + render before it takes over visibility — without this delay
-    // the user sees a brief flash of the MushafPage spinner.
-    const endTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const onGestureStart = useCallback((dir: 1 | -1) => {
-      if (endTimeoutRef.current) {
-        clearTimeout(endTimeoutRef.current);
-        endTimeoutRef.current = null;
-      }
-      setActiveDir(dir);
-      setGestureActive(true);
-    }, []);
-    const onGestureEnd = useCallback(
-      (delta: 0 | 1 | -1) => {
-        if (delta !== 0) {
-          const newPage = pageNumber + delta;
-          if (newPage >= 1 && newPage <= totalPages) onPageChange(newPage);
-        }
-        if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
-        // Commit: hold the canvas for ~220ms so the new MushafPage settles.
-        // Spring-back: no delay needed, just clean up immediately.
-        const holdMs = delta !== 0 ? 220 : 0;
-        endTimeoutRef.current = setTimeout(() => {
-          setGestureActive(false);
-          setActiveDir(0);
-          endTimeoutRef.current = null;
-        }, holdMs);
+    // Drives the canvas wrapper's opacity. We can't smoothly mount/unmount
+    // the Skia Canvas, so instead we keep it mounted through the commit and
+    // fade an Animated.View wrapper around it.
+    const canvasFadeOpacity = useSharedValue(0);
+    const animatedCanvasStyle = useAnimatedStyle(() => ({
+      opacity: canvasFadeOpacity.value,
+    }));
+
+    // Drives only the curl decoration's opacity (mesh + back + highlight +
+    // shadow). bgImage stays at full opacity. On commit the curl fades out
+    // first, revealing the next-page bgImage cleanly — without that, the
+    // half-wrapped curl is still showing the OLD page's texture on the
+    // right side of the screen when the spring lands, which reads as "the
+    // page we're already on" right before the canvas hands off.
+    const curlOpacity = useSharedValue(1);
+
+    const onGestureStart = useCallback(
+      (dir: 1 | -1) => {
+        setActiveDir(dir);
+        setPhase('dragging');
+        // Snap both canvas + curl decoration to full opacity; also cancels
+        // any in-flight commit fade if a new gesture starts during one.
+        canvasFadeOpacity.value = 1;
+        curlOpacity.value = 1;
       },
-      [pageNumber, totalPages, onPageChange],
+      [canvasFadeOpacity, curlOpacity],
     );
 
-    useEffect(() => {
-      return () => {
-        if (endTimeoutRef.current) clearTimeout(endTimeoutRef.current);
-      };
-    }, []);
+    // Spring-back complete (released early, no page change). Reset both
+    // opacities so the next gesture starts fresh.
+    const endGestureNoCommit = useCallback(() => {
+      setActiveDir(0);
+      setPhase('idle');
+      canvasFadeOpacity.value = 0;
+      curlOpacity.value = 1;
+    }, [canvasFadeOpacity, curlOpacity]);
+
+    // Final cleanup once the commit's canvas fade has finished — restore
+    // curlOpacity to 1 so the next gesture starts with the curl visible.
+    const finishCommit = useCallback(() => {
+      setActiveDir(0);
+      setPhase('idle');
+      curlOpacity.value = 1;
+    }, [curlOpacity]);
+
+    const beginCommit = useCallback(
+      (delta: 1 | -1) => {
+        const newPage = pageNumber + delta;
+        if (newPage >= 1 && newPage <= totalPages) onPageChange(newPage);
+        setPhase('committing');
+        // One quick parallel fade — curl + canvas both dissolve over the
+        // same 120ms onto the live RN view (which has had the full spring
+        // duration to start loading its new MushafPage). Total commit
+        // phase post-spring ≈ 120ms, so a release feels like one
+        // continuous turning motion rather than multiple sequential
+        // phases.
+        curlOpacity.value = withTiming(0, { duration: 120 });
+        canvasFadeOpacity.value = withTiming(
+          0,
+          { duration: 120 },
+          (finished) => {
+            if (finished) {
+              runOnJS(finishCommit)();
+            }
+          },
+        );
+      },
+      [
+        pageNumber,
+        totalPages,
+        onPageChange,
+        canvasFadeOpacity,
+        curlOpacity,
+        finishCommit,
+      ],
+    );
 
     const pageW = stage.w;
     const pageH = stage.h;
@@ -191,18 +238,19 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
           const effective = goingForward ? progress : 1 - progress;
           const commit = shouldCommit(effective, e.velocityX, direction);
           if (commit) {
-            // Past threshold (>40% across or fast enough flick) → finish the
-            // turn for the user. Spring touchX to the spine, then bump the
-            // page number on completion.
+            // Past threshold → spring touchX to the natural half-wrap
+            // position at the spine. The curl decoration is then faded
+            // out separately in beginCommit, so the page doesn't need to
+            // be thrown off-screen to read as "turned".
             const targetX = goingForward
               ? direction === 'rtl' ? pageW : 0
               : direction === 'rtl' ? 0 : pageW;
             touchX.value = withSpring(
               targetX,
-              { damping: 18, stiffness: 160, mass: 0.7 },
+              { damping: 30, stiffness: 400, mass: 0.6 },
               () => {
                 turnDir.value = 0;
-                runOnJS(onGestureEnd)(goingForward ? 1 : -1);
+                runOnJS(beginCommit)(goingForward ? 1 : -1);
               },
             );
           } else {
@@ -215,18 +263,19 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
               { damping: 22, stiffness: 200, mass: 0.7 },
               () => {
                 turnDir.value = 0;
-                runOnJS(onGestureEnd)(0);
+                runOnJS(endGestureNoCommit)();
               },
             );
           }
         })
         .onFinalize(() => {
           'worklet';
-          // Cancellation safety net — if the gesture aborts we still clear
-          // the active flag so the live RN view becomes visible again.
+          // Cancellation safety net — if the gesture aborts mid-flight (no
+          // onEnd path taken) we still clear active state so the live RN
+          // view becomes visible again.
           if (turnDir.value !== 0) {
             turnDir.value = 0;
-            runOnJS(onGestureEnd)(0);
+            runOnJS(endGestureNoCommit)();
           }
         });
     }, [
@@ -235,7 +284,8 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       prevNum,
       nextNum,
       onGestureStart,
-      onGestureEnd,
+      beginCommit,
+      endGestureNoCommit,
       turnDir,
       startY,
       touchX,
@@ -364,25 +414,25 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       return result;
     });
 
-    // Cast shadow: a soft path projected from the curl ridge onto the
-    // background. Approximated by tracing the perimeter of the curling mesh.
+    // Cast shadow: a stroked line along the curl's apex (the highest point
+    // of the cylinder bend). Stroke width + BlurMask widen it into a soft
+    // band — this is where a real curl casts its strongest shadow because
+    // it's where the page is furthest off the surface below. Avoids the
+    // self-intersecting polygon problem of tracing the full mesh outline.
     const shadowPath = useDerivedValue(() => {
       const f = fold.value;
-      const verts = frontVertices.value;
-      if (verts.length === 0 || f.R < 1e-2) return Skia.Path.Make();
+      const h = pageHSV.value;
       const path = Skia.Path.Make();
-      // Top edge of mesh (row 0) projected as the shadow leading edge
-      for (let c = 0; c < COLS; c++) {
-        const v = verts[c];
-        if (c === 0) path.moveTo(v.x, v.y + 4);
-        else path.lineTo(v.x, v.y + 4);
-      }
-      // Bottom edge of mesh (last row) — close the shape
-      for (let c = COLS - 1; c >= 0; c--) {
-        const v = verts[(ROWS - 1) * COLS + c];
-        path.lineTo(v.x, v.y + 4);
-      }
-      path.close();
+      if (h === 0 || f.R < 1e-2) return path;
+      // Apex (ground-projected): one R away from the fold midpoint in the
+      // curl-normal direction.
+      const apexX = f.midX + f.R * f.normalX;
+      const apexY = f.midY + f.R * f.normalY;
+      // Extend the line generously along the fold direction so it spans
+      // the page even when the fold is angled (corner curl).
+      const halfLen = h * 1.5;
+      path.moveTo(apexX - f.dirX * halfLen, apexY - f.dirY * halfLen);
+      path.lineTo(apexX + f.dirX * halfLen, apexY + f.dirY * halfLen);
       return path;
     });
 
@@ -416,7 +466,8 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
     // page on backward turn).
     const bgImage = activeDir === -1 ? prev.image : next.image;
     const curlImage = curr.image;
-    const showCanvas = gestureActive && pageW > 0 && curlImage != null;
+    const showCanvas = phase !== 'idle' && pageW > 0 && curlImage != null;
+    const isDragging = phase === 'dragging';
 
     return (
       <View style={styles.root} onLayout={onLayout}>
@@ -466,24 +517,29 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
         </View>
 
         {/* Live current page. Doubles as the snapshot source via curr.viewRef.
-            We only hide it once the Canvas can actually render the curl —
-            otherwise the user sees nothing until the snapshot lands. */}
+            Only hidden during 'dragging' — during 'committing' it stays at
+            full opacity behind the fading canvas so the new page is fully
+            in place by the time the fade completes. */}
         <View
           ref={curr.viewRef}
           collapsable={false}
           style={[
             StyleSheet.absoluteFill,
             { backgroundColor: pageBackgroundColor },
-            showCanvas ? styles.invisible : null,
+            isDragging ? styles.invisible : null,
           ]}
-          pointerEvents={showCanvas ? 'none' : 'auto'}
+          pointerEvents={isDragging ? 'none' : 'auto'}
         >
           {renderPage(pageNumber)}
         </View>
 
-        {/* Skia overlay during gesture */}
+        {/* Skia overlay during gesture + commit fade */}
         {showCanvas ? (
-          <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Animated.View
+            style={[StyleSheet.absoluteFill, animatedCanvasStyle]}
+            pointerEvents="none"
+          >
+            <Canvas style={StyleSheet.absoluteFill}>
             {/* Background page (revealed under the curl) */}
             {bgImage ? (
               <SkiaImage
@@ -496,52 +552,28 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
               />
             ) : null}
 
-            {/* Soft cast shadow under the curl — opacity tuned for a
-                tangible rolled-tube feel without darkening the underlying
-                page too much. */}
-            <Path path={shadowPath} color="rgba(0,0,0,0.42)" style="fill">
-              <BlurMask blur={SHADOW_BLUR} style="normal" />
-            </Path>
-
-            {/* Front side of the curling page (texture from current snapshot) */}
-            {curlImage ? (
-              <Vertices
-                vertices={frontVertices}
-                textures={textures}
-                indices={indices}
-                mode="triangles"
+            {/* Curl decoration group — fades out on commit so the page
+                doesn't get left as a half-wrapped tube on the right side
+                of the screen. bgImage above stays at full opacity so the
+                next-page snapshot remains during the dissolve. */}
+            <Group opacity={curlOpacity}>
+              {/* Soft cast shadow under the curl — a thick stroked line at
+                  the apex, heavily blurred into a soft band. */}
+              <Path
+                path={shadowPath}
+                style="stroke"
+                strokeWidth={28}
+                color="rgba(0,0,0,0.45)"
               >
-                <ImageShader
-                  image={curlImage}
-                  tx="clamp"
-                  ty="clamp"
-                  fit="fill"
-                  rect={{ x: 0, y: 0, width: pageW, height: pageH }}
-                />
-              </Vertices>
-            ) : null}
+                <BlurMask blur={SHADOW_BLUR} style="normal" />
+              </Path>
 
-            {/* Back-of-page overlay: solid fill on the subset of triangles
-                where all 3 corners are past 90°. Slightly darker than the
-                front page colour so the rolled-tube reads as a separate
-                surface even though both are warm cream. */}
-            <Vertices
-              vertices={frontVertices}
-              indices={backIndices}
-              mode="triangles"
-              color="#e8dec5"
-            />
-
-            {/* Mirrored print bleeding through from the front — same texture
-                with horizontally-flipped UVs, drawn at low opacity over the
-                beige fill so the back of the page shows faint reversed Quran
-                text (matches Revealed's see-through-paper look). */}
-            {curlImage ? (
-              <Group opacity={0.22}>
+              {/* Front side of the curling page (texture from current snapshot) */}
+              {curlImage ? (
                 <Vertices
                   vertices={frontVertices}
-                  textures={mirroredTextures}
-                  indices={backIndices}
+                  textures={textures}
+                  indices={indices}
                   mode="triangles"
                 >
                   <ImageShader
@@ -552,19 +584,49 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
                     rect={{ x: 0, y: 0, width: pageW, height: pageH }}
                   />
                 </Vertices>
-              </Group>
-            ) : null}
+              ) : null}
 
-            {/* Specular highlight along the cylinder apex */}
-            <Path
-              path={highlightPath}
-              style="stroke"
-              strokeWidth={2}
-              color="rgba(255,255,255,0.4)"
-            >
-              <BlurMask blur={3} style="solid" />
-            </Path>
-          </Canvas>
+              {/* Back-of-page overlay: solid fill on the subset of triangles
+                  where all 3 corners are past 90°. */}
+              <Vertices
+                vertices={frontVertices}
+                indices={backIndices}
+                mode="triangles"
+                color="#e8dec5"
+              />
+
+              {/* Mirrored print bleeding through from the front */}
+              {curlImage ? (
+                <Group opacity={0.22}>
+                  <Vertices
+                    vertices={frontVertices}
+                    textures={mirroredTextures}
+                    indices={backIndices}
+                    mode="triangles"
+                  >
+                    <ImageShader
+                      image={curlImage}
+                      tx="clamp"
+                      ty="clamp"
+                      fit="fill"
+                      rect={{ x: 0, y: 0, width: pageW, height: pageH }}
+                    />
+                  </Vertices>
+                </Group>
+              ) : null}
+
+              {/* Specular highlight along the cylinder apex */}
+              <Path
+                path={highlightPath}
+                style="stroke"
+                strokeWidth={2}
+                color="rgba(255,255,255,0.4)"
+              >
+                <BlurMask blur={3} style="solid" />
+              </Path>
+            </Group>
+            </Canvas>
+          </Animated.View>
         ) : null}
 
         {/* Gesture detector covers entire page */}
