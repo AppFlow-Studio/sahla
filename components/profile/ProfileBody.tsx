@@ -118,7 +118,7 @@ export default function ProfileBody({
           <RowItem
             icon={SAVED_CLIPS_ICON}
             title="Saved Clips"
-            onPress={() => {}}
+            onPress={() => router.push("/profile/saved-clips" as Href)}
           />
           <RowItem
             icon={PAYMENT_HISTORY_ICON}

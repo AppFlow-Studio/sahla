@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
-
 import MasjidLogo from '@/assets/masjid-logo.svg';
+import NoWifiSignal from '@/assets/images/no_wifi_signal.png';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
@@ -26,67 +28,16 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
+import { useNetInfo } from '@react-native-community/netinfo';
 
-type Reel = {
-  id: string;
-  mediaUrl: string;
-  arabic?: string;
-  urdu?: string;
-  translation?: string;
-  source?: string;
-  creator: { name: string; masjid: string; avatarUrl: string };
-  caption: string;
-  likes: number;
-};
+import { useReels, type Reel } from '@/src/hooks/use-reels';
+import { useDismissReel } from '@/src/hooks/use-dismissed-reels';
+import { useIsReelLiked, useToggleReelLike } from '@/src/hooks/use-liked-reels';
+import { useIsReelSaved, useToggleReelSave } from '@/src/hooks/use-saved-reels';
+import { useConfigStore } from '@/src/stores/config-store';
 
-const REELS: Reel[] = [
-  {
-    id: '1',
-    mediaUrl:
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    arabic: 'قَالَ لَا تَخَافَآ',
-    urdu: 'اللہ نے فرمایا: ڈرو نہیں',
-    translation: '[Allah] said, "Fear not."',
-    source: 'Qur\u2019an',
-    creator: {
-      name: 'Sheikh Yusuf Rahman',
-      masjid: 'MAS Staten Island',
-      avatarUrl: 'https://picsum.photos/seed/sheikh-yusuf/80/80',
-    },
-    caption: 'Every Soul will taste death | Sheikh Yusuf Rahman | Must watch',
-    likes: 1100,
-  },
-  {
-    id: '2',
-    mediaUrl:
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    arabic: 'إِنَّ مَعَ ٱلْعُسْرِ يُسْرًۭا',
-    translation: 'Indeed, with hardship comes ease.',
-    source: 'Qur\u2019an 94:6',
-    creator: {
-      name: 'Imam Abdul Hakim',
-      masjid: 'MAS Staten Island',
-      avatarUrl: 'https://picsum.photos/seed/imam-abdul/80/80',
-    },
-    caption: 'A reminder for anyone going through hard times.',
-    likes: 842,
-  },
-  {
-    id: '3',
-    mediaUrl:
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    arabic: 'وَذَكِّرْ فَإِنَّ ٱلذِّكْرَىٰ تَنفَعُ ٱلْمُؤْمِنِينَ',
-    translation: 'And remind, for indeed, the reminder benefits the believers.',
-    source: 'Qur\u2019an 51:55',
-    creator: {
-      name: 'Sheikh Yusuf Rahman',
-      masjid: 'MAS Staten Island',
-      avatarUrl: 'https://picsum.photos/seed/sheikh-yusuf/80/80',
-    },
-    caption: 'Short reminder on the power of dhikr.',
-    likes: 2300,
-  },
-];
+
 
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
@@ -245,8 +196,8 @@ function BottomSheet({
   );
 }
 
-function MasjidCard({ reel, onClose }: { reel: Reel; onClose: () => void }) {
-  const masjidName = reel.creator.masjid;
+function MasjidCard({ onClose }: { onClose: () => void }) {
+  const masjidName = useConfigStore((s) => s.config.displayName);
 
   return (
     <View
@@ -373,7 +324,7 @@ function StatDivider() {
   return <View style={{ width: 0.5, backgroundColor: 'rgba(10,38,30,0.15)', marginVertical: 4 }} />;
 }
 
-function ReelItem({
+export function ReelItem({
   reel,
   height,
   isActive,
@@ -384,35 +335,67 @@ function ReelItem({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
+  // Local pause state — single-tapping the reel toggles play/pause (TikTok-style).
+  const [paused, setPaused] = useState(false);
+  const masjidName = useConfigStore((s) => s.config.displayName);
+  const isSavedQ = useIsReelSaved(reel.reel_id);
+  const toggleSave = useToggleReelSave(reel.reel_id, reel.mosque_id);
+  const saved = !!isSavedQ.data;
+  const isLikedQ = useIsReelLiked(reel.reel_id);
+  const toggleLike = useToggleReelLike(reel.reel_id, reel.mosque_id);
+  const liked = !!isLikedQ.data;
+  const dismissReel = useDismissReel(reel.reel_id, reel.mosque_id);
 
-  const player = useVideoPlayer(reel.mediaUrl, (p) => {
+  const player = useVideoPlayer(reel.video_url, (p) => {
     p.loop = true;
-    p.muted = true;
+    p.muted = false;
   });
 
+  // On becoming active: restart from 0 + clear any prior tap-pause state.
+  // Matches TikTok/IG behavior for short-form video.
   useEffect(() => {
+    setPaused(false);
     if (isActive) {
+      player.currentTime = 0;
+    }
+  }, [isActive, player]);
+
+  // Drive play/pause from the combined (isActive + paused) state.
+  useEffect(() => {
+    if (isActive && !paused) {
       player.play();
     } else {
       player.pause();
     }
-  }, [isActive, player]);
+  }, [isActive, paused, player]);
 
   const handleShare = async () => {
-    const message = [reel.arabic, reel.translation, reel.source ? `— ${reel.source}` : null]
+    const arabic = 'arabic' in reel ? (reel.arabic as string | undefined) : undefined;
+    const translation =
+      'translation' in reel ? (reel.translation as string | undefined) : undefined;
+    const source = 'source' in reel ? (reel.source as string | undefined) : undefined;
+    const message = [arabic, translation, source ? `— ${source}` : null]
       .filter(Boolean)
       .join('\n\n');
     try {
-      await Share.share({ message: message || reel.caption, title: reel.caption });
+      await Share.share({
+        message: message || reel.caption || '',
+        title: reel.caption ?? undefined,
+      });
     } catch {
       // user dismissed; no-op
     }
   };
 
   return (
-    <View style={{ height, width: '100%' }} className="bg-black">
+    // Root Pressable: tapping the video toggles pause/play (matching TikTok).
+    // Nested Pressables (action buttons, menu, sheet) capture their own taps.
+    // FlatList claims vertical pans, so swiping doesn't fire onPress.
+    <Pressable
+      onPress={() => setPaused((p) => !p)}
+      style={{ height, width: '100%' }}
+      className="bg-black"
+    >
       <VideoView
         player={player}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -425,9 +408,37 @@ function ReelItem({
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' }}
       />
 
+      {isActive && paused ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: 'rgba(0,0,0,0.55)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="play" size={40} color="#ffffff" style={{ marginLeft: 4 }} />
+          </View>
+        </View>
+      ) : null}
+
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 justify-center px-6">
-          {reel.arabic ? (
+          {'arabic' in reel && reel.arabic ? (
             <Text
               style={{
                 fontFamily: 'Amiri_400Regular',
@@ -437,10 +448,10 @@ function ReelItem({
                 lineHeight: 52,
               }}
             >
-              {reel.arabic}
+              {String(reel.arabic)}
             </Text>
           ) : null}
-          {reel.urdu ? (
+          {'urdu' in reel && reel.urdu ? (
             <Text
               style={{
                 fontFamily: 'Amiri_400Regular',
@@ -450,10 +461,10 @@ function ReelItem({
                 marginTop: 10,
               }}
             >
-              {reel.urdu}
+              {String(reel.urdu)}
             </Text>
           ) : null}
-          {reel.translation ? (
+          {'translation' in reel && reel.translation ? (
             <Text
               style={{
                 fontSize: 17,
@@ -463,10 +474,10 @@ function ReelItem({
                 fontStyle: 'italic',
               }}
             >
-              {reel.translation}
+              {String(reel.translation)}
             </Text>
           ) : null}
-          {reel.source ? (
+          {'source' in reel && reel.source ? (
             <Text
               style={{
                 fontFamily: 'PlayfairDisplay_500Medium',
@@ -476,7 +487,7 @@ function ReelItem({
                 marginTop: 16,
               }}
             >
-              {reel.source}
+              {String(reel.source)}
             </Text>
           ) : null}
         </View>
@@ -487,29 +498,40 @@ function ReelItem({
           <ActionButton
             icon={liked ? 'heart' : 'heart-outline'}
             color={liked ? '#FF0005' : '#ffffff'}
-            label={formatCount(reel.likes + (liked ? 1 : 0))}
-            onPress={() => setLiked((v) => !v)}
+            label={formatCount(reel.like_count ?? 0)}
+            onPress={() => toggleLike.mutate(liked)}
           />
           <ActionButton icon="paper-plane-outline" onPress={handleShare} />
           <ActionButton
             icon={saved ? 'bookmark' : 'bookmark-outline'}
             color={saved ? '#B8922A' : '#ffffff'}
-            onPress={() => setSaved((v) => !v)}
+            onPress={() => toggleSave.mutate(saved)}
           />
           <ActionButton icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingBottom: 130 }}>
           <View className="flex-row items-center">
-            <Image
-              source={{ uri: reel.creator.avatarUrl }}
-              style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#ffffff' }}
-            />
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: '#ffffff',
+                backgroundColor: '#0A261E',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              <MasjidLogo width={28} height={28} />
+            </View>
             <View className="ml-3 flex-1">
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#ffffff' }}>
-                {reel.creator.name}
+                {reel.title ?? masjidName}
               </Text>
-              <Text style={{ fontSize: 10, color: '#ffffff' }}>{reel.creator.masjid}</Text>
+              <Text style={{ fontSize: 10, color: '#ffffff' }}>{masjidName}</Text>
             </View>
             <Pressable
               onPress={() => setSheetOpen(true)}
@@ -540,7 +562,10 @@ function ReelItem({
         >
           <View style={{ position: 'absolute', right: 54, bottom: 260 }}>
             <ReelMenu
-              onNotInterested={() => setMenuOpen(false)}
+              onNotInterested={() => {
+                setMenuOpen(false);
+                dismissReel.mutate();
+              }}
               onReport={() => setMenuOpen(false)}
             />
           </View>
@@ -548,26 +573,36 @@ function ReelItem({
       ) : null}
 
       <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
-        <MasjidCard reel={reel} onClose={() => setSheetOpen(false)} />
+        <MasjidCard onClose={() => setSheetOpen(false)} />
       </BottomSheet>
-    </View>
+    </Pressable>
   );
 }
 
 export default function WatchScreen() {
-  const { height } = useWindowDimensions();
+
+  const {reels, isLoading, isError, refetch} = useReels();
   const listRef = useRef<FlatList<Reel>>(null);
+  const { height } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
-
-  const renderItem = useCallback(
-    ({ item, index }: { item: Reel; index: number }) => (
-      <ReelItem reel={item} height={height} isActive={index === activeIndex} />
-    ),
-    [height, activeIndex],
-  );
-
-  const keyExtractor = useCallback((item: Reel) => item.id, []);
-
+  // True while the Watch screen is the focused tab; false when the user
+  // switches to Home / Discover / etc. We treat "not focused" as "no reel is
+  // active" so all players pause when the screen isn't visible.
+  const isFocused = useIsFocused();
+  // Device connectivity — drives the no-connection overlay even when no
+  // fetch is in flight (so going offline mid-session triggers it instantly).
+  const netInfo = useNetInfo();
+  const isOffline = netInfo.isConnected === false;
+  const showNoConnection = isError || isOffline;
+  const renderItem = useCallback(({ item, index }: { item: Reel; index: number }) => (
+    <ReelItem
+      reel={item}
+      height={height}
+      // Pause the underlying reel while the no-connection overlay is showing.
+      isActive={index === activeIndex && isFocused && !showNoConnection}
+    />
+  ), [height, activeIndex, isFocused, showNoConnection]);
+  const keyExtractor = useCallback((item: Reel) => item.reel_id, []);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
@@ -575,12 +610,77 @@ export default function WatchScreen() {
       if (idx != null) setActiveIndex(idx);
     },
   );
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center">
+        <ActivityIndicator />
+      </View>
+    );
+  }
+  // First-time no-connection (no cached reels to blur against) — solid-bg takeover.
+  if (showNoConnection && !reels.length) {
+    return (
+      <View
+        className="flex-1 items-center justify-center px-8"
+        style={{ backgroundColor: '#0a261e' }}
+      >
+        <Image
+          source={NoWifiSignal}
+          style={{ width: 24, height: 21, marginBottom: 24 }}
+          contentFit="contain"
+        />
+        <Text
+          style={{
+            color: '#fffbf2',
+            fontSize: 18,
+            fontWeight: '500',
+            marginBottom: 12,
+          }}
+        >
+          No connection
+        </Text>
+        <Text
+          style={{
+            color: 'rgba(255,251,242,0.6)',
+            fontSize: 13,
+            textAlign: 'center',
+            lineHeight: 18,
+            marginBottom: 24,
+          }}
+        >
+          Check your internet connection{'\n'}and try again
+        </Text>
+        <Pressable
+          onPress={() => refetch()}
+          className="active:opacity-70"
+          style={{
+            borderWidth: 0.5,
+            borderColor: 'rgba(255,251,242,0.6)',
+            paddingHorizontal: 18,
+            paddingVertical: 14,
+            borderRadius: 50,
+          }}
+        >
+          <Text style={{ color: '#fffbf2', fontSize: 13, fontWeight: '600' }}>
+            Try again
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+  if (!reels.length) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center">
+        <Text style={{ color: '#ffffff' }}>No reels yet</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-black">
       <FlatList
         ref={listRef}
-        data={REELS}
+        data={reels}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         pagingEnabled
@@ -592,6 +692,67 @@ export default function WatchScreen() {
         onViewableItemsChanged={onViewableItemsChanged.current}
         viewabilityConfig={viewabilityConfig.current}
       />
+
+      {/* No-connection overlay — blurs the last-known reel + dark tint. */}
+      {showNoConnection ? (
+        <BlurView
+          intensity={60}
+          tint="dark"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 32,
+            backgroundColor: 'rgba(0,0,0,0.3)',
+          }}
+        >
+          <Image
+            source={NoWifiSignal}
+            style={{ width: 24, height: 21, marginBottom: 24 }}
+            contentFit="contain"
+          />
+          <Text
+            style={{
+              color: '#fffbf2',
+              fontSize: 18,
+              fontWeight: '500',
+              marginBottom: 12,
+            }}
+          >
+            No connection
+          </Text>
+          <Text
+            style={{
+              color: 'rgba(255,251,242,0.6)',
+              fontSize: 13,
+              textAlign: 'center',
+              lineHeight: 18,
+              marginBottom: 24,
+            }}
+          >
+            Check your internet connection{'\n'}and try again
+          </Text>
+          <Pressable
+            onPress={() => refetch()}
+            className="active:opacity-70"
+            style={{
+              borderWidth: 0.5,
+              borderColor: 'rgba(255,251,242,0.6)',
+              paddingHorizontal: 18,
+              paddingVertical: 14,
+              borderRadius: 50,
+            }}
+          >
+            <Text style={{ color: '#fffbf2', fontSize: 13, fontWeight: '600' }}>
+              Try again
+            </Text>
+          </Pressable>
+        </BlurView>
+      ) : null}
     </View>
   );
 }
