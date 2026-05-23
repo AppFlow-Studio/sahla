@@ -16,7 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import QuranScreen from '@/src/screens/QuranScreen';
+import { PrayerNotificationSheet } from '@/src/components/prayer/prayer-notification-sheet';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { usePrayerAlerts, type PrayerName } from '@/src/hooks/use-prayer-alerts';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 import { useTrackerVersion } from '@/src/hooks/use-tracker';
 import { getLastViewed } from '@/src/lib/quran-tracker';
@@ -815,13 +817,18 @@ function PrayerRowItem({
   row,
   c,
   showDivider,
+  hasNotifications,
+  onBellPress,
 }: {
   row: PrayerRow;
   c: Palette;
   showDivider: boolean;
+  hasNotifications: boolean;
+  onBellPress: () => void;
 }) {
   const isNext = row.status === 'next';
   const isPassed = row.status === 'passed';
+  const bellActive = hasNotifications || isNext;
 
   return (
     <View
@@ -885,15 +892,17 @@ function PrayerRowItem({
         {row.iqamah}
       </Text>
 
-      <View style={{ width: 20, alignItems: 'flex-end' }}>
-        {!isPassed ? (
-          <MaterialCommunityIcons
-            name={isNext ? 'bell' : 'bell-outline'}
-            size={16}
-            color={isNext ? c.gold : c.muted}
-          />
-        ) : null}
-      </View>
+      <Pressable
+        onPress={onBellPress}
+        hitSlop={12}
+        style={{ width: 24, alignItems: 'center' }}
+      >
+        <MaterialCommunityIcons
+          name={bellActive ? 'bell' : 'bell-outline'}
+          size={16}
+          color={bellActive ? c.gold : c.muted}
+        />
+      </Pressable>
     </View>
   );
 }
@@ -903,7 +912,14 @@ export default function PrayerScreen() {
   const [now, setNow] = useState(new Date());
   const [quranOpen, setQuranOpen] = useState(false);
   const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
+  const [sheetPrayer, setSheetPrayer] = useState<PrayerName | null>(null);
   const { items: prayerItems, nextPrayer, countdownLabel, countdownClock } = usePrayerTimes();
+  const {
+    toggles: prayerToggles,
+    getSettings,
+    savePrayerSettings,
+    applyToAll,
+  } = usePrayerAlerts();
   const prayerRows = useMemo(
     () => buildPrayerRows(prayerItems, nextPrayer),
     [prayerItems, nextPrayer]
@@ -1103,7 +1119,17 @@ export default function PrayerScreen() {
               const isNext = p.status === 'next';
               const nextRow = prayerRows[i + 1];
               const showDivider = !isPassed && !isNext && nextRow?.status !== 'next';
-              return <PrayerRowItem key={`${p.name}-${i}`} row={p} c={c} showDivider={showDivider} />;
+              const pName = p.name as PrayerName;
+              return (
+                <PrayerRowItem
+                  key={`${p.name}-${i}`}
+                  row={p}
+                  c={c}
+                  showDivider={showDivider}
+                  hasNotifications={prayerToggles[pName] ?? false}
+                  onBellPress={() => setSheetPrayer(pName)}
+                />
+              );
             })}
 
             <DailyQuranGoalCard c={c} onContinueReading={() => { setResumeTarget(getLastViewed()); setQuranOpen(true); }} />
@@ -1121,6 +1147,18 @@ export default function PrayerScreen() {
       >
         <QuranScreen onClose={() => { setQuranOpen(false); setResumeTarget(null); }} initial={resumeTarget} />
       </Modal>
+
+      <PrayerNotificationSheet
+        prayer={sheetPrayer}
+        currentSettings={sheetPrayer ? getSettings(sheetPrayer) : []}
+        onSave={(settings) => {
+          if (sheetPrayer) savePrayerSettings(sheetPrayer, settings).catch(() => {});
+        }}
+        onApplyToAll={(settings) => {
+          applyToAll(settings).catch(() => {});
+        }}
+        onClose={() => setSheetPrayer(null)}
+      />
     </View>
   );
 }

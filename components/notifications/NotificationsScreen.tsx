@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,13 +51,21 @@ export function NotificationsScreen({ items = [], onPressSettings }: Props) {
   return (
     <View style={{ flex: 1, backgroundColor: INK, paddingTop: insets.top }}>
       <View style={{ flex: 1, backgroundColor: SURFACE }}>
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={12}
+        style={{ paddingHorizontal: 24, paddingTop: 16 }}
+      >
+        <Ionicons name="chevron-back" size={24} color={INK} />
+      </Pressable>
+
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: 24,
-          paddingTop: 24,
+          paddingTop: 8,
         }}
       >
         <Text

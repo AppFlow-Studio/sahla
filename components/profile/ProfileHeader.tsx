@@ -142,8 +142,6 @@ export default function ProfileHeader() {
                 style={{
                   fontFamily: 'CormorantGaramond_500Medium',
                   lineHeight: 48,
-                  marginLeft: 5,
-                  marginTop: 3,
                 }}
               >
                 {initial}
@@ -161,7 +159,7 @@ export default function ProfileHeader() {
 
           {/* Name */}
           <Text
-            className="mt-1.5 text-center text-primary-foreground"
+            className="mt-3 text-center text-primary-foreground"
             style={{
               fontFamily: 'CormorantGaramond_600SemiBold',
               fontSize: 20,

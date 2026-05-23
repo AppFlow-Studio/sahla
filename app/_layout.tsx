@@ -1,7 +1,27 @@
 import '../global.css';
 
-import { LogBox } from 'react-native';
+import { LogBox, Platform } from 'react-native';
 LogBox.ignoreLogs(['forwardRef render functions']);
+
+// Configure how notifications behave when the app is in the foreground.
+// Wrapped in try/catch so the app doesn't crash before a fresh EAS build
+// links the native ExpoPushTokenManager module.
+if (Platform.OS !== 'web') {
+  try {
+    const Notifications = require('expo-notifications') as typeof import('expo-notifications');
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch {
+    // Native module not yet available — will work after next EAS build.
+  }
+}
 
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
@@ -16,7 +36,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const StripeProvider =
@@ -120,6 +139,20 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="prayer-alerts"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="advertise"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="advertise-apply"
           options={{
             headerShown: false,
             animation: 'slide_from_right',

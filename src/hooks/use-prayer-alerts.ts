@@ -7,9 +7,18 @@ import { useConfigStore } from '@/src/stores/config-store';
 export const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
 export type PrayerName = (typeof PRAYER_NAMES)[number];
 
+/** Tokens stored in the `notification_settings` text[] column. */
+export const NOTIF_TOKENS = {
+  PRAYER_TIME: 'prayer_time',
+  IQAMAH_TIME: 'iqamah_time',
+  THIRTY_MIN: '30_min_before',
+} as const;
+
+export type NotifToken = (typeof NOTIF_TOKENS)[keyof typeof NOTIF_TOKENS];
+
 const DEFAULT_ON_SETTINGS: string[] = ['prayer_time', 'iqamah_time'];
 
-type PrayerSettingRow = {
+export type PrayerSettingRow = {
   prayer: string | null;
   notification_settings: string[] | null;
 };
@@ -45,10 +54,14 @@ export function usePrayerAlerts() {
   });
 
   const rows = prayerQuery.data ?? [];
-  const isOn = (prayer: PrayerName): boolean => {
+
+  /** Get the notification_settings array for a single prayer. */
+  const getSettings = (prayer: PrayerName): string[] => {
     const row = rows.find((r) => r.prayer === prayer);
-    return (row?.notification_settings ?? []).length > 0;
+    return row?.notification_settings ?? [];
   };
+
+  const isOn = (prayer: PrayerName): boolean => getSettings(prayer).length > 0;
 
   const toggles: PrayerToggleMap = {
     Fajr: isOn('Fajr'),
@@ -58,6 +71,90 @@ export function usePrayerAlerts() {
     Isha: isOn('Isha'),
   };
 
+  /** Save exact notification_settings array for a single prayer. */
+  const savePrayerSettingsMutation = useMutation<
+    void,
+    Error,
+    { prayer: PrayerName; settings: string[] },
+    { previous: PrayerSettingRow[] | undefined }
+  >({
+    mutationFn: async ({ prayer, settings }) => {
+      if (!mosqueId || !userId) {
+        throw new Error('Cannot save — user or mosque not ready.');
+      }
+      const { error } = await supabase
+        .from('prayer_notification_settings')
+        .upsert(
+          {
+            user_id: userId,
+            mosque_id: mosqueId,
+            prayer,
+            notification_settings: settings,
+          },
+          { onConflict: 'user_id,mosque_id,prayer' },
+        );
+      if (error) throw new Error(error.message);
+    },
+    onMutate: async ({ prayer, settings }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<PrayerSettingRow[]>(queryKey);
+      const base = previous ?? [];
+      const filtered = base.filter((r) => r.prayer !== prayer);
+      queryClient.setQueryData<PrayerSettingRow[]>(queryKey, [
+        ...filtered,
+        { prayer, notification_settings: settings },
+      ]);
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  /** Apply the same notification_settings to all 5 prayers at once. */
+  const applyToAllMutation = useMutation<
+    void,
+    Error,
+    { settings: string[] },
+    { previous: PrayerSettingRow[] | undefined }
+  >({
+    mutationFn: async ({ settings }) => {
+      if (!mosqueId || !userId) {
+        throw new Error('Cannot save — user or mosque not ready.');
+      }
+      const upsertRows = PRAYER_NAMES.map((prayer) => ({
+        user_id: userId,
+        mosque_id: mosqueId,
+        prayer,
+        notification_settings: settings,
+      }));
+      const { error } = await supabase
+        .from('prayer_notification_settings')
+        .upsert(upsertRows, { onConflict: 'user_id,mosque_id,prayer' });
+      if (error) throw new Error(error.message);
+    },
+    onMutate: async ({ settings }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<PrayerSettingRow[]>(queryKey);
+      const next: PrayerSettingRow[] = PRAYER_NAMES.map((prayer) => ({
+        prayer,
+        notification_settings: settings,
+      }));
+      queryClient.setQueryData<PrayerSettingRow[]>(queryKey, next);
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  // Keep the old simple toggle for backwards compat (PrayerAlerts screen)
   const setPrayerMutation = useMutation<
     void,
     Error,
@@ -106,11 +203,24 @@ export function usePrayerAlerts() {
 
   return {
     toggles,
+    rows,
+    getSettings,
     setPrayer: (prayer: PrayerName, value: boolean) =>
       setPrayerMutation.mutateAsync({ prayer, value }),
+    savePrayerSettings: (prayer: PrayerName, settings: string[]) =>
+      savePrayerSettingsMutation.mutateAsync({ prayer, settings }),
+    applyToAll: (settings: string[]) =>
+      applyToAllMutation.mutateAsync({ settings }),
     isLoading: prayerQuery.isPending,
-    isSaving: setPrayerMutation.isPending,
+    isSaving:
+      setPrayerMutation.isPending ||
+      savePrayerSettingsMutation.isPending ||
+      applyToAllMutation.isPending,
     error:
-      prayerQuery.error?.message ?? setPrayerMutation.error?.message ?? null,
+      prayerQuery.error?.message ??
+      setPrayerMutation.error?.message ??
+      savePrayerSettingsMutation.error?.message ??
+      applyToAllMutation.error?.message ??
+      null,
   };
 }

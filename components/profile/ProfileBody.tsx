@@ -1,4 +1,5 @@
 import { SendFeedback } from "@/src/components/send_feedback";
+import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
 import { useAuth } from "@clerk/clerk-expo";
@@ -62,6 +63,7 @@ export default function ProfileBody({
 }: Props) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const config = useMasjidConfig();
+  const { isAdmin } = useIsAdmin();
 
   const handleInviteFriends = useCallback(async () => {
     try {
@@ -178,7 +180,7 @@ export default function ProfileBody({
           <RowItem
             icon={APPLICATION_ICON}
             title="Start an Application"
-            onPress={() => {}}
+            onPress={() => router.push("/advertise" as Href)}
           />
           <RowItem
             icon={CHECK_STATUS_ICON}
@@ -208,13 +210,19 @@ export default function ProfileBody({
       </View>
 
       {/* ADMIN */}
-      <View className="flex-col">
-        <SectionHeader title="ADMIN" />
-        <View>
-          <RowItem icon={ADMIN_ICON} title="Admin Portal" onPress={() => {}} />
+      {isAdmin && (
+        <View className="flex-col">
+          <SectionHeader title="ADMIN" />
+          <View>
+            <RowItem
+              icon={ADMIN_ICON}
+              title="Admin Portal"
+              onPress={() => router.push("/profile/admin" as Href)}
+            />
+          </View>
+          <SectionRule />
         </View>
-        <SectionRule />
-      </View>
+      )}
 
       {/* SIGN OUT */}
       <View className="items-center" style={{ paddingBottom: 120, paddingTop: 20 }}>

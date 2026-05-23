@@ -23,6 +23,7 @@ export function QuickActions() {
   const handlePress = (id: string) => {
     if (id === 'donate') openDonation();
     else if (id === 'prayers') router.push('/prayer');
+    else if (id === 'advertise') router.push('/advertise');
   };
 
   return (

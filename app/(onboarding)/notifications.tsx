@@ -1,12 +1,21 @@
+import { useAuth } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 
 import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
+import { requestAndRegisterToken } from '@/src/hooks/use-register-push-token';
+import { useSupabase } from '@/src/hooks/use-supabase';
+import { useConfigStore } from '@/src/stores/config-store';
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const supabase = useSupabase();
+  const { userId } = useAuth();
+  const mosqueId = useConfigStore((s) => s.mosqueUuid);
 
   const requestPermission = async () => {
-    // TODO: wire up expo-notifications permission request
+    if (userId && mosqueId) {
+      await requestAndRegisterToken(supabase, userId, mosqueId);
+    }
     router.push('/(onboarding)/location');
   };
 
