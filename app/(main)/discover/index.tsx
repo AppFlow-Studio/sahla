@@ -2,7 +2,7 @@ import {
   PlayfairDisplay_500Medium,
   useFonts,
 } from "@expo-google-fonts/playfair-display";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import Animated, {
@@ -20,9 +20,6 @@ import AudienceBrowse, {
 import DiscoverHeader, {
   type DiscoverTab,
 } from "@/components/Discover/DiscoverHeader";
-import EventsCalendar, {
-  type EventCalendarItem,
-} from "@/components/Discover/EventsCalendar";
 import ForYouContent, {
   type ForYouRowItem,
 } from "@/components/Discover/ForYouContent";
@@ -38,7 +35,6 @@ import UpcomingEventsSection, {
 import DonateCard from "@/components/profile/DonateCard";
 import { useContentItems } from "@/src/hooks/use-content-items";
 import { useRecommendation } from "@/src/hooks/use-Recommendation";
-import { useDonation } from "@/src/providers/donation-provider";
 
 const PROGRAMS: ProgramItem[] = [
   {
@@ -58,44 +54,6 @@ const PROGRAMS: ProgramItem[] = [
   },
 ];
 
-function formatTime(time: string | null): string {
-  if (!time) return "";
-  const m = /^(\d{1,2}):(\d{2})/.exec(time);
-  if (!m) return time;
-  const hour = Number(m[1]);
-  const minute = m[2];
-  const period = hour >= 12 ? "pm" : "am";
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  return minute === "00" ? `${h12}${period}` : `${h12}:${minute}${period}`;
-}
-
-function formatEventDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function formatScheduleLabel(
-  type: string | null,
-  startDate: string | null,
-  endDate: string | null,
-  startTime: string | null,
-  days: string[] | null,
-): string {
-  const time = formatTime(startTime);
-  if (type === "program") {
-    const day = days?.[0] ?? "";
-    return [day, time].filter(Boolean).join(" • ");
-  }
-  if (!startDate) return time;
-  const start = formatEventDate(startDate);
-  const range =
-    endDate && endDate !== startDate ? `${start} - ${formatEventDate(endDate)}` : start;
-  return time ? `${range} • ${time}` : range;
-}
-
 function formatTime12(time: string | null): string {
   if (!time) return "";
   const m = /^(\d{1,2}):(\d{2})/.exec(time);
@@ -107,17 +65,19 @@ function formatTime12(time: string | null): string {
   return `${h12}:${minute} ${period}`;
 }
 
+function toTitleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .split(/(\s+)/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+}
+
 function formatCardDate(
-  type: string | null,
   startDate: string | null,
   startTime: string | null,
-  days: string[] | null,
 ): string {
   const time = formatTime12(startTime);
-  if (type === "program") {
-    const day = days?.[0] ?? "";
-    return [day, time].filter(Boolean).join(" • ");
-  }
   if (!startDate) return time;
   const start = new Date(startDate).toLocaleDateString(undefined, {
     month: "long",
@@ -134,12 +94,14 @@ const TAB_INDEX: Record<DiscoverTab, number> = {
 };
 
 export default function DiscoverScreen() {
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTabState] = useState<DiscoverTab>("All");
   const [direction, setDirection] = useState<"right" | "left">("right");
   const [nextTab, setNextTab] = useState<DiscoverTab | null>(null);
   const [programsInitialFilter, setProgramsInitialFilter] =
     useState<AudienceFilter>("All");
   const [hasMounted, setHasMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [fontsLoaded] = useFonts({ PlayfairDisplay_500Medium });
 
   useEffect(() => {
@@ -164,6 +126,16 @@ export default function DiscoverScreen() {
     }
   }, [nextTab, activeTab, direction]);
 
+  useEffect(() => {
+    const requested = params.tab;
+    if (!requested) return;
+    if (!(requested in TAB_INDEX)) return;
+    const target = requested as DiscoverTab;
+    if (target === activeTab) return;
+    if (target === "Programs") setProgramsInitialFilter("All");
+    switchTab(target);
+  }, [params.tab, activeTab, switchTab]);
+
   const handleHeaderSelect = useCallback(
     (tab: DiscoverTab) => {
       if (tab === "Programs") setProgramsInitialFilter("All");
@@ -179,42 +151,40 @@ export default function DiscoverScreen() {
     },
     [switchTab],
   );
-  const { open: openDonate } = useDonation();
   const { items, status, error } = useContentItems();
   const { recommendations, status: recStatus, error: recError } = useRecommendation();
 
-  const filtered = useMemo(() => {
-    if (activeTab === "All") return items;
-    if (activeTab === "Events") return items.filter((i) => i.type === "event");
-    if (activeTab === "Programs") return items.filter((i) => i.type === "program");
-    // "For You" — show a curated subset (first 4)
-    return items.filter((_, idx) => idx % 2 === 0);
-  }, [items, activeTab]);
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredItems = useMemo(
+    () =>
+      normalizedQuery
+        ? items.filter((i) =>
+            (i.name ?? "").toLowerCase().includes(normalizedQuery),
+          )
+        : items,
+    [items, normalizedQuery],
+  );
+
+  const filteredRecommendations = useMemo(
+    () =>
+      normalizedQuery
+        ? recommendations.filter((r) =>
+            (r.name ?? "").toLowerCase().includes(normalizedQuery),
+          )
+        : recommendations,
+    [recommendations, normalizedQuery],
+  );
 
   const recommendedItems: RecommendedItem[] = useMemo(
     () =>
-      recommendations.map((r) => ({
+      filteredRecommendations.map((r) => ({
         id: r.content_id,
-        title: r.name ?? "Untitled",
+        title: toTitleCase(r.name ?? "Untitled"),
         category: r.type ?? "",
         image: r.image ? { uri: r.image } : undefined,
       })),
-    [recommendations],
-  );
-
-  const upcomingItems: EventItem[] = useMemo(
-    () =>
-      filtered
-        .filter((r) => activeTab === "Programs" ? r.type === "program" : true)
-        .slice(0, 3)
-        .map((r) => ({
-          id: r.content_id,
-          title: r.name ?? "Untitled",
-          dateLabel: formatScheduleLabel(r.type, r.start_date, r.end_date, r.start_time, r.days),
-          description: r.description ?? "",
-          thumbnail: r.image ? { uri: r.image } : undefined,
-        })),
-    [filtered, activeTab],
+    [filteredRecommendations],
   );
 
   const itemsById = useMemo(() => {
@@ -237,12 +207,25 @@ export default function DiscoverScreen() {
     return labels.slice(0, 2).join(" & ");
   };
 
+  const upcomingItems: EventItem[] = useMemo(
+    () =>
+      filteredItems.slice(0, 3).map((r) => ({
+        id: r.content_id,
+        title: toTitleCase(r.name ?? "Untitled"),
+        dateLabel: formatCardDate(r.start_date, r.start_time),
+        category: deriveCategory(r),
+        thumbnail: r.image ? { uri: r.image } : undefined,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredItems],
+  );
+
   const buildRow = useCallback(
     (r: (typeof recommendations)[number]): ForYouRowItem => {
       const matched = itemsById.get(r.content_id);
       return {
         id: r.content_id,
-        title: r.name ?? "Untitled",
+        title: toTitleCase(r.name ?? "Untitled"),
         speaker: matched?.speakers?.[0] ?? null,
         category: deriveCategory(matched),
         image: r.image ? { uri: r.image } : undefined,
@@ -253,37 +236,40 @@ export default function DiscoverScreen() {
 
   const forYouEvents: ForYouRowItem[] = useMemo(
     () =>
-      recommendations
+      filteredRecommendations
         .filter((r) => r.type !== "program")
         .slice(0, 3)
         .map(buildRow),
-    [recommendations, buildRow],
+    [filteredRecommendations, buildRow],
   );
 
   const forYouPrograms: ForYouRowItem[] = useMemo(
     () =>
-      recommendations
+      filteredRecommendations
         .filter((r) => r.type === "program")
         .slice(0, 3)
         .map(buildRow),
-    [recommendations, buildRow],
+    [filteredRecommendations, buildRow],
   );
 
   const audienceItems = useCallback(
-    (kind: "event" | "program"): AudienceItem[] =>
-      items
+    (kind: "event" | "program"): AudienceItem[] => {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      return filteredItems
         .filter((r) => r.type === kind)
         .map((r) => ({
           id: r.content_id,
-          title: r.name ?? "Untitled",
-          dateLabel: formatCardDate(r.type, r.start_date, r.start_time, r.days),
+          title: toTitleCase(r.name ?? "Untitled"),
+          dateLabel: formatCardDate(r.start_date, r.start_time),
           image: r.image ? { uri: r.image } : undefined,
           isKids: r.is_kids === true,
           isYouth: r.is_fourteen_plus === true,
           category: deriveCategory(r),
           isWeekly: r.is_weekly_program === true,
-        })),
-    [items],
+          isUpcoming: r.start_date ? r.start_date >= todayIso : false,
+        }));
+    },
+    [filteredItems],
   );
 
   const programBrowseItems = useMemo(
@@ -291,19 +277,9 @@ export default function DiscoverScreen() {
     [audienceItems],
   );
 
-  const eventsCalendarItems: EventCalendarItem[] = useMemo(
-    () =>
-      items
-        .filter((r) => r.type === "event")
-        .map((r) => ({
-          id: r.content_id,
-          title: r.name ?? "Untitled",
-          image: r.image ? { uri: r.image } : undefined,
-          startDate: r.start_date,
-          startTime: r.start_time,
-          category: deriveCategory(r),
-        })),
-    [items],
+  const eventBrowseItems = useMemo(
+    () => audienceItems("event"),
+    [audienceItems],
   );
 
   const openContent = useCallback((id: string) => {
@@ -343,6 +319,9 @@ export default function DiscoverScreen() {
           }
           active={activeTab}
           onSelect={handleHeaderSelect}
+          onPressCalendar={() => router.push("/discover/calendar")}
+          searchValue={searchQuery}
+          onChangeSearch={setSearchQuery}
         />
 
         {status === "error" ? (
@@ -391,15 +370,12 @@ export default function DiscoverScreen() {
                 />
               )
             ) : activeTab === "Events" ? (
-              <>
-                <EventsCalendar
-                  items={eventsCalendarItems}
-                  onPressItem={openContent}
-                />
-                <View className="px-6" style={{ marginTop: 24 }}>
-                  <DonateCard />
-                </View>
-              </>
+              <AudienceBrowse
+                kind="events"
+                items={eventBrowseItems}
+                onPressItem={openContent}
+                allTabFooter={<DonateCard />}
+              />
             ) : activeTab === "Programs" ? (
               <AudienceBrowse
                 kind="programs"
@@ -413,7 +389,7 @@ export default function DiscoverScreen() {
               />
             ) : (
               <>
-                <View className="mt-4">
+                <View className="mt-8">
                   {isLoading ? (
                     <View className="px-6 py-8">
                       <ActivityIndicator color="#0A261E" />
@@ -430,7 +406,9 @@ export default function DiscoverScreen() {
                   <UpcomingEventsSection
                     items={upcomingItems}
                     onPressItem={(item) => openContent(item.id)}
-                    onPressViewCalendar={() => switchTab("Events")}
+                    onPressViewCalendar={() =>
+                      router.push("/discover/calendar")
+                    }
                   />
                 </View>
 
@@ -447,7 +425,7 @@ export default function DiscoverScreen() {
                 </View>
 
                 <View className="mt-6 px-6">
-                  <DonateCard onPress={openDonate} />
+                  <DonateCard />
                 </View>
               </>
             )}

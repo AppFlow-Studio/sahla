@@ -77,6 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'Allow $(PRODUCT_NAME) to access your camera to take a profile picture.',
       },
     ],
+    'expo-video',
     [
       '@stripe/stripe-react-native',
       {

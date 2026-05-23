@@ -33,7 +33,7 @@ export default function ProfileScreen() {
           Platform.OS === "ios" ? "never" : undefined
         }
       >
-        <View className="w-full">
+        <View className="w-full ">
           <ProfileHeader />
           <ProfileBody
             onPressPersonalized={() => router.push("/(personalization)/reasons")}

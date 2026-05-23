@@ -68,7 +68,9 @@ export default function NotificationCenterScreen() {
   return (
     <NotificationsScreen
       items={MOCK_ITEMS}
-      onPressSettings={() => router.push('/notification-settings' as Href)}
+      onPressSettings={() =>
+        router.push('/profile/notification-settings' as Href)
+      }
     />
   );
 }

@@ -2847,6 +2847,56 @@ export type Database = {
           },
         ]
       }
+      saved_reels: {
+        Row: {
+          created_at: string | null
+          mosque_id: string
+          reel_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          mosque_id: string
+          reel_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          mosque_id?: string
+          reel_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_reels_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_dashboard_stats"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "saved_reels_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_feature_flags"
+            referencedColumns: ["mosque_id"]
+          },
+          {
+            foreignKeyName: "saved_reels_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_reels_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["reel_id"]
+          },
+        ]
+      }
       speaker_data: {
         Row: {
           created_at: string

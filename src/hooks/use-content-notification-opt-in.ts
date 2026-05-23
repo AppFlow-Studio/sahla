@@ -14,14 +14,16 @@ export function useIsNotifOptedIn(contentId: string) {
   return useQuery({
     queryKey: ['content-notif-opt-in', userId, contentId],
     queryFn: async (): Promise<boolean> => {
-      const { data, error } = await supabase
-        .from('content_notifications')
-        .select('content_id')
-        .eq('user_id', userId!)
-        .eq('content_id', contentId)
-        .maybeSingle();
+      // Demo-day workaround: see ct02-actions edge function header.
+      const { data, error } = await supabase.functions.invoke<{
+        is_opted_in: boolean;
+        error?: string;
+      }>('ct02-actions', {
+        body: { action: 'is_notif', user_id: userId, content_id: contentId },
+      });
       if (error) throw new Error(error.message);
-      return !!data;
+      if (data?.error) throw new Error(data.error);
+      return !!data?.is_opted_in;
     },
     enabled: isLoaded && !!userId && !!contentId,
   });
@@ -49,29 +51,22 @@ export function useToggleContentNotif(
     mutationFn: async (currentlyOptedIn: boolean): Promise<boolean> => {
       if (!userId) throw new Error('Not signed in');
       if (!mosqueId) throw new Error('No mosque resolved');
-
-      if (currentlyOptedIn) {
-        const { error } = await supabase
-          .from('content_notifications')
-          .delete()
-          .eq('user_id', userId)
-          .eq('content_id', contentId);
-        if (error) throw new Error(error.message);
-      } else {
-        const { error } = await supabase
-          .from('content_notifications')
-          .insert({ user_id: userId, content_id: contentId, mosque_id: mosqueId });
-        if (error) throw new Error(error.message);
-      }
-
-      void supabase.from('user_content_interactions').insert({
-        user_id: userId,
-        content_id: contentId,
-        mosque_id: mosqueId,
-        interaction_type: currentlyOptedIn ? 'notification_opt_off' : 'notification_opt_in',
+      // Demo-day workaround: see ct02-actions edge function header.
+      const { data, error } = await supabase.functions.invoke<{
+        is_opted_in: boolean;
+        error?: string;
+      }>('ct02-actions', {
+        body: {
+          action: 'toggle_notif',
+          user_id: userId,
+          mosque_id: mosqueId,
+          content_id: contentId,
+          currently_opted_in: currentlyOptedIn,
+        },
       });
-
-      return !currentlyOptedIn;
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      return !!data?.is_opted_in;
     },
     onMutate: async (currentlyOptedIn) => {
       await queryClient.cancelQueries({

@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useRecommendation } from '@/src/hooks/use-Recommendation';
@@ -47,7 +48,11 @@ export function RecommendedForYou() {
           contentContainerStyle={{ gap: 12 }}
         >
           {recommendations.map((item) => (
-            <TouchableOpacity key={item.content_id} activeOpacity={0.85}>
+            <TouchableOpacity
+              key={item.content_id}
+              activeOpacity={0.85}
+              onPress={() => router.push(`/content/${item.content_id}`)}
+            >
               <View
                 className="mb-2 h-[196px] w-[220px] items-center justify-center overflow-hidden rounded-2xl"
                 style={{ backgroundColor: `rgb(${primary})` }}

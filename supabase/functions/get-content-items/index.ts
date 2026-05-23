@@ -1,19 +1,15 @@
 /**
- * DEMO WORKAROUND — re-introduced 2026-04-25.
+ * DEMO WORKAROUND — created 2026-04-25.
  *
- * F-RLS-01 added an `org_members_select` policy on `todays_prayers` scoped by
+ * F-RLS-01 added an `org_members_select` policy on `content_items` scoped by
  * `requesting_mosque_id()`, but the Clerk → Supabase third-party auth path
- * isn't returning a non-null JWT context to those helpers right now, so direct
- * reads via `supabase.from('todays_prayers')` come back empty.
+ * isn't returning a non-null JWT context to those helpers right now, so
+ * direct reads via `supabase.from('content_items')` come back empty.
  *
- * This service-role read bypass restores prayer-time visibility for the
- * demo. Retire it once either:
- *   (a) Clerk third-party auth is verified working in Supabase, OR
- *   (b) prayer times are sourced from the external API (per the Sahla team
- *       roadmap — see project_sahla_prayer_times_api memory).
+ * Service-role read bypass for the demo. Mirrors `get-todays-prayers`. Retire
+ * when Clerk third-party auth is verified working in Supabase.
  *
- * verify_jwt is disabled to match the rest of this project's edge functions
- * (clerk-webhooks, recommend, join-org, sync-onboarding).
+ * verify_jwt is disabled to match the rest of this project's edge functions.
  */
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
@@ -25,6 +21,9 @@ const CORS = {
     'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+const SELECT =
+  'content_id, name, description, image, type, start_date, end_date, start_time, days';
 
 type Body = {
   mosque_id?: string;
@@ -54,10 +53,10 @@ serve(async (req) => {
     );
 
     const { data, error } = await supabase
-      .from('todays_prayers')
-      .select('prayer_name, athan_time, iqamah_time')
+      .from('content_items')
+      .select(SELECT)
       .eq('mosque_id', body.mosque_id)
-      .order('athan_time', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), {

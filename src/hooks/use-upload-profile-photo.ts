@@ -4,11 +4,20 @@ import { useCallback, useState } from 'react';
 
 import { useSupabase } from '@/src/hooks/use-supabase';
 
-// Deferred so the missing native module doesn't crash the app at import time
-// in dev clients that haven't been rebuilt with the expo-image-picker plugin.
+// Loaded lazily on first use so that a dev client missing the
+// expo-image-picker native module doesn't crash the screens that
+// transitively import this hook (e.g. the Profile tab).
 type ImagePickerModule = typeof import('expo-image-picker');
 async function loadImagePicker(): Promise<ImagePickerModule> {
-  return await import('expo-image-picker');
+  try {
+    const mod = await import('expo-image-picker');
+    // Metro's dynamic-import transform sometimes nests named exports under `default`.
+    return ((mod as any).default ?? mod) as ImagePickerModule;
+  } catch {
+    throw new Error(
+      "Photo picker isn't available in this build. Rebuild the dev client (npx expo run:ios) to include expo-image-picker.",
+    );
+  }
 }
 
 const BUCKET = 'profile-pics';

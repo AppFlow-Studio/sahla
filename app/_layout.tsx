@@ -117,34 +117,6 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
-          name="saved-events"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
-          name="notification-center"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
-          name="notification-settings"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
-          name="prayer-alerts"
-          options={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
           name="advertise"
           options={{
             headerShown: false,

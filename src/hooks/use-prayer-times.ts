@@ -43,13 +43,13 @@ function titleCase(name: string): string {
 }
 
 function timeToSeconds(hhmmss: string | null | undefined): number {
-  if (!hhmmss) return 0;
+  if (typeof hhmmss !== 'string') return 0;
   const [hh = '0', mm = '0', ss = '0'] = hhmmss.split(':');
   return Number(hh) * 3600 + Number(mm) * 60 + Number(ss);
 }
 
 function formatTo12Hour(hhmmss: string | null | undefined): string {
-  if (!hhmmss) return '--:--';
+  if (typeof hhmmss !== 'string') return '';
   const [hh = '0', mm = '0'] = hhmmss.split(':');
   const h = Number(hh);
   const m = Number(mm);
@@ -192,13 +192,27 @@ export function usePrayerTimes(): UsePrayerTimesResult {
   const query = useQuery({
     queryKey: ['prayer-times', mosqueUuid, todayDateStr],
     queryFn: async (): Promise<TodaysPrayerRow[]> => {
-      const { data, error } = await supabase
-        .from('todays_prayers')
-        .select('prayer_name, athan_time, iqamah_time')
-        .eq('mosque_id', mosqueUuid!)
-        .eq('date', todayDateStr);
+      // Demo-day workaround: F-RLS-01 added per-org RLS on todays_prayers, but
+      // the Clerk → Supabase JWT bridge isn't returning a usable auth context
+      // to the helpers, so direct reads come back empty. Route through the
+      // service-role edge function until that's resolved (or until prayer
+      // times move to the external API per the team roadmap).
+      const { data, error } = await supabase.functions.invoke<{
+        rows: TodaysPrayerRow[];
+        error?: string;
+      }>('get-todays-prayers', {
+        body: { mosque_id: mosqueUuid },
+      });
       if (error) throw new Error(error.message);
-      return (data as TodaysPrayerRow[]) ?? [];
+      if (data?.error) throw new Error(data.error);
+      // Filter out rows with null fields — the edge function returns
+      // whatever's in the table and the schema allows nulls.
+      return (data?.rows ?? []).filter(
+        (r) =>
+          typeof r.prayer_name === 'string' &&
+          typeof r.athan_time === 'string' &&
+          typeof r.iqamah_time === 'string',
+      );
     },
     enabled: !!mosqueUuid,
   });

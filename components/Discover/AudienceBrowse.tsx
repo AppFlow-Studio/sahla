@@ -33,6 +33,7 @@ export type AudienceItem = {
   isYouth: boolean;
   category?: string | null;
   isWeekly?: boolean;
+  isUpcoming?: boolean;
 };
 
 export type AudienceFilter = "All" | "Kids" | "Youth" | "Adults";
@@ -407,12 +408,18 @@ export default function AudienceBrowse({
     return { kids, youth, adults };
   }, [items]);
 
-  const showProgramsList = kind === "programs" && filter !== "All";
+  const showAudienceList = filter !== "All";
 
-  const programsForAudience = useMemo(() => {
-    if (!showProgramsList) return [];
+  const itemsForAudience = useMemo(() => {
+    if (!showAudienceList) return [];
     return items.filter((item) => matchesAudience(item, filter));
-  }, [items, filter, showProgramsList]);
+  }, [items, filter, showAudienceList]);
+
+  const allLabel = kind === "programs" ? "All programs" : "All events";
+  const secondaryLabel =
+    kind === "programs" ? "Weekly programs" : "Upcoming events";
+  const secondaryFilter = (item: AudienceItem) =>
+    kind === "programs" ? item.isWeekly === true : item.isUpcoming === true;
 
   const showKids = filter === "All" || filter === "Kids";
   const showYouth = filter === "All" || filter === "Youth";
@@ -424,16 +431,16 @@ export default function AudienceBrowse({
         <FilterPills active={filter} onSelect={setFilter} />
       </View>
 
-      {showProgramsList ? (
+      {showAudienceList ? (
         <>
           <ListSection
-            label="All programs"
-            items={programsForAudience}
+            label={allLabel}
+            items={itemsForAudience}
             onPressItem={onPressItem}
           />
           <ListSection
-            label="Weekly programs"
-            items={programsForAudience.filter((item) => item.isWeekly)}
+            label={secondaryLabel}
+            items={itemsForAudience.filter(secondaryFilter)}
             onPressItem={onPressItem}
           />
         </>
@@ -444,7 +451,10 @@ export default function AudienceBrowse({
               label="Kids"
               items={grouped.kids}
               onPressItem={onPressItem}
-              onPressSeeAll={() => onPressSeeAll?.("Kids")}
+              onPressSeeAll={() => {
+                if (onPressSeeAll) onPressSeeAll("Kids");
+                else setFilter("Kids");
+              }}
             />
           ) : null}
           {showYouth ? (
@@ -452,7 +462,10 @@ export default function AudienceBrowse({
               label="Youth"
               items={grouped.youth}
               onPressItem={onPressItem}
-              onPressSeeAll={() => onPressSeeAll?.("Youth")}
+              onPressSeeAll={() => {
+                if (onPressSeeAll) onPressSeeAll("Youth");
+                else setFilter("Youth");
+              }}
             />
           ) : null}
           {showAdults ? (
@@ -460,7 +473,10 @@ export default function AudienceBrowse({
               label="Adults"
               items={grouped.adults}
               onPressItem={onPressItem}
-              onPressSeeAll={() => onPressSeeAll?.("Adults")}
+              onPressSeeAll={() => {
+                if (onPressSeeAll) onPressSeeAll("Adults");
+                else setFilter("Adults");
+              }}
             />
           ) : null}
         </>

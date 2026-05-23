@@ -69,7 +69,7 @@ const SECTIONS: Section[] = [
         key: 'customize',
         icon: 'sunny-outline',
         label: 'Customize by prayer',
-        onPress: () => router.push('/prayer-alerts' as Href),
+        onPress: () => router.push('/profile/prayer-alerts' as Href),
       },
     ],
   },

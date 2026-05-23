@@ -1,4 +1,3 @@
-import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
@@ -120,10 +119,11 @@ export default function SpeakerInfoModal({
           <View
             style={{
               backgroundColor: SHEET_BG,
-              borderRadius: 28,
+              borderRadius: 48,
               paddingTop: 12,
               paddingBottom: 28,
               paddingHorizontal: 24,
+              minHeight: 500,
               overflow: "hidden",
             }}
           >
@@ -146,18 +146,27 @@ export default function SpeakerInfoModal({
                 accessibilityLabel="Close speaker info"
                 style={{ padding: 4 }}
               >
-                <AntDesign name="close" size={22} color={BUSH} />
+                <Text
+                  style={{
+                    fontFamily: platformUiFont,
+                    fontSize: 22,
+                    fontWeight: "400",
+                    color: BUSH,
+                    lineHeight: 22,
+                  }}
+                >
+                  ×
+                </Text>
               </Pressable>
             </View>
 
             <Text
               style={{
-                fontFamily: "SF Pro",
-                fontSize: 16,
-                fontStyle: "normal",
+                fontFamily: platformUiFont,
+                fontSize: 13,
                 fontWeight: "600",
                 color: BUSH,
-                marginTop: 4,
+                marginTop: 14,
               }}
             >
               SPEAKER
@@ -179,14 +188,14 @@ export default function SpeakerInfoModal({
               <>
                 <View
                   style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 32,
+                    width: 50,
+                    height: 50,
+                    borderRadius: 12,
                     backgroundColor: AVATAR_BG,
                     overflow: "hidden",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginBottom: 14,
+                    marginBottom: 8,
                   }}
                 >
                   {data?.speaker_img ? (
@@ -202,12 +211,12 @@ export default function SpeakerInfoModal({
 
                 <Text
                   style={{
-                    fontFamily: platformTitleFont,
-                    fontSize: 19,
-                    lineHeight: 24,
-                    fontWeight: "700",
+                    fontFamily: platformUiFont,
+                    fontSize: 11,
+                    lineHeight: 18,
+                    fontWeight: "600",
                     color: BUSH,
-                    marginBottom: 22,
+                    marginBottom: 8,
                   }}
                 >
                   {displayName}
@@ -226,21 +235,22 @@ export default function SpeakerInfoModal({
                       >
                         <View
                           style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: 3,
+                            width: 4,
+                            height: 4,
+                            borderRadius: 2,
                             backgroundColor: BULLET_GOLD,
-                            marginTop: 9,
-                            marginRight: 14,
+                            marginTop: 7,
+                            marginRight: 8,
                           }}
                         />
                         <Text
                           style={{
                             flex: 1,
                             fontFamily: platformUiFont,
-                            fontSize: 15,
-                            lineHeight: 22,
-                            color: BUSH,
+                            fontSize: 11,
+                            lineHeight: 18,
+                            fontWeight: "400",
+                            color: "rgba(10,38,30,0.6)",
                           }}
                         >
                           {cred}
