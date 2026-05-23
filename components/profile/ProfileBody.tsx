@@ -1,13 +1,18 @@
 import { SendFeedback } from "@/src/components/send_feedback";
+import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useOnboardingStore } from "@/src/stores/onboarding-store";
+import { useAuth } from "@clerk/clerk-expo";
 import { router, type Href } from "expo-router";
 import { useCallback, useState } from "react";
-import { Platform, Share, View } from "react-native";
+import { Platform, Pressable, Share, Text, View } from "react-native";
 import DonateCard from "./DonateCard";
 import Notifications from "./Notifications";
 import PersonalizedCard from "./PersonalizedCard";
 import RowItem from "./RowItem";
 import SectionHeader from "./SectionHeader";
+
+const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: replace with real App Store URL
 
 const COMMUNITY_ICON = require("@/assets/images/Vector_addfriends.png");
 const SAVED_PROGRAMS_AND_EVENTS_ICON = require("@/assets/images/Saved_Programgs_and_events.png");
@@ -26,30 +31,45 @@ const ADMIN_ICON = require("@/assets/images/Admin_Portal.png");
 
 type Props = {
   onPressPersonalized: () => void;
-  onPressDonate: () => void;
   onPressNotifications: () => void;
 };
 
 function SectionRule() {
-  return <View className="w-full border-t border-[#0A261E1A] pt-2" />;
+  return <View className="w-full border-t border-foreground/10" style={{ marginTop: 4 }} />;
+}
+
+function SignOutButton() {
+  const { signOut } = useAuth();
+  const resetOnboarding = useOnboardingStore((s) => s.reset);
+
+  return (
+    <Pressable
+      onPress={async () => {
+        resetOnboarding();
+        await signOut();
+      }}
+      className="rounded-full border border-red-500/30 px-8 py-3 active:opacity-70"
+    >
+      <Text className="text-red-500" style={{ fontSize: 14, fontWeight: '600' }}>
+        Sign Out
+      </Text>
+    </Pressable>
+  );
 }
 
 export default function ProfileBody({
   onPressPersonalized,
-  onPressDonate,
   onPressNotifications,
 }: Props) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const config = useMasjidConfig();
+  const { isAdmin } = useIsAdmin();
 
   const handleInviteFriends = useCallback(async () => {
     try {
-      // TODO: replace with the real download URL once we have an App Store /
-      // landing-page link. The share sheet works fine with text alone, but a
-      // URL gives recipients something to tap.
       await Share.share({
-        message: `Join me at ${config.displayName} on Sahla — https://sahla.app`,
-        url: 'https://sahla.app',
+        message: `Join me at ${config.displayName} on Sahla — ${APP_STORE_URL}`,
+        url: APP_STORE_URL,
       });
     } catch {
       // User dismissed or platform error — nothing actionable to show.
@@ -58,16 +78,26 @@ export default function ProfileBody({
 
   return (
     <View
-      className="-mt-4 w-full flex-col rounded-t-[32px] bg-[#FFFBF2] px-4 pt-6 pb-20"
+      className="w-full flex-col rounded-t-[48px] bg-card px-5 pt-6"
       style={{
+        marginTop: -36,
         zIndex: 1,
         ...(Platform.OS === "android" ? { elevation: 3 } : {}),
       }}
     >
       <PersonalizedCard onPress={onPressPersonalized} />
+
+      {/* COMMUNITY */}
       <View className="flex-col">
         <SectionHeader title="COMMUNITY" />
-        <View className="pl-4">
+        <View
+          style={{
+            borderWidth: 0.5,
+            borderColor: `rgba(${config.colors.foreground.replace(/ /g, ',')}, 0.1)`,
+            borderStyle: 'dashed',
+            borderRadius: 14,
+          }}
+        >
           <RowItem
             icon={COMMUNITY_ICON}
             title="Invite friends"
@@ -75,9 +105,11 @@ export default function ProfileBody({
           />
         </View>
       </View>
+
+      {/* MY ACTIVITY */}
       <View className="flex-col">
         <SectionHeader title="MY ACTIVITY" />
-        <View className="pl-4">
+        <View>
           <RowItem
             icon={SAVED_PROGRAMS_AND_EVENTS_ICON}
             title="Saved Programs & Events"
@@ -91,22 +123,26 @@ export default function ProfileBody({
           <RowItem
             icon={PAYMENT_HISTORY_ICON}
             title="Payment History"
-            onPress={() => {}}
+            onPress={() => router.push('/profile/payment-history')}
           />
           <RowItem
             icon={PAYMENT_METHODS_ICON}
             title="Payment Methods"
-            onPress={() => {}}
+            onPress={() => router.push('/profile/payment-methods')}
           />
         </View>
       </View>
-      <View className="my-6">
-        <DonateCard onPress={onPressDonate} />
+
+      {/* DONATE */}
+      <View style={{ marginVertical: 20 }}>
+        <DonateCard />
       </View>
+
+      {/* NOTIFICATIONS */}
       <View className="flex-col gap-2">
         <SectionHeader title="NOTIFICATIONS" />
         <Notifications onEnablePress={onPressNotifications} />
-        <View className="flex-col pl-4">
+        <View className="flex-col">
           <RowItem
             icon={PRAYER_ALERTS_ICON}
             title="Prayer Alerts"
@@ -123,9 +159,11 @@ export default function ProfileBody({
         </View>
         <SectionRule />
       </View>
+
+      {/* MAS SHOP */}
       <View className="flex-col">
-        <SectionHeader title="MAS SHOP" />
-        <View className="pl-4">
+        <SectionHeader title="SHOP" />
+        <View>
           <RowItem
             icon={MAS_BAG_ICON}
             title="Programs / Events Shop"
@@ -134,13 +172,15 @@ export default function ProfileBody({
         </View>
         <SectionRule />
       </View>
+
+      {/* BUSINESS ADS */}
       <View className="flex-col">
         <SectionHeader title="BUSINESS ADS" />
-        <View className="pl-4">
+        <View>
           <RowItem
             icon={APPLICATION_ICON}
             title="Start an Application"
-            onPress={() => {}}
+            onPress={() => router.push("/advertise" as Href)}
           />
           <RowItem
             icon={CHECK_STATUS_ICON}
@@ -155,9 +195,11 @@ export default function ProfileBody({
         </View>
         <SectionRule />
       </View>
+
+      {/* LEAVE A COMMENT */}
       <View className="flex-col">
         <SectionHeader title="LEAVE A COMMENT" />
-        <View className="pl-4">
+        <View>
           <RowItem
             icon={FEEDBACK_ICON}
             title="Send Feedback"
@@ -166,11 +208,25 @@ export default function ProfileBody({
         </View>
         <SectionRule />
       </View>
-      <View className="flex-col pb-6">
-        <SectionHeader title="ADMIN" />
-        <View className="pl-4">
-          <RowItem icon={ADMIN_ICON} title="Admin Portal" onPress={() => {}} />
+
+      {/* ADMIN */}
+      {isAdmin && (
+        <View className="flex-col">
+          <SectionHeader title="ADMIN" />
+          <View>
+            <RowItem
+              icon={ADMIN_ICON}
+              title="Admin Portal"
+              onPress={() => router.push("/profile/admin" as Href)}
+            />
+          </View>
+          <SectionRule />
         </View>
+      )}
+
+      {/* SIGN OUT */}
+      <View className="items-center" style={{ paddingBottom: 120, paddingTop: 20 }}>
+        <SignOutButton />
       </View>
       <SendFeedback
         visible={feedbackOpen}

@@ -4,9 +4,8 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
-import { getHijriDate } from '@/src/lib/hijri';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 import { PrayerTimesBar } from './prayer-times-bar';
 
 const patternSource = require('@/assets/islamic-pattern.png');
@@ -16,9 +15,8 @@ export function HomeHeader() {
   const { colors, clerkOrgId } = useMasjidConfig();
   const { user } = useUser();
   const storedFirstName = useOnboardingStore((s) => s.firstName);
-  const { nextPrayer, currentTimeFormatted, countdownLabel } = usePrayerTimes();
-  const hijriDate = getHijriDate();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const { currentTime, hijriDate, nextPrayer } = usePrayerTimes();
 
   // Read firstName: Clerk metadata (org-keyed) → onboarding store → Clerk user
   const meta = user?.publicMetadata as Record<string, any> | undefined;
@@ -29,16 +27,16 @@ export function HomeHeader() {
     '';
 
   return (
-    <View className="overflow-hidden bg-primary" style={{ paddingTop: insets.top + 16 }}>
+    <View className="overflow-hidden bg-[#0A261E]" style={{ paddingTop: insets.top + 16 }}>
       <Image
         source={patternSource}
         tintColor={accentRgb}
         style={{
           position: 'absolute',
           top: -10,
-          left: 0,
-          right: 0,
-          height: 280,
+          right: -10,
+          width: 180,
+          height: 200,
           opacity: 0.35,
           transform: [{ rotate: '180deg' }],
         }}
@@ -69,35 +67,33 @@ export function HomeHeader() {
             fontFamily: 'PlayfairDisplay_400Regular',
           }}
         >
-          {currentTimeFormatted}
+          {currentTime}
         </Text>
 
-        <Text
-          className="text-primary-foreground"
-          style={{ fontSize: 13, fontWeight: '600', marginTop: 4 }}
-        >
-          {hijriDate}
-        </Text>
-
-        <View className="mt-3 flex-row items-center">
-          <View
-            className="mr-1.5 bg-accent"
-            style={{ height: 6, width: 6, borderRadius: 3 }}
-          />
-          <Text style={{ fontSize: 13 }}>
-            {nextPrayer ? (
-              <>
-                <Text className="text-primary-foreground/50">{nextPrayer.name}</Text>
-                <Text className="text-primary-foreground/80">
-                  {' '}
-                  iqamah in {countdownLabel}
-                </Text>
-              </>
-            ) : (
-              <Text className="text-primary-foreground/80">All prayers complete for today</Text>
-            )}
+        {hijriDate ? (
+          <Text
+            className="text-primary-foreground"
+            style={{ fontSize: 13, fontWeight: '600', marginTop: 4 }}
+          >
+            {hijriDate}
           </Text>
-        </View>
+        ) : null}
+
+        {nextPrayer && (
+          <View className="mt-3 flex-row items-center">
+            <View
+              className="mr-1.5 bg-accent"
+              style={{ height: 6, width: 6, borderRadius: 3 }}
+            />
+            <Text style={{ fontSize: 13 }}>
+              <Text className="text-primary-foreground/50">{nextPrayer.name}</Text>
+              <Text className="text-primary-foreground/80">
+                {' '}
+                {nextPrayer.type} in {nextPrayer.timeRemaining}
+              </Text>
+            </Text>
+          </View>
+        )}
       </View>
 
       <View className="mt-6 pb-6">

@@ -1,5 +1,28 @@
 import '../global.css';
 
+import { LogBox, Platform } from 'react-native';
+LogBox.ignoreLogs(['forwardRef render functions']);
+
+// Configure how notifications behave when the app is in the foreground.
+// Wrapped in try/catch so the app doesn't crash before a fresh EAS build
+// links the native ExpoPushTokenManager module.
+if (Platform.OS !== 'web') {
+  try {
+    const Notifications = require('expo-notifications') as typeof import('expo-notifications');
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch {
+    // Native module not yet available — will work after next EAS build.
+  }
+}
+
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
@@ -15,16 +38,35 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+const StripeProvider =
+  Platform.OS !== 'web'
+    ? require('@stripe/stripe-react-native').StripeProvider
+    : ({ children }: { children: React.ReactNode }) => children;
+
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { DonationProvider } from '@/src/providers/donation-provider';
+import { StripeAccountProvider, useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
 import { useOnboardingSync } from '@/src/hooks/use-onboarding-sync';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 SplashScreen.preventAutoHideAsync();
+
+function StripeProviderWithConnect({ children }: { children: React.ReactNode }) {
+  const { stripeAccountId } = useStripeAccount();
+  return (
+    <StripeProvider
+      publishableKey={env.STRIPE_PUBLISHABLE_KEY}
+      stripeAccountId={stripeAccountId}
+      merchantIdentifier="merchant.com.sahla"
+    >
+      {children}
+    </StripeProvider>
+  );
+}
 
 export const unstable_settings = {
   anchor: '(auth)',
@@ -54,9 +96,6 @@ function RootNavigator() {
   const showOnboarding = authenticated && !onboardingComplete && !devBypass;
   const showMain = authenticated && (onboardingComplete || devBypass);
 
-  console.log('[RootNav] isSignedIn:', isSignedIn, 'onboardingComplete:', onboardingComplete, 'devBypass:', devBypass);
-  console.log('[RootNav] → showAuth:', showAuth, 'showOnboarding:', showOnboarding, 'showMain:', showMain);
-
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={showMain}>
@@ -72,6 +111,20 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="change-password"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="advertise"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="advertise-apply"
           options={{
             headerShown: false,
             animation: 'slide_from_right',
@@ -93,6 +146,7 @@ export default function RootLayout() {
     PlayfairDisplay_400Regular,
     PlayfairDisplay_500Medium,
     CormorantGaramond_400Regular,
+    UthmanicHafs: require('../assets/fonts/UthmanicHafs_V22.ttf'),
   });
 
   useEffect(() => {
@@ -108,12 +162,16 @@ export default function RootLayout() {
           <QueryProvider>
             <SupabaseProvider>
               <ConfigProvider>
-                <ThemeRoot>
-                  <DonationProvider>
-                    <RootNavigator />
-                    <StatusBar style="auto" />
-                  </DonationProvider>
-                </ThemeRoot>
+                <StripeAccountProvider>
+                  <StripeProviderWithConnect>
+                    <ThemeRoot>
+                      <DonationProvider>
+                        <RootNavigator />
+                        <StatusBar style="auto" />
+                      </DonationProvider>
+                    </ThemeRoot>
+                  </StripeProviderWithConnect>
+                </StripeAccountProvider>
               </ConfigProvider>
             </SupabaseProvider>
           </QueryProvider>

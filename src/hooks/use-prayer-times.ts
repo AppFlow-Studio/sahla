@@ -117,11 +117,54 @@ function getTodayDateStringInTz(timeZone: string): string {
   }).format(new Date());
 }
 
+function getHijriDate(): string | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).formatToParts(new Date());
+    const month = parts.find((p) => p.type === 'month')?.value ?? '';
+    const day = parts.find((p) => p.type === 'day')?.value ?? '';
+    const year = parts.find((p) => p.type === 'year')?.value ?? '';
+    return `${month} ${day}, ${year}`;
+  } catch {
+    return null;
+  }
+}
+
+const PRAYER_ICONS: Record<string, string> = {
+  fajr: 'weather-sunset-up',
+  sunrise: 'white-balance-sunny',
+  dhuhr: 'white-balance-sunny',
+  asr: 'weather-sunny',
+  maghrib: 'weather-sunset-down',
+  isha: 'moon-waning-crescent',
+};
+
+export type SimplePrayer = {
+  name: string;
+  time: string;
+  icon: string;
+  isActive: boolean;
+};
+
+export type NextPrayerInfo = {
+  name: string;
+  type: string;
+  timeRemaining: string;
+};
+
 export type UsePrayerTimesResult = {
   items: PrayerEntry[];
-  nextPrayer: PrayerEntry | null;
-  /** Live-formatted clock time in mosque tz, e.g. '4:01 PM'. */
+  /** Simplified prayer list for UI components like PrayerTimesBar. */
+  prayers: SimplePrayer[];
+  nextPrayer: NextPrayerInfo | null;
+  /** Live-formatted clock time in mosque tz, e.g. '4:18 PM'. */
+  currentTime: string;
   currentTimeFormatted: string;
+  /** Hijri date string, e.g. "Dhu'l-Qi'dah 17, 1447". */
+  hijriDate: string | null;
   /** 'in 1h 53m' style countdown to next iqamah, or null when no next prayer. */
   countdownLabel: string | null;
   /** 'HH:MM' clock-style countdown to next iqamah, or null when no next prayer. */
@@ -209,18 +252,40 @@ export function usePrayerTimes(): UsePrayerTimesResult {
     if (nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
 
     const nextPrayer = nextIdx >= 0 ? items[nextIdx] : null;
-    const secondsToIqamah = nextPrayer
-      ? timeToSeconds(nextPrayer.iqamahTimeRaw) - now.totalSeconds
+    const nextTimeRaw = nextPrayer
+      ? (nextPrayer.iqamahTimeRaw || nextPrayer.athanTimeRaw)
+      : null;
+    const secondsToIqamah = nextTimeRaw
+      ? timeToSeconds(nextTimeRaw) - now.totalSeconds
       : null;
     const countdownLabel =
       secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;
     const countdownClock =
       secondsToIqamah !== null ? formatCountdownClock(secondsToIqamah) : null;
 
+    const prayers: SimplePrayer[] = items.map((p) => ({
+      name: p.name,
+      time: p.athan,
+      icon: PRAYER_ICONS[p.rawName] ?? 'weather-sunny',
+      isActive: p.status === 'next',
+    }));
+
+    const currentTimeStr = formatCurrentTimeInTz(timezone);
+    const nextPrayerInfo: NextPrayerInfo | null = nextPrayer
+      ? {
+          name: nextPrayer.name,
+          type: 'iqamah',
+          timeRemaining: countdownLabel ?? '',
+        }
+      : null;
+
     return {
       items,
-      nextPrayer,
-      currentTimeFormatted: formatCurrentTimeInTz(timezone),
+      prayers,
+      nextPrayer: nextPrayerInfo,
+      currentTime: currentTimeStr,
+      currentTimeFormatted: currentTimeStr,
+      hijriDate: getHijriDate(),
       countdownLabel,
       countdownClock,
       nowHours: now.hours,

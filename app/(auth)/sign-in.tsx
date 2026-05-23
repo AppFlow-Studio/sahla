@@ -6,6 +6,8 @@ import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import * as Linking from 'expo-linking';
+
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
@@ -21,6 +23,8 @@ export default function SignInScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [pendingVerification, setPendingVerification] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [ssoLoading, setSsoLoading] = useState<'apple' | 'google' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +50,23 @@ export default function SignInScreen() {
     try {
       await clerk.signOut().catch(() => {});
       const attempt = await signIn.create({ identifier: email, password });
+      console.log('[SignIn] attempt status:', attempt.status, 'firstFactor:', attempt.firstFactorVerification?.status);
       if (attempt.status === 'complete') {
         await setActive({ session: attempt.createdSessionId });
         const userId = clerk.user?.id;
         if (userId) await joinAndActivateOrg(userId);
+      } else if (attempt.status === 'needs_second_factor') {
+        router.push('/(auth)/two-factor');
+      } else if (attempt.status === 'needs_first_factor') {
+        // Send email verification code
+        const emailFactor = attempt.supportedFirstFactors?.find((f: any) => f.strategy === 'email_code') as any;
+        await signIn.prepareFirstFactor({ strategy: 'email_code', emailAddressId: emailFactor?.emailAddressId });
+        setPendingVerification(true);
       } else {
-        setError(`Additional step required: ${attempt.status}`);
+        // null or other status — try email code flow
+        const emailFactor = attempt.supportedFirstFactors?.find((f: any) => f.strategy === 'email_code') as any;
+        await signIn.prepareFirstFactor({ strategy: 'email_code', emailAddressId: emailFactor?.emailAddressId });
+        setPendingVerification(true);
       }
     } catch (err: unknown) {
       const message =
@@ -63,7 +78,34 @@ export default function SignInScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk]);
+  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router]);
+
+  const onVerify = useCallback(async () => {
+    if (!isLoaded || submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const attempt = await signIn.attemptFirstFactor({ strategy: 'email_code', code });
+      if (attempt.status === 'complete') {
+        await setActive({ session: attempt.createdSessionId });
+        const userId = clerk.user?.id;
+        if (userId) await joinAndActivateOrg(userId);
+      } else if (attempt.status === 'needs_second_factor') {
+        router.push('/(auth)/two-factor');
+      } else {
+        setError(`Unexpected status: ${attempt.status}`);
+      }
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === 'object' && 'errors' in err
+          ? // @ts-expect-error Clerk error shape
+            (err.errors?.[0]?.message ?? 'Verification failed')
+          : 'Verification failed';
+      setError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [isLoaded, signIn, code, setActive, submitting, joinAndActivateOrg, clerk, router]);
 
   const activateOAuthSession = useCallback(
     async (result: any) => {
@@ -93,7 +135,7 @@ export default function SignInScreen() {
       if (Platform.OS === 'ios') {
         result = await startAppleAuthenticationFlow();
       } else {
-        result = await startSSOFlow({ strategy: 'oauth_apple' });
+        result = await startSSOFlow({ strategy: 'oauth_apple', redirectUrl: Linking.createURL('/') });
         if (result.authSessionResult?.type === 'dismiss') return;
       }
       await activateOAuthSession(result);
@@ -108,7 +150,7 @@ export default function SignInScreen() {
   const handleGoogle = useCallback(async () => {
     setSsoLoading('google');
     try {
-      const result = await startSSOFlow({ strategy: 'oauth_google' });
+      const result = await startSSOFlow({ strategy: 'oauth_google', redirectUrl: Linking.createURL('/') });
       if (result.authSessionResult?.type === 'dismiss') return;
       await activateOAuthSession(result);
     } catch (err) {
@@ -118,13 +160,11 @@ export default function SignInScreen() {
     }
   }, [startSSOFlow, activateOAuthSession]);
 
-  const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
+  const surfaceHex = `rgb(${(config.colors.onboardingSurface ?? '255 251 242').replace(/ /g, ',')})`;
 
   return (
     <View className="flex-1 bg-onboarding-bg">
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
-        <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin slice" />
-      </View>
+      <View pointerEvents="none" className="absolute inset-x-0 top-0 bg-onboarding-bg/80" style={{ height: '30%' }} />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-5 pt-2">
@@ -142,52 +182,79 @@ export default function SignInScreen() {
             className="text-onboarding-surface"
             style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
           >
-            Welcome back
+            {pendingVerification ? 'Check your email' : 'Welcome back'}
           </Text>
           <Text className="text-onboarding-accent mb-8" style={{ fontSize: 12 }}>
-            {config.displayName}
+            {pendingVerification
+              ? `We sent a code to ${email}`
+              : config.displayName}
           </Text>
 
-          <Text
-            className="text-onboarding-surface/40 mb-2"
-            style={{ fontSize: 10, letterSpacing: 1.5 }}
-          >
-            EMAIL
-          </Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor="rgba(255,251,242,0.25)"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            className="border-onboarding-surface/20 text-onboarding-surface mb-5 border-b pb-2"
-            style={{ fontSize: 16 }}
-          />
-          <Text
-            className="text-onboarding-surface/40 mb-2"
-            style={{ fontSize: 10, letterSpacing: 1.5 }}
-          >
-            PASSWORD
-          </Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Your password"
-            placeholderTextColor="rgba(255,251,242,0.25)"
-            secureTextEntry
-            autoComplete="password"
-            className="border-onboarding-surface/20 text-onboarding-surface mb-2 border-b pb-2"
-            style={{ fontSize: 16 }}
-          />
-          <Link
-            href="/(auth)/forgot-password"
-            className="text-onboarding-accent mb-4 self-end"
-            style={{ fontSize: 11, fontWeight: '500' }}
-          >
-            Forgot password?
-          </Link>
+          {!pendingVerification ? (
+            <>
+              <Text
+                className="text-onboarding-surface/40 mb-2"
+                style={{ fontSize: 10, letterSpacing: 1.5 }}
+              >
+                EMAIL
+              </Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor="rgba(255,251,242,0.25)"
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                className="border-onboarding-surface/20 text-onboarding-surface mb-5 border-b pb-2"
+                style={{ fontSize: 16 }}
+              />
+              <Text
+                className="text-onboarding-surface/40 mb-2"
+                style={{ fontSize: 10, letterSpacing: 1.5 }}
+              >
+                PASSWORD
+              </Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Your password"
+                placeholderTextColor="rgba(255,251,242,0.25)"
+                secureTextEntry
+                autoComplete="password"
+                className="border-onboarding-surface/20 text-onboarding-surface mb-2 border-b pb-2"
+                style={{ fontSize: 16 }}
+              />
+              <Link
+                href="/(auth)/forgot-password"
+                className="text-onboarding-accent mb-4 self-end"
+                style={{ fontSize: 11, fontWeight: '500' }}
+              >
+                Forgot password?
+              </Link>
+            </>
+          ) : (
+            <>
+              <Text
+                className="text-onboarding-surface/40 mb-2"
+                style={{ fontSize: 10, letterSpacing: 1.5 }}
+              >
+                VERIFICATION CODE
+              </Text>
+              <TextInput
+                value={code}
+                onChangeText={setCode}
+                placeholder="000000"
+                placeholderTextColor="rgba(255,251,242,0.25)"
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                maxLength={6}
+                autoFocus
+                className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
+                style={{ fontSize: 22, letterSpacing: 8 }}
+              />
+            </>
+          )}
 
           {error ? (
             <Text className="mb-4" style={{ fontSize: 13, color: '#EF4444' }}>
@@ -197,7 +264,7 @@ export default function SignInScreen() {
 
           <View style={{ paddingHorizontal: 30, gap: 12 }}>
             <Pressable
-              onPress={onSubmit}
+              onPress={pendingVerification ? onVerify : onSubmit}
               disabled={submitting || !isLoaded}
               className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90 disabled:opacity-50"
             >
@@ -205,49 +272,53 @@ export default function SignInScreen() {
                 <ActivityIndicator size="small" color="#0A261E" />
               ) : (
                 <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
-                  Sign in
+                  {pendingVerification ? 'Verify' : 'Sign in'}
                 </Text>
               )}
             </Pressable>
 
-            <Pressable
-              onPress={handleApple}
-              disabled={!!ssoLoading}
-              className="h-[43px] flex-row items-center justify-center rounded-full bg-onboarding-surface/5 active:opacity-80"
-              style={{ gap: 8 }}
-            >
-              {ssoLoading === 'apple' ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="logo-apple" size={14} color={surfaceHex} />
-                  <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
-                    Continue with Apple
-                  </Text>
-                </>
-              )}
-            </Pressable>
+            {!pendingVerification && (
+              <>
+                <Pressable
+                  onPress={handleApple}
+                  disabled={!!ssoLoading}
+                  className="h-[43px] flex-row items-center justify-center rounded-full bg-onboarding-surface/5 active:opacity-80"
+                  style={{ gap: 8 }}
+                >
+                  {ssoLoading === 'apple' ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="logo-apple" size={14} color={surfaceHex} />
+                      <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
+                        Continue with Apple
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
 
-            <Pressable
-              onPress={handleGoogle}
-              disabled={!!ssoLoading}
-              className="h-[43px] flex-row items-center justify-center rounded-full bg-onboarding-surface/5 active:opacity-80"
-              style={{ gap: 8 }}
-            >
-              {ssoLoading === 'google' ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="logo-google" size={12} color={surfaceHex} />
-                  <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
-                    Continue with Google
-                  </Text>
-                </>
-              )}
-            </Pressable>
+                <Pressable
+                  onPress={handleGoogle}
+                  disabled={!!ssoLoading}
+                  className="h-[43px] flex-row items-center justify-center rounded-full bg-onboarding-surface/5 active:opacity-80"
+                  style={{ gap: 8 }}
+                >
+                  {ssoLoading === 'google' ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="logo-google" size={12} color={surfaceHex} />
+                      <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
+                        Continue with Google
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              </>
+            )}
           </View>
 
-          <View className="mt-6 flex-row justify-center">
+          {!pendingVerification && <View className="mt-6 flex-row justify-center">
             <Text className="text-onboarding-surface/50" style={{ fontSize: 12 }}>
               Don&apos;t have an account?{' '}
             </Text>
@@ -258,7 +329,7 @@ export default function SignInScreen() {
             >
               Sign up
             </Link>
-          </View>
+          </View>}
         </View>
       </SafeAreaView>
     </View>

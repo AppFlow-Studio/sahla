@@ -1,0 +1,220 @@
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+/**
+ * Creates a Stripe Subscription (monthly ad fee) with a one-time onboarding
+ * invoice item on the mosque's connected account.
+ *
+ * Body: {
+ *   user_id: string
+ *   mosque_id: string        — mosque UUID
+ *   customer_email?: string
+ * }
+ *
+ * Returns: { clientSecret, ephemeralKey, customerId, publishableKey, stripeAccountId }
+ */
+serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS });
+  }
+
+  try {
+    const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeSecret) {
+      return new Response(
+        JSON.stringify({ error: "STRIPE_SECRET_KEY not configured" }),
+        { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
+    const stripe = new Stripe(stripeSecret, {
+      apiVersion: "2024-12-18.acacia",
+      httpClient: Stripe.createFetchHttpClient(),
+    });
+
+    const { user_id, mosque_id, customer_email } = await req.json();
+
+    if (!user_id || !mosque_id) {
+      return new Response(
+        JSON.stringify({ error: "user_id and mosque_id are required" }),
+        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // Look up mosque config
+    const { data: mosque, error: mosqueError } = await supabase
+      .from("mosques")
+      .select("stripe_account_id, ad_monthly_price_cents, ad_onboarding_fee_cents")
+      .eq("id", mosque_id)
+      .single();
+
+    if (mosqueError || !mosque?.stripe_account_id) {
+      return new Response(
+        JSON.stringify({ error: "Mosque not found or Stripe not configured" }),
+        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
+    const connectedAccountId = mosque.stripe_account_id;
+    const monthlyPriceCents = mosque.ad_monthly_price_cents ?? 5000;
+    const onboardingFeeCents = mosque.ad_onboarding_fee_cents ?? 10000;
+    const stripeAccountOpts = { stripeAccount: connectedAccountId };
+
+    // ── Find or create Stripe Customer on connected account ──
+    let existingStripeId: string | null = null;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stripe_id")
+      .eq("id", user_id)
+      .single();
+    existingStripeId = profile?.stripe_id ?? null;
+
+    let customer: Stripe.Customer;
+    if (existingStripeId) {
+      customer = (await stripe.customers.retrieve(
+        existingStripeId,
+        stripeAccountOpts,
+      )) as Stripe.Customer;
+    } else if (customer_email) {
+      const existing = await stripe.customers.list(
+        { email: customer_email, limit: 1 },
+        stripeAccountOpts,
+      );
+      if (existing.data.length > 0) {
+        customer = existing.data[0];
+      } else {
+        customer = await stripe.customers.create(
+          { email: customer_email },
+          stripeAccountOpts,
+        );
+      }
+    } else {
+      customer = await stripe.customers.create({}, stripeAccountOpts);
+    }
+
+    // Save customer ID to profile
+    if (!existingStripeId) {
+      await supabase
+        .from("profiles")
+        .update({ stripe_id: customer.id })
+        .eq("id", user_id);
+    }
+
+    // ── Find or create Product + Price on connected account ──
+    let product: Stripe.Product | undefined;
+    const products = await stripe.products.search(
+      { query: `metadata["type"]:"business_ad"` },
+      stripeAccountOpts,
+    );
+    product = products.data[0];
+
+    if (!product) {
+      product = await stripe.products.create(
+        {
+          name: "Business Ad — Monthly",
+          metadata: { type: "business_ad" },
+        },
+        stripeAccountOpts,
+      );
+    }
+
+    // Find existing price matching the amount, or create one
+    const prices = await stripe.prices.list(
+      {
+        product: product.id,
+        active: true,
+        type: "recurring",
+        limit: 10,
+      },
+      stripeAccountOpts,
+    );
+    let price = prices.data.find(
+      (p) =>
+        p.unit_amount === monthlyPriceCents &&
+        p.currency === "usd" &&
+        p.recurring?.interval === "month",
+    );
+
+    if (!price) {
+      price = await stripe.prices.create(
+        {
+          product: product.id,
+          unit_amount: monthlyPriceCents,
+          currency: "usd",
+          recurring: { interval: "month" },
+        },
+        stripeAccountOpts,
+      );
+    }
+
+    // ── Add one-time onboarding fee as an invoice item ──
+    await stripe.invoiceItems.create(
+      {
+        customer: customer.id,
+        amount: onboardingFeeCents,
+        currency: "usd",
+        description: "Business Ad — Onboarding Fee",
+      },
+      stripeAccountOpts,
+    );
+
+    // ── Create Subscription (incomplete — needs payment confirmation) ──
+    const subscription = await stripe.subscriptions.create(
+      {
+        customer: customer.id,
+        items: [{ price: price.id }],
+        payment_behavior: "default_incomplete",
+        payment_settings: {
+          save_default_payment_method: "on_subscription",
+        },
+        expand: ["latest_invoice.payment_intent"],
+        metadata: {
+          type: "business_ad",
+          mosque_id,
+          user_id,
+        },
+      },
+      stripeAccountOpts,
+    );
+
+    const invoice = subscription.latest_invoice as Stripe.Invoice;
+    const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+
+    // Ephemeral key for mobile SDK
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: customer.id },
+      { apiVersion: "2024-12-18.acacia", ...stripeAccountOpts },
+    );
+
+    return new Response(
+      JSON.stringify({
+        clientSecret: paymentIntent.client_secret,
+        ephemeralKey: ephemeralKey.secret,
+        customerId: customer.id,
+        subscriptionId: subscription.id,
+        publishableKey: Deno.env.get("STRIPE_PUBLISHABLE_KEY")!,
+        stripeAccountId: connectedAccountId,
+      }),
+      { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
+    );
+  } catch (err) {
+    console.error("[create-ad-subscription] Error:", err);
+    return new Response(
+      JSON.stringify({ error: "Internal error", detail: String(err) }),
+      { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
+    );
+  }
+});

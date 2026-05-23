@@ -26,9 +26,10 @@ const JUMMAH_HEIGHT = 360;
 
 export default function HomeScreen() {
   const { features } = useMasjidConfig();
-  const { nextPrayer } = usePrayerTimes();
+  const { prayers } = usePrayerTimes();
   const showJummah = features.jumaahRegistration;
-  const isMaghribTime = nextPrayer?.rawName === 'maghrib';
+  const isMaghribTime =
+    prayers.find((p) => p.name === 'Maghrib')?.isActive ?? false;
   const progress = useSharedValue(0);
 
   useEffect(() => {

@@ -20,6 +20,8 @@ export function RecommendedForYou() {
   const primary = colors.primary.replace(/ /g, ',');
   const fg = colors.primaryForeground.replace(/ /g, ',');
 
+  if (recommendations.length === 0) return null;
+
   return (
     <View>
       <View className="flex-row items-center justify-between pb-3">
