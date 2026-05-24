@@ -25,7 +25,7 @@ export type PrayerEntry = {
 type TodaysPrayerRow = {
   prayer_name: string;
   athan_time: string;
-  iqamah_time: string;
+  iqamah_time: string | null;
 };
 
 const PRAYER_ORDER: Record<string, number> = {
@@ -201,17 +201,16 @@ export function usePrayerTimes(): UsePrayerTimesResult {
         rows: TodaysPrayerRow[];
         error?: string;
       }>('get-todays-prayers', {
-        body: { mosque_id: mosqueUuid },
+        body: { mosque_id: mosqueUuid, date: todayDateStr },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      // Filter out rows with null fields — the edge function returns
-      // whatever's in the table and the schema allows nulls.
+      // iqamah_time may be null when the mosque hasn't configured iqamah_config —
+      // athan_time is still useful on its own, so only require those two.
       return (data?.rows ?? []).filter(
         (r) =>
           typeof r.prayer_name === 'string' &&
-          typeof r.athan_time === 'string' &&
-          typeof r.iqamah_time === 'string',
+          typeof r.athan_time === 'string',
       );
     },
     enabled: !!mosqueUuid,

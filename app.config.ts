@@ -64,6 +64,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/images/favicon.png',
   },
   plugins: [
+    [
+      'expo-build-properties',
+      {
+        ios: {
+          deploymentTarget: '16.0',
+        },
+      },
+    ],
     'expo-router',
     'expo-sqlite',
     'expo-asset',

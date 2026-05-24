@@ -1,0 +1,23 @@
+project_id = "sahla"
+
+# Edge functions that should not require a JWT to be invoked.
+# These are either called by pg_cron (no user context) or are intentional
+# service-role bypasses for the app (see comments at the top of each file).
+
+[functions.sync-prayer-times]
+verify_jwt = false
+
+[functions.get-todays-prayers]
+verify_jwt = false
+
+[functions.recommend]
+verify_jwt = false
+
+[functions.join-org]
+verify_jwt = false
+
+[functions.sync-onboarding]
+verify_jwt = false
+
+[functions.get-content-items]
+verify_jwt = false
