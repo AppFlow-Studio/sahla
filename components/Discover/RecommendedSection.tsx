@@ -2,10 +2,8 @@ import { Image } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import SectionTitle from "./SectionTitle";
-
-const BUSH = "#0A261E";
-const MUTED = "rgba(10,38,30,0.6)";
 
 export type RecommendedItem = {
   id: string;
@@ -33,11 +31,16 @@ function RecommendedCard({
   item: RecommendedItem;
   onPress?: () => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+
   return (
     <Pressable onPress={onPress} className="w-[220px]">
       <View
         className="h-[196px] w-full overflow-hidden rounded-[14px]"
-        style={{ backgroundColor: "#E8E3D6" }}
+        style={{ backgroundColor: mutedRgb }}
       >
         {item.image ? (
           <Image
@@ -54,7 +57,7 @@ function RecommendedCard({
           fontFamily: platformUiFont,
           fontSize: 13,
           fontWeight: "600",
-          color: BUSH,
+          color: fgRgb,
         }}
       >
         {item.title}
@@ -65,7 +68,7 @@ function RecommendedCard({
           fontFamily: platformUiFont,
           fontSize: 13,
           fontWeight: "400",
-          color: MUTED,
+          color: mutedFgRgb,
         }}
       >
         {item.category}

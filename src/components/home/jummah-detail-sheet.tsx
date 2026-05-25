@@ -136,7 +136,7 @@ export function JummahDetailSheet({
               paddingHorizontal: 24,
               paddingBottom: 40,
               minHeight: SCREEN_H * 0.4,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: `rgb(${colors.card.replace(/ /g, ',')})`,
             }}
           >
             <View className="items-center pb-3">

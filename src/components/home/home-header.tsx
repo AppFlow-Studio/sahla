@@ -27,7 +27,7 @@ export function HomeHeader() {
     '';
 
   return (
-    <View className="overflow-hidden bg-[#0A261E]" style={{ paddingTop: insets.top + 16 }}>
+    <View className="overflow-hidden bg-primary" style={{ paddingTop: insets.top + 16 }}>
       <Image
         source={patternSource}
         tintColor={accentRgb}

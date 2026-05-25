@@ -2,9 +2,8 @@ import { Image } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import SectionTitle from "./SectionTitle";
-
-const BUSH = "#0A261E";
 
 export type ProgramItem = {
   id: string;
@@ -31,13 +30,19 @@ function ProgramCard({
   item: ProgramItem;
   onPress?: () => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const cardRgb = `rgb(${colors.card.replace(/ /g, ",")})`;
+  const borderColor = `rgba(${fg}, 0.1)`;
+
   return (
     <Pressable onPress={onPress} className="w-[149px]">
       <View
         className="h-[217px] w-full overflow-hidden rounded-[16px] border"
         style={{
-          backgroundColor: "#FAF9F4",
-          borderColor: "rgba(10,38,30,0.1)",
+          backgroundColor: cardRgb,
+          borderColor,
         }}
       >
         {item.image ? (
@@ -54,7 +59,7 @@ function ProgramCard({
           fontFamily: platformUiFont,
           fontSize: 13,
           fontWeight: "500",
-          color: BUSH,
+          color: fgRgb,
         }}
       >
         {item.title}

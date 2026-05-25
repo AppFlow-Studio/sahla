@@ -1,8 +1,6 @@
 import { Platform, Pressable, Text, View } from "react-native";
 
-const BUSH = "#0A261E";
-const MUTED = "rgba(10,38,30,0.6)";
-const RULE = "#0A261E";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 type Props = {
   title: string;
@@ -23,6 +21,10 @@ export default function SectionTitle({
   actionLeading,
   onPressAction,
 }: Props) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+
   return (
     <View className="px-5 pt-3">
       <View className="flex-row items-center justify-between pb-3">
@@ -33,7 +35,7 @@ export default function SectionTitle({
             fontWeight: "600",
             letterSpacing: 0.5,
             textTransform: "uppercase",
-            color: BUSH,
+            color: fgRgb,
           }}
         >
           {title}
@@ -49,16 +51,16 @@ export default function SectionTitle({
               style={{
                 fontFamily: platformUiFont,
                 fontSize: 10,
-                color: MUTED,
+                color: mutedFgRgb,
                 textTransform: "uppercase",
               }}
             >
-              {actionLeading ? actionLabel : `${actionLabel} →`}
+              {actionLeading ? actionLabel : `${actionLabel} \u2192`}
             </Text>
           </Pressable>
         ) : null}
       </View>
-      <View style={{ height: 1, backgroundColor: RULE }} />
+      <View style={{ height: 1, backgroundColor: fgRgb }} />
     </View>
   );
 }

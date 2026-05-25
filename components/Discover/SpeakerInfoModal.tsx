@@ -10,15 +10,8 @@ import {
   View,
 } from "react-native";
 
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useSupabase } from "@/src/hooks/use-supabase";
-
-const BUSH = "#0A261E";
-const SHEET_BG = "#F4EFE2";
-const AVATAR_BG = "#E8E3D2";
-const DIVIDER = "#0A261E";
-const SUBLABEL = "rgba(10,38,30,0.55)";
-const BULLET_GOLD = "#C9A227";
-const HANDLE = "rgba(10,38,30,0.22)";
 
 const platformTitleFont = Platform.select({
   ios: "SF Pro Display",
@@ -57,6 +50,15 @@ export default function SpeakerInfoModal({
   mosqueUuid,
   onClose,
 }: Props) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+  const handleColor = `rgba(${fg}, 0.22)`;
+  const sublabelColor = `rgba(${fg}, 0.55)`;
+
   const supabase = useSupabase();
   const [data, setData] = useState<SpeakerRow | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
@@ -118,7 +120,7 @@ export default function SpeakerInfoModal({
         <Pressable onPress={() => {}}>
           <View
             style={{
-              backgroundColor: SHEET_BG,
+              backgroundColor: mutedRgb,
               borderRadius: 48,
               paddingTop: 12,
               paddingBottom: 28,
@@ -133,7 +135,7 @@ export default function SpeakerInfoModal({
                 width: 44,
                 height: 4,
                 borderRadius: 2,
-                backgroundColor: HANDLE,
+                backgroundColor: handleColor,
                 marginBottom: 6,
               }}
             />
@@ -151,11 +153,11 @@ export default function SpeakerInfoModal({
                     fontFamily: platformUiFont,
                     fontSize: 22,
                     fontWeight: "400",
-                    color: BUSH,
+                    color: fgRgb,
                     lineHeight: 22,
                   }}
                 >
-                  ×
+                  {"\u00d7"}
                 </Text>
               </Pressable>
             </View>
@@ -165,7 +167,7 @@ export default function SpeakerInfoModal({
                 fontFamily: platformUiFont,
                 fontSize: 13,
                 fontWeight: "600",
-                color: BUSH,
+                color: fgRgb,
                 marginTop: 14,
               }}
             >
@@ -174,7 +176,7 @@ export default function SpeakerInfoModal({
             <View
               style={{
                 height: 1,
-                backgroundColor: DIVIDER,
+                backgroundColor: fgRgb,
                 marginTop: 10,
                 marginBottom: 22,
               }}
@@ -182,7 +184,7 @@ export default function SpeakerInfoModal({
 
             {status === "loading" ? (
               <View style={{ paddingVertical: 36, alignItems: "center" }}>
-                <ActivityIndicator color={BUSH} />
+                <ActivityIndicator color={fgRgb} />
               </View>
             ) : (
               <>
@@ -191,7 +193,7 @@ export default function SpeakerInfoModal({
                     width: 50,
                     height: 50,
                     borderRadius: 12,
-                    backgroundColor: AVATAR_BG,
+                    backgroundColor: mutedRgb,
                     overflow: "hidden",
                     alignItems: "center",
                     justifyContent: "center",
@@ -205,7 +207,7 @@ export default function SpeakerInfoModal({
                       contentFit="cover"
                     />
                   ) : (
-                    <Feather name="user" size={28} color={BUSH} />
+                    <Feather name="user" size={28} color={fgRgb} />
                   )}
                 </View>
 
@@ -215,7 +217,7 @@ export default function SpeakerInfoModal({
                     fontSize: 11,
                     lineHeight: 18,
                     fontWeight: "600",
-                    color: BUSH,
+                    color: fgRgb,
                     marginBottom: 8,
                   }}
                 >
@@ -238,7 +240,7 @@ export default function SpeakerInfoModal({
                             width: 4,
                             height: 4,
                             borderRadius: 2,
-                            backgroundColor: BULLET_GOLD,
+                            backgroundColor: accentRgb,
                             marginTop: 7,
                             marginRight: 8,
                           }}
@@ -250,7 +252,7 @@ export default function SpeakerInfoModal({
                             fontSize: 11,
                             lineHeight: 18,
                             fontWeight: "400",
-                            color: "rgba(10,38,30,0.6)",
+                            color: mutedFgRgb,
                           }}
                         >
                           {cred}
@@ -264,7 +266,7 @@ export default function SpeakerInfoModal({
                       fontFamily: platformUiFont,
                       fontSize: 14,
                       lineHeight: 22,
-                      color: SUBLABEL,
+                      color: sublabelColor,
                     }}
                   >
                     No credentials available.

@@ -11,7 +11,7 @@ import Animated, {
   SlideOutLeft,
   SlideOutRight,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AudienceBrowse, {
   type AudienceFilter,
@@ -34,6 +34,7 @@ import UpcomingEventsSection, {
 } from "@/components/Discover/UpcomingEventsSection";
 import DonateCard from "@/components/profile/DonateCard";
 import { useContentItems } from "@/src/hooks/use-content-items";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useRecommendation } from "@/src/hooks/use-Recommendation";
 
 const PROGRAMS: ProgramItem[] = [
@@ -83,7 +84,7 @@ function formatCardDate(
     month: "long",
     day: "numeric",
   });
-  return time ? `${start} • ${time}` : start;
+  return time ? `${start} \u2022 ${time}` : start;
 }
 
 const TAB_INDEX: Record<DiscoverTab, number> = {
@@ -94,6 +95,13 @@ const TAB_INDEX: Record<DiscoverTab, number> = {
 };
 
 export default function DiscoverScreen() {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
+  const insets = useSafeAreaInsets();
+
   const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTabState] = useState<DiscoverTab>("All");
   const [direction, setDirection] = useState<"right" | "left">("right");
@@ -290,9 +298,9 @@ export default function DiscoverScreen() {
     return (
       <View
         className="flex-1 items-center justify-center"
-        style={{ backgroundColor: "#FFFBF2" }}
+        style={{ backgroundColor: bgRgb }}
       >
-        <ActivityIndicator color="#0A261E" />
+        <ActivityIndicator color={fgRgb} />
       </View>
     );
   }
@@ -300,12 +308,11 @@ export default function DiscoverScreen() {
   const isLoading = recStatus === "loading" && recommendations.length === 0;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: "#0A261E" }}>
-      <SafeAreaView edges={["top"]} />
-      <View className="flex-1" style={{ backgroundColor: "#FFFBF2" }}>
+    <View className="flex-1" style={{ backgroundColor: bgRgb }}>
+      <View className="flex-1">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 120 }}
       >
         <DiscoverHeader
           title={
@@ -323,7 +330,6 @@ export default function DiscoverScreen() {
           searchValue={searchQuery}
           onChangeSearch={setSearchQuery}
         />
-
         {status === "error" ? (
           <View className="mx-6 mt-4 rounded-lg bg-[#FDECEC] p-3">
             <Text className="text-xs text-[#7A1F1F]">
@@ -359,7 +365,7 @@ export default function DiscoverScreen() {
             {activeTab === "For You" ? (
               isLoading ? (
                 <View className="px-6 py-8">
-                  <ActivityIndicator color="#0A261E" />
+                  <ActivityIndicator color={fgRgb} />
                 </View>
               ) : (
                 <ForYouContent
@@ -392,7 +398,7 @@ export default function DiscoverScreen() {
                 <View className="mt-8">
                   {isLoading ? (
                     <View className="px-6 py-8">
-                      <ActivityIndicator color="#0A261E" />
+                      <ActivityIndicator color={fgRgb} />
                     </View>
                   ) : (
                     <RecommendedSection

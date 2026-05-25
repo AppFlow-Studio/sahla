@@ -108,7 +108,7 @@ export default function ProfileHeader() {
       <LinearGradient
         colors={[depthRgb, primaryRgb]}
         className="w-full"
-        style={{ paddingTop: insets.top + 5, paddingBottom: 48 }}
+        style={{ paddingTop: insets.top + 20, paddingBottom: 48 }}
         onLayout={(e) => {
           const h = e.nativeEvent.layout.height;
           if (h > 0) setHeaderHeight(h);
@@ -128,7 +128,7 @@ export default function ProfileHeader() {
 
         <View className="relative z-10 w-full items-center px-4">
         {/* Avatar */}
-        <View className="relative h-20 w-20">
+        <View className="relative h-20 w-20 items-center justify-center self-center">
           {hasPhoto && url ? (
             <Image
               source={{ uri: url }}
