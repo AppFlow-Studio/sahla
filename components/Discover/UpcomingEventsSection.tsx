@@ -2,14 +2,9 @@ import { Image } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
 import { Platform, Pressable, Text, View } from "react-native";
 
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import SectionTitle from "./SectionTitle";
-
-const BUSH = "#0A261E";
-const MUTED = "rgba(10,38,30,0.6)";
-const GOLD = "#B8922A";
-const ROW_BORDER = "#0A261E1A";
-const CHEVRON_MUTED = "rgba(10,38,30,0.4)";
 
 export type EventItem = {
   id: string;
@@ -38,6 +33,14 @@ function EventRow({
   item: EventItem;
   onPress?: () => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+  const chevronColor = `rgba(${fg}, 0.4)`;
+
   return (
     <Pressable
       onPress={onPress}
@@ -45,7 +48,7 @@ function EventRow({
     >
       <View
         className="mr-4 h-[50px] w-[50px] overflow-hidden rounded-[10px]"
-        style={{ backgroundColor: "#E8E3D6" }}
+        style={{ backgroundColor: mutedRgb }}
       >
         {item.thumbnail ? (
           <Image
@@ -62,7 +65,7 @@ function EventRow({
             fontFamily: platformUiFont,
             fontSize: 12,
             fontWeight: "600",
-            color: BUSH,
+            color: fgRgb,
           }}
         >
           {item.title}
@@ -74,7 +77,7 @@ function EventRow({
               marginTop: 2,
               fontFamily: platformUiFont,
               fontSize: 11,
-              color: MUTED,
+              color: mutedFgRgb,
             }}
           >
             {item.dateLabel}
@@ -88,14 +91,14 @@ function EventRow({
               fontFamily: platformUiFont,
               fontSize: 11,
               fontWeight: "500",
-              color: GOLD,
+              color: accentRgb,
             }}
           >
             {item.category}
           </Text>
         ) : null}
       </View>
-      <IconSymbol name="chevron.right" size={14} color={CHEVRON_MUTED} />
+      <IconSymbol name="chevron.right" size={14} color={chevronColor} />
     </Pressable>
   );
 }
@@ -105,6 +108,10 @@ export default function UpcomingEventsSection({
   onPressItem,
   onPressViewCalendar,
 }: Props) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const rowBorder = `rgba(${fg}, 0.1)`;
+
   return (
     <View>
       <SectionTitle
@@ -127,7 +134,7 @@ export default function UpcomingEventsSection({
               <View
                 style={{
                   height: 1,
-                  backgroundColor: ROW_BORDER,
+                  backgroundColor: rowBorder,
                   marginHorizontal: 20,
                 }}
               />

@@ -16,6 +16,10 @@ export default function ForgotPasswordScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   const config = useMasjidConfig();
+  const surface = config.colors.onboardingSurface.replace(/ /g, ',');
+  const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
+  const surfaceAlpha25 = `rgba(${surface}, 0.25)`;
+  const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -112,7 +116,7 @@ export default function ForgotPasswordScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color="rgba(255,251,242,0.6)" />
+            <Ionicons name="arrow-back" size={20} color={surfaceAlpha60} />
           </Pressable>
         </View>
 
@@ -144,7 +148,7 @@ export default function ForgotPasswordScreen() {
                 value={email}
                 onChangeText={setEmail}
                 placeholder="you@example.com"
-                placeholderTextColor="rgba(255,251,242,0.25)"
+                placeholderTextColor={surfaceAlpha25}
                 autoCapitalize="none"
                 autoComplete="email"
                 keyboardType="email-address"
@@ -169,7 +173,7 @@ export default function ForgotPasswordScreen() {
                 value={code}
                 onChangeText={setCode}
                 placeholder="123456"
-                placeholderTextColor="rgba(255,251,242,0.25)"
+                placeholderTextColor={surfaceAlpha25}
                 keyboardType="number-pad"
                 className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
                 style={{ fontSize: 24, letterSpacing: 8 }}
@@ -192,7 +196,7 @@ export default function ForgotPasswordScreen() {
                 value={password}
                 onChangeText={setPassword}
                 placeholder="At least 8 characters"
-                placeholderTextColor="rgba(255,251,242,0.25)"
+                placeholderTextColor={surfaceAlpha25}
                 secureTextEntry
                 autoComplete="new-password"
                 className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
@@ -220,7 +224,7 @@ export default function ForgotPasswordScreen() {
               className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90 disabled:opacity-50"
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#0A261E" />
+                <ActivityIndicator size="small" color={bgHex} />
               ) : (
                 <Text
                   className="text-onboarding-bg"

@@ -15,6 +15,10 @@ export default function TwoFactorScreen() {
   const clerk = useClerk();
   const router = useRouter();
   const config = useMasjidConfig();
+  const surface = config.colors.onboardingSurface.replace(/ /g, ',');
+  const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
+  const surfaceAlpha25 = `rgba(${surface}, 0.25)`;
+  const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
 
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +110,7 @@ export default function TwoFactorScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color="rgba(255,251,242,0.6)" />
+            <Ionicons name="arrow-back" size={20} color={surfaceAlpha60} />
           </Pressable>
         </View>
 
@@ -133,7 +137,7 @@ export default function TwoFactorScreen() {
             value={code}
             onChangeText={setCode}
             placeholder="000000"
-            placeholderTextColor="rgba(255,251,242,0.25)"
+            placeholderTextColor={surfaceAlpha25}
             autoCapitalize="none"
             autoComplete="one-time-code"
             keyboardType="number-pad"
@@ -162,7 +166,7 @@ export default function TwoFactorScreen() {
               className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90 disabled:opacity-50"
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#0A261E" />
+                <ActivityIndicator size="small" color={bgHex} />
               ) : (
                 <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
                   Verify

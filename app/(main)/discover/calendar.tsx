@@ -2,16 +2,13 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import EventsCalendar, {
   type EventCalendarItem,
 } from "@/components/Discover/EventsCalendar";
 import { useContentItems } from "@/src/hooks/use-content-items";
-
-const STATUS_BG = "#0A261E";
-const PAGE_BG = "#FFFBF2";
-const INK = "#0A261E";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 const platformUiFont = Platform.select({
   ios: "SF Pro Text",
@@ -45,6 +42,12 @@ function deriveCategory(item: {
 }
 
 export default function DiscoverCalendarScreen() {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const insets = useSafeAreaInsets();
+
   const { items } = useContentItems();
 
   const calendarItems: EventCalendarItem[] = useMemo(
@@ -65,67 +68,64 @@ export default function DiscoverCalendarScreen() {
   const openContent = (id: string) => router.push(`/content/${id}`);
 
   return (
-    <View className="flex-1" style={{ backgroundColor: STATUS_BG }}>
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: STATUS_BG }} />
-      <View className="flex-1" style={{ backgroundColor: PAGE_BG }}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32 }}
-        >
-          <View className="px-6 pt-6">
-            <View
-              className="items-center justify-center"
-              style={{ position: "relative" }}
+    <View className="flex-1" style={{ backgroundColor: bgRgb }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 }}
+      >
+        <View className="px-6 pt-6">
+          <View
+            className="items-center justify-center"
+            style={{ position: "relative" }}
+          >
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                justifyContent: "center",
+              }}
             >
-              <Pressable
-                onPress={() => router.back()}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  justifyContent: "center",
-                }}
-              >
-                <Image
-                  source={require("@/assets/images/left_arrow.png")}
-                  style={{ width: 16, height: 16 }}
-                  contentFit="contain"
-                />
-              </Pressable>
-              <Text
-                style={{
-                  fontFamily: "PlayfairDisplay_500Medium",
-                  fontSize: 30,
-                  lineHeight: 36,
-                  color: INK,
-                  textAlign: "center",
-                }}
-              >
-                Calendar
-              </Text>
-              <Text
-                style={{
-                  fontFamily: platformUiFont,
-                  fontSize: 12,
-                  color: "rgba(10,38,30,0.6)",
-                  marginTop: 4,
-                  textAlign: "center",
-                }}
-              >
-                Today and upcoming events
-              </Text>
-            </View>
+              <Image
+                source={require("@/assets/images/left_arrow.png")}
+                style={{ width: 16, height: 16 }}
+                contentFit="contain"
+              />
+            </Pressable>
+            <Text
+              style={{
+                fontFamily: "PlayfairDisplay_500Medium",
+                fontSize: 30,
+                lineHeight: 36,
+                color: fgRgb,
+                textAlign: "center",
+              }}
+            >
+              Calendar
+            </Text>
+            <Text
+              style={{
+                fontFamily: platformUiFont,
+                fontSize: 12,
+                color: mutedFgRgb,
+                marginTop: 4,
+                textAlign: "center",
+              }}
+            >
+              Today and upcoming events
+            </Text>
           </View>
+        </View>
 
-          <View style={{ marginTop: 16 }}>
-            <EventsCalendar items={calendarItems} onPressItem={openContent} />
-          </View>
-        </ScrollView>
-      </View>
+        <View style={{ marginTop: 16 }}>
+          <EventsCalendar items={calendarItems} onPressItem={openContent} />
+        </View>
+      </ScrollView>
     </View>
   );
 }

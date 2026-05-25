@@ -9,14 +9,7 @@ import {
   View,
 } from "react-native";
 
-const BUSH = "#0A261E";
-const MUTED = "rgba(10,38,30,0.6)";
-const GOLD = "#B8922A";
-const SECTION_LINE = "#0A261E";
-const ROW_DIVIDER = "rgba(10,38,30,0.1)";
-const PILL_TRACK_BG = "rgba(10,38,30,0.06)";
-const PILL_TRACK_BORDER = "rgba(10,38,30,0.4)";
-const CARD_PLACEHOLDER = "#EFEDE6";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 const platformUiFont = Platform.select({
   ios: "SF Pro Text",
@@ -55,16 +48,24 @@ function FilterPills({
   active: AudienceFilter;
   onSelect: (f: AudienceFilter) => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const pillTrackBg = `rgba(${fg}, 0.06)`;
+  const pillTrackBorder = `rgba(${fg}, 0.4)`;
+
   return (
     <View className="px-6">
       <View
         className="flex-row items-center"
         style={{
-          backgroundColor: PILL_TRACK_BG,
+          backgroundColor: pillTrackBg,
           borderRadius: 999,
           padding: 3,
           borderWidth: 0.5,
-          borderColor: PILL_TRACK_BORDER,
+          borderColor: pillTrackBorder,
         }}
       >
         {FILTERS.map((f) => {
@@ -77,14 +78,14 @@ function FilterPills({
               style={{
                 paddingVertical: 7,
                 borderRadius: 999,
-                backgroundColor: isActive ? BUSH : "transparent",
+                backgroundColor: isActive ? primaryRgb : "transparent",
               }}
             >
               <Text
                 style={{
                   fontFamily: platformUiFont,
                   fontSize: 11,
-                  color: isActive ? "#FFFBF2" : MUTED,
+                  color: isActive ? bgRgb : mutedFgRgb,
                 }}
               >
                 {f}
@@ -104,6 +105,11 @@ function Card({
   item: AudienceItem;
   onPress: () => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+
   return (
     <Pressable
       onPress={onPress}
@@ -117,7 +123,7 @@ function Card({
           height: 145,
           borderRadius: 14,
           overflow: "hidden",
-          backgroundColor: CARD_PLACEHOLDER,
+          backgroundColor: mutedRgb,
         }}
       >
         {item.image ? (
@@ -135,7 +141,7 @@ function Card({
           fontFamily: platformUiFont,
           fontSize: 11,
           fontWeight: "600",
-          color: BUSH,
+          color: fgRgb,
           lineHeight: 16,
         }}
       >
@@ -147,7 +153,7 @@ function Card({
           marginTop: 2,
           fontFamily: platformUiFont,
           fontSize: 10,
-          color: MUTED,
+          color: mutedFgRgb,
           lineHeight: 14,
         }}
       >
@@ -166,6 +172,14 @@ function ListRow({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+  const rowDivider = `rgba(${fg}, 0.1)`;
+
   return (
     <View>
       <Pressable
@@ -181,7 +195,7 @@ function ListRow({
             height: 50,
             borderRadius: 10,
             overflow: "hidden",
-            backgroundColor: CARD_PLACEHOLDER,
+            backgroundColor: mutedRgb,
           }}
         >
           {item.image ? (
@@ -200,7 +214,7 @@ function ListRow({
               fontFamily: platformUiFont,
               fontSize: 13,
               fontWeight: "600",
-              color: BUSH,
+              color: fgRgb,
               lineHeight: 16,
             }}
           >
@@ -212,7 +226,7 @@ function ListRow({
               style={{
                 fontFamily: platformUiFont,
                 fontSize: 11,
-                color: MUTED,
+                color: mutedFgRgb,
                 lineHeight: 14,
                 marginTop: 2,
               }}
@@ -226,7 +240,7 @@ function ListRow({
               style={{
                 fontFamily: platformUiFont,
                 fontSize: 11,
-                color: GOLD,
+                color: accentRgb,
                 fontWeight: "500",
                 lineHeight: 16,
                 marginTop: 2,
@@ -237,14 +251,14 @@ function ListRow({
           ) : null}
         </View>
 
-        <AntDesign name="right" size={12} color={MUTED} />
+        <AntDesign name="right" size={12} color={mutedFgRgb} />
       </Pressable>
 
       {showDivider ? (
         <View
           style={{
             height: 1,
-            backgroundColor: ROW_DIVIDER,
+            backgroundColor: rowDivider,
             marginHorizontal: 24,
           }}
         />
@@ -262,6 +276,9 @@ function ListSection({
   items: AudienceItem[];
   onPressItem: (id: string) => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+
   if (items.length === 0) return null;
   return (
     <View style={{ marginTop: 24 }}>
@@ -273,13 +290,13 @@ function ListSection({
             fontWeight: "700",
             letterSpacing: 0.6,
             textTransform: "uppercase",
-            color: BUSH,
+            color: fgRgb,
             marginBottom: 6,
           }}
         >
           {label}
         </Text>
-        <View style={{ height: 1, backgroundColor: SECTION_LINE }} />
+        <View style={{ height: 1, backgroundColor: fgRgb }} />
       </View>
       <View style={{ marginTop: 2 }}>
         {items.map((item, idx) => (
@@ -306,6 +323,10 @@ function Section({
   onPressItem: (id: string) => void;
   onPressSeeAll?: () => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+
   if (items.length === 0) return null;
   return (
     <View style={{ marginTop: 24 }}>
@@ -318,7 +339,7 @@ function Section({
             fontWeight: "700",
             letterSpacing: 0.6,
             textTransform: "uppercase",
-            color: BUSH,
+            color: fgRgb,
           }}
         >
           {label}
@@ -335,20 +356,20 @@ function Section({
               fontFamily: platformUiFont,
               fontSize: 10,
               textTransform: "uppercase",
-              color: MUTED,
+              color: mutedFgRgb,
               letterSpacing: 0.4,
               marginRight: 4,
             }}
           >
             See all
           </Text>
-          <AntDesign name="arrow-right" size={10} color={MUTED} />
+          <AntDesign name="arrow-right" size={10} color={mutedFgRgb} />
         </Pressable>
       </View>
       <View
         style={{
           height: 1,
-          backgroundColor: SECTION_LINE,
+          backgroundColor: fgRgb,
           marginTop: 6,
           marginHorizontal: 24,
         }}

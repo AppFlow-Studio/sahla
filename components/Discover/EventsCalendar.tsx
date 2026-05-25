@@ -9,14 +9,7 @@ import Animated, {
   SlideOutRight,
 } from "react-native-reanimated";
 
-const BUSH = "#0A261E";
-const MUTED = "rgba(10,38,30,0.6)";
-const GOLD = "#B8922A";
-const SECTION_LINE = "#0A261E";
-const ROW_DIVIDER = "rgba(10,38,30,0.1)";
-const PILL_TRACK_BG = "#F1EDE4";
-const CARD_PLACEHOLDER = "#EFEDE6";
-const DAY_TEXT = "#333333";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 const platformUiFont = Platform.select({
   ios: "SF Pro Text",
@@ -98,7 +91,6 @@ function formatTime(time: string | null): string {
 
 function buildMonthGrid(viewMonth: Date): Date[] {
   const first = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
-  // Monday-first: 0=Mon..6=Sun
   const offset = (first.getDay() + 6) % 7;
   const start = new Date(first);
   start.setDate(first.getDate() - offset);
@@ -120,6 +112,9 @@ function MonthHeader({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+
   return (
     <View className="flex-row items-center px-6" style={{ marginTop: 18 }}>
       <Text
@@ -130,7 +125,7 @@ function MonthHeader({
           fontWeight: "700",
           letterSpacing: 0.6,
           textTransform: "uppercase",
-          color: BUSH,
+          color: fgRgb,
         }}
       >
         {MONTH_NAMES[viewMonth.getMonth()]}
@@ -142,7 +137,7 @@ function MonthHeader({
         accessibilityLabel="Previous month"
         style={{ marginRight: 16 }}
       >
-        <AntDesign name="left" size={12} color={BUSH} />
+        <AntDesign name="left" size={12} color={fgRgb} />
       </Pressable>
       <Pressable
         onPress={onNext}
@@ -150,7 +145,7 @@ function MonthHeader({
         accessibilityRole="button"
         accessibilityLabel="Next month"
       >
-        <AntDesign name="right" size={12} color={BUSH} />
+        <AntDesign name="right" size={12} color={fgRgb} />
       </Pressable>
     </View>
   );
@@ -169,6 +164,12 @@ function DayCell({
   hasEvent: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+
   return (
     <Pressable
       onPress={onPress}
@@ -188,14 +189,14 @@ function DayCell({
           borderRadius: 13,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: selected ? BUSH : "transparent",
+          backgroundColor: selected ? primaryRgb : "transparent",
         }}
       >
         <Text
           style={{
             fontFamily: platformUiFont,
             fontSize: 12,
-            color: selected ? "#FFFBF2" : DAY_TEXT,
+            color: selected ? bgRgb : fgRgb,
             opacity: inMonth ? 1 : 0.3,
           }}
         >
@@ -208,7 +209,7 @@ function DayCell({
           height: 4,
           borderRadius: 2,
           marginTop: 3,
-          backgroundColor: hasEvent && !selected ? GOLD : "transparent",
+          backgroundColor: hasEvent && !selected ? accentRgb : "transparent",
         }}
       />
     </Pressable>
@@ -226,6 +227,9 @@ function CalendarGrid({
   eventDates: Set<string>;
   onSelect: (d: Date) => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+
   const days = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
   const weeks: Date[][] = [];
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
@@ -242,7 +246,7 @@ function CalendarGrid({
               style={{
                 fontFamily: platformUiFont,
                 fontSize: 11,
-                color: MUTED,
+                color: mutedFgRgb,
               }}
             >
               {w}
@@ -275,12 +279,18 @@ function ModeToggle({
   mode: Mode;
   onChange: (m: Mode) => void;
 }) {
+  const { colors } = useMasjidConfig();
+  const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+
   return (
     <View className="px-6" style={{ marginTop: 18 }}>
       <View
         className="flex-row items-center"
         style={{
-          backgroundColor: PILL_TRACK_BG,
+          backgroundColor: mutedRgb,
           borderRadius: 999,
           padding: 3,
         }}
@@ -295,7 +305,7 @@ function ModeToggle({
               style={{
                 paddingVertical: 8,
                 borderRadius: 999,
-                backgroundColor: isActive ? BUSH : "transparent",
+                backgroundColor: isActive ? primaryRgb : "transparent",
               }}
               accessibilityRole="button"
               accessibilityLabel={m}
@@ -305,7 +315,7 @@ function ModeToggle({
                   fontFamily: platformUiFont,
                   fontSize: 12,
                   fontWeight: "600",
-                  color: isActive ? "#FFFBF2" : MUTED,
+                  color: isActive ? bgRgb : mutedFgRgb,
                 }}
               >
                 {m}
@@ -327,6 +337,14 @@ function EventRow({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+  const rowDivider = `rgba(${fg}, 0.1)`;
+
   const time = formatTime(item.startTime);
   return (
     <View>
@@ -343,7 +361,7 @@ function EventRow({
             height: 50,
             borderRadius: 10,
             overflow: "hidden",
-            backgroundColor: CARD_PLACEHOLDER,
+            backgroundColor: mutedRgb,
           }}
         >
           {item.image ? (
@@ -362,7 +380,7 @@ function EventRow({
               fontFamily: platformUiFont,
               fontSize: 13,
               fontWeight: "600",
-              color: BUSH,
+              color: fgRgb,
               lineHeight: 16,
             }}
           >
@@ -378,12 +396,12 @@ function EventRow({
                 marginTop: 2,
               }}
             >
-              {time ? <Text style={{ color: MUTED }}>{time}</Text> : null}
+              {time ? <Text style={{ color: mutedFgRgb }}>{time}</Text> : null}
               {time && item.category ? (
-                <Text style={{ color: MUTED }}> • </Text>
+                <Text style={{ color: mutedFgRgb }}> {"\u2022"} </Text>
               ) : null}
               {item.category ? (
-                <Text style={{ color: GOLD, fontWeight: "500" }}>
+                <Text style={{ color: accentRgb, fontWeight: "500" }}>
                   {item.category}
                 </Text>
               ) : null}
@@ -391,14 +409,14 @@ function EventRow({
           ) : null}
         </View>
 
-        <AntDesign name="right" size={12} color={MUTED} />
+        <AntDesign name="right" size={12} color={mutedFgRgb} />
       </Pressable>
 
       {showDivider ? (
         <View
           style={{
             height: 1,
-            backgroundColor: ROW_DIVIDER,
+            backgroundColor: rowDivider,
             marginHorizontal: 24,
           }}
         />
@@ -408,6 +426,9 @@ function EventRow({
 }
 
 function DayHeading({ date }: { date: Date }) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+
   const label = `${WEEKDAY_NAMES[date.getDay()]}, ${
     MONTH_NAMES[date.getMonth()]
   } ${date.getDate()}`;
@@ -420,18 +441,21 @@ function DayHeading({ date }: { date: Date }) {
           fontWeight: "700",
           letterSpacing: 0.6,
           textTransform: "uppercase",
-          color: BUSH,
+          color: fgRgb,
           marginBottom: 6,
         }}
       >
         {label}
       </Text>
-      <View style={{ height: 1, backgroundColor: SECTION_LINE }} />
+      <View style={{ height: 1, backgroundColor: fgRgb }} />
     </View>
   );
 }
 
 export default function EventsCalendar({ items, onPressItem }: Props) {
+  const { colors } = useMasjidConfig();
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+
   const today = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -515,7 +539,7 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
                     style={{
                       fontFamily: platformUiFont,
                       fontSize: 12,
-                      color: MUTED,
+                      color: mutedFgRgb,
                     }}
                   >
                     No events on this day.
@@ -548,7 +572,7 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
                   style={{
                     fontFamily: platformUiFont,
                     fontSize: 12,
-                    color: MUTED,
+                    color: mutedFgRgb,
                   }}
                 >
                   No upcoming events.

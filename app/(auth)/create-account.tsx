@@ -28,6 +28,9 @@ type AuthButtonProps = {
 };
 
 function AuthButton({ label, variant, icon, onPress, loading }: AuthButtonProps) {
+  const { colors } = useMasjidConfig();
+  const bgColor = `rgb(${colors.onboardingBackground.replace(/ /g, ',')})`;
+  const surfaceColor = `rgb(${colors.onboardingSurface.replace(/ /g, ',')})`;
   const isPrimary = variant === 'primary';
   return (
     <Pressable
@@ -41,7 +44,7 @@ function AuthButton({ label, variant, icon, onPress, loading }: AuthButtonProps)
       style={{ gap: 8 }}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={isPrimary ? '#0A261E' : '#fff'} />
+        <ActivityIndicator size="small" color={isPrimary ? bgColor : surfaceColor} />
       ) : (
         <>
           {icon}

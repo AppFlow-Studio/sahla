@@ -1,10 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import { router, Stack } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -12,7 +13,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import QuranScreen from '@/src/screens/QuranScreen';
@@ -907,13 +908,96 @@ function PrayerRowItem({
   );
 }
 
+function SkeletonRow({ c, index }: { c: Palette; index: number }) {
+  const pulse = useSharedValue(0.08);
+  useEffect(() => {
+    pulse.value = withDelay(
+      index * 80,
+      withRepeat(
+        withSequence(
+          withTiming(0.18, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.08, { duration: 800, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      )
+    );
+  }, [pulse, index]);
+
+  const shimmer = useAnimatedStyle(() => ({
+    opacity: pulse.value,
+  }));
+
+  return (
+    <View
+      style={{
+        borderRadius: 18,
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        marginBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}
+    >
+      <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
+        <Animated.View style={[{ width: 22, height: 22, borderRadius: 11, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ flex: 1.1 }}>
+        <Animated.View style={[{ width: 60, height: 14, borderRadius: 7, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ flex: 0.9, alignItems: 'center' }}>
+        <Animated.View style={[{ width: 52, height: 14, borderRadius: 7, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ flex: 0.9, alignItems: 'center' }}>
+        <Animated.View style={[{ width: 52, height: 14, borderRadius: 7, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ width: 24 }} />
+    </View>
+  );
+}
+
+const SKELETON_PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
+
 export default function PrayerScreen() {
   const c = usePalette();
   const [now, setNow] = useState(new Date());
   const [quranOpen, setQuranOpen] = useState(false);
   const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
   const [sheetPrayer, setSheetPrayer] = useState<PrayerName | null>(null);
-  const { items: prayerItems, nextPrayer, countdownLabel, countdownClock } = usePrayerTimes();
+  // Date navigation — allow browsing ±7 days
+  const [dayOffset, setDayOffset] = useState(0);
+
+  const { timezone } = useMasjidConfig();
+  const tz = timezone || 'UTC';
+
+  const todayDateStr = useMemo(() => {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tz, now]);
+
+  const selectedDateStr = useMemo(() => {
+    // Parse today in mosque tz, then offset by days
+    const [y, m, d] = todayDateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + dayOffset);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }, [dayOffset, todayDateStr]);
+
+  const isToday = selectedDateStr === todayDateStr;
+
+  const {
+    items: prayerItems,
+    nextPrayer,
+    countdownLabel,
+    countdownClock,
+    isFetching: prayersFetching,
+    status: prayersStatus,
+  } = usePrayerTimes(isToday ? undefined : selectedDateStr);
   const {
     toggles: prayerToggles,
     getSettings,
@@ -921,9 +1005,12 @@ export default function PrayerScreen() {
     applyToAll,
   } = usePrayerAlerts();
   const prayerRows = useMemo(
-    () => buildPrayerRows(prayerItems, nextPrayer),
-    [prayerItems, nextPrayer]
+    () => buildPrayerRows(prayerItems, isToday ? nextPrayer : null),
+    [prayerItems, nextPrayer, isToday]
   );
+
+  const goBack = useCallback(() => setDayOffset((d) => Math.max(d - 1, 0)), []);
+  const goForward = useCallback(() => setDayOffset((d) => Math.min(d + 1, 7)), []);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -936,20 +1023,26 @@ export default function PrayerScreen() {
     hour12: true,
   });
 
-  const todayFormatted = now
-    .toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      year: 'numeric',
-    })
-    .toUpperCase();
+  const selectedDateFormatted = useMemo(() => {
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return date
+      .toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+      .toUpperCase();
+  }, [selectedDateStr]);
+
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 160 }}
+          contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 160 }}
           contentInsetAdjustmentBehavior="never"
         >
           <View style={{ position: 'relative' }}>
@@ -1076,16 +1169,22 @@ export default function PrayerScreen() {
                 paddingVertical: 14,
               }}
             >
-              <Pressable hitSlop={12}>
+              <Pressable hitSlop={12} onPress={goBack} style={{ opacity: dayOffset > 0 ? 1 : 0.3 }}>
                 <MaterialCommunityIcons name="chevron-left" size={22} color={c.muted} />
               </Pressable>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: c.text, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }}>
-                  {todayFormatted}
-                </Text>
-                {/* TODO: hijri date */}
-              </View>
-              <Pressable hitSlop={12}>
+              <Pressable onPress={() => setDayOffset(0)} hitSlop={8}>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ color: c.text, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }}>
+                    {selectedDateFormatted}
+                  </Text>
+                  {!isToday && (
+                    <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
+                      TAP TO RETURN TO TODAY
+                    </Text>
+                  )}
+                </View>
+              </Pressable>
+              <Pressable hitSlop={12} onPress={goForward} style={{ opacity: dayOffset < 7 ? 1 : 0.3 }}>
                 <MaterialCommunityIcons name="chevron-right" size={22} color={c.muted} />
               </Pressable>
             </View>
@@ -1114,30 +1213,37 @@ export default function PrayerScreen() {
               <View style={{ width: 20 }} />
             </View>
 
-            {prayerRows.map((p, i) => {
-              const isPassed = p.status === 'passed';
-              const isNext = p.status === 'next';
-              const nextRow = prayerRows[i + 1];
-              const showDivider = !isPassed && !isNext && nextRow?.status !== 'next';
-              const pName = p.name as PrayerName;
-              return (
-                <PrayerRowItem
-                  key={`${p.name}-${i}`}
-                  row={p}
-                  c={c}
-                  showDivider={showDivider}
-                  hasNotifications={prayerToggles[pName] ?? false}
-                  onBellPress={() => setSheetPrayer(pName)}
-                />
-              );
-            })}
+            {prayersFetching && prayerRows.length === 0 ? (
+              SKELETON_PRAYERS.map((name, i) => (
+                <SkeletonRow key={name} c={c} index={i} />
+              ))
+            ) : (
+              <Animated.View entering={FadeIn.duration(300)} key={selectedDateStr}>
+                {prayerRows.map((p, i) => {
+                  const isPassed = p.status === 'passed';
+                  const isNext = p.status === 'next';
+                  const nextRow = prayerRows[i + 1];
+                  const showDivider = !isPassed && !isNext && nextRow?.status !== 'next';
+                  const pName = p.name as PrayerName;
+                  return (
+                    <PrayerRowItem
+                      key={`${p.name}-${i}`}
+                      row={p}
+                      c={c}
+                      showDivider={showDivider}
+                      hasNotifications={prayerToggles[pName] ?? false}
+                      onBellPress={() => setSheetPrayer(pName)}
+                    />
+                  );
+                })}
+              </Animated.View>
+            )}
 
             <DailyQuranGoalCard c={c} onContinueReading={() => { setResumeTarget(getLastViewed()); setQuranOpen(true); }} />
             <SupportMasjidCard c={c} />
             <CommunityPartnersSection c={c} />
           </View>
         </ScrollView>
-      </SafeAreaView>
 
       <Modal
         visible={quranOpen}
