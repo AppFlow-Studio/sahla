@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -108,6 +114,69 @@ const groupPaymentsByMonth = (payments: Payment[]): GroupedPayments[] => {
   }
   return Object.entries(groups).map(([title, data]) => ({ title, data }));
 };
+
+// ── Skeleton ──────────────────────────────────────────
+
+function SkeletonBox({ width, height, borderRadius = 8, style }: { width: number | string; height: number; borderRadius?: number; style?: any }) {
+  const opacity = useSharedValue(0.35);
+
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.8, { duration: 900 }), -1, true);
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  return (
+    <Animated.View
+      style={[
+        { width, height, borderRadius, backgroundColor: 'currentColor' },
+        animatedStyle,
+        style,
+      ]}
+    />
+  );
+}
+
+function PaymentHistorySkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: string; cardRgb: string; fgRgb: string; insets: any }) {
+  const shimmerColor = `${fgRgb}18`;
+  return (
+    <View style={{ flex: 1, backgroundColor: bgRgb }}>
+      {/* Header skeleton */}
+      <View style={{ paddingTop: insets.top + 8, paddingBottom: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: shimmerColor, marginRight: 16 }} />
+        <SkeletonBox width={130} height={18} style={{ backgroundColor: shimmerColor }} />
+      </View>
+
+      <View style={{ padding: 16 }}>
+        {/* Summary card skeleton */}
+        <View style={{ backgroundColor: shimmerColor, borderRadius: 20, padding: 24, marginBottom: 24 }}>
+          <SkeletonBox width={100} height={10} style={{ backgroundColor: `${fgRgb}12`, marginBottom: 8 }} />
+          <SkeletonBox width={160} height={30} borderRadius={6} style={{ backgroundColor: `${fgRgb}12`, marginBottom: 10 }} />
+          <SkeletonBox width={80} height={10} style={{ backgroundColor: `${fgRgb}12` }} />
+        </View>
+
+        {/* Section label */}
+        <SkeletonBox width={80} height={10} style={{ backgroundColor: shimmerColor, marginBottom: 12, marginLeft: 4 }} />
+
+        {/* Payment card skeletons */}
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={{ backgroundColor: cardRgb, borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: `${fgRgb}05` }}>
+            <SkeletonBox width={40} height={40} borderRadius={12} style={{ backgroundColor: shimmerColor, marginRight: 12 }} />
+            <View style={{ flex: 1 }}>
+              <SkeletonBox width={90} height={14} style={{ backgroundColor: shimmerColor, marginBottom: 6 }} />
+              <SkeletonBox width={60} height={11} style={{ backgroundColor: shimmerColor, marginBottom: 4 }} />
+              <SkeletonBox width={110} height={10} style={{ backgroundColor: shimmerColor }} />
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <SkeletonBox width={70} height={18} borderRadius={8} style={{ backgroundColor: shimmerColor, marginBottom: 6 }} />
+              <SkeletonBox width={60} height={10} style={{ backgroundColor: shimmerColor }} />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 // ── Components ─────────────────────────────────────────
 
@@ -262,7 +331,8 @@ export default function PaymentHistoryScreen() {
         body: { user_id: profile.id, mosque_id: mosqueUuid },
       });
       if (error) {
-        console.log('Error fetching payment history:', error);
+        const body = error?.context ? await error.context.json().catch(() => null) : null;
+        console.log('Error fetching payment history:', body ?? error);
         return;
       }
       if (data?.payments) setPayments(data.payments);
@@ -299,11 +369,7 @@ export default function PaymentHistoryScreen() {
   const totalDonated = donationPayments.reduce((sum, p) => sum + p.amount, 0);
 
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: bgRgb, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={accentRgb} />
-      </View>
-    );
+    return <PaymentHistorySkeleton bgRgb={bgRgb} cardRgb={cardRgb} fgRgb={fgRgb} insets={insets} />;
   }
 
   return (
@@ -314,15 +380,15 @@ export default function PaymentHistoryScreen() {
           paddingTop: insets.top + 8,
           paddingBottom: 16,
           paddingHorizontal: 20,
-          backgroundColor: primaryRgb,
+          backgroundColor: bgRgb,
           flexDirection: 'row',
           alignItems: 'center',
         }}
       >
         <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={{ marginRight: 16 }}>
-          <Ionicons name="chevron-back" size={24} color={pfgRgb} />
+          <Ionicons name="chevron-back" size={24} color={fgRgb} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: pfgRgb }}>Payment History</Text>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>Payment History</Text>
       </View>
 
       {payments.length === 0 ? (

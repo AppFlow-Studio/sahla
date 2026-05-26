@@ -35,13 +35,14 @@ export type NotificationTab = (typeof NOTIFICATION_TABS)[number];
 
 type Props = {
   items?: NotificationItem[];
+  initialTab?: NotificationTab;
   onPressSettings?: () => void;
 };
 
-export function NotificationsScreen({ items = [], onPressSettings }: Props) {
+export function NotificationsScreen({ items = [], initialTab, onPressSettings }: Props) {
   const insets = useSafeAreaInsets();
   const masjidName = useConfigStore((s) => s.config.displayName);
-  const [activeTab, setActiveTab] = useState<NotificationTab>('All');
+  const [activeTab, setActiveTab] = useState<NotificationTab>(initialTab ?? 'All');
 
   const filterCategory = TAB_TO_CATEGORY[activeTab];
   const visibleItems = filterCategory
@@ -50,8 +51,7 @@ export function NotificationsScreen({ items = [], onPressSettings }: Props) {
   const isEmpty = visibleItems.length === 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: INK, paddingTop: insets.top }}>
-      <View style={{ flex: 1, backgroundColor: SURFACE }}>
+    <View style={{ flex: 1, backgroundColor: SURFACE, paddingTop: insets.top }}>
       <View
         style={{
           flexDirection: 'row',
@@ -128,7 +128,6 @@ export function NotificationsScreen({ items = [], onPressSettings }: Props) {
           <NotificationsList items={visibleItems} />
         </ScrollView>
       )}
-      </View>
     </View>
   );
 }

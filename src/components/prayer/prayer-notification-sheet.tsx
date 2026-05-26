@@ -191,7 +191,7 @@ export function PrayerNotificationSheet({
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: 8, paddingBottom: 12 }}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: 8, paddingBottom: 20 }}>
         <Animated.View
           pointerEvents={visible ? 'auto' : 'none'}
           style={{
@@ -211,7 +211,7 @@ export function PrayerNotificationSheet({
           {...panResponder.panHandlers}
           style={{
             transform: [{ translateY }],
-            borderRadius: 28,
+            borderRadius: 36,
             overflow: 'hidden',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: -4 },

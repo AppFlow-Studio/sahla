@@ -1,6 +1,10 @@
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 
-import { NotificationsScreen } from '@/components/notifications/NotificationsScreen';
+import {
+  NotificationsScreen,
+  type NotificationTab,
+  NOTIFICATION_TABS,
+} from '@/components/notifications/NotificationsScreen';
 import type { NotificationItem } from '@/components/notifications/NotificationsList';
 
 // Mock list — covers all three categories so each tab (Prayer / Events /
@@ -65,9 +69,15 @@ const MOCK_ITEMS: NotificationItem[] = [
 ];
 
 export default function NotificationCenterScreen() {
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const initialTab = NOTIFICATION_TABS.includes(tab as NotificationTab)
+    ? (tab as NotificationTab)
+    : undefined;
+
   return (
     <NotificationsScreen
       items={MOCK_ITEMS}
+      initialTab={initialTab}
       onPressSettings={() =>
         router.push('/profile/notification-settings' as Href)
       }

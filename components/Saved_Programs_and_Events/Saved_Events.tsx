@@ -139,8 +139,8 @@ export default function Saved_Events() {
   }, [isLoaded, userId, config.id]);
 
   return (
-    <View className="flex-1" style={{ backgroundColor: STATUS_BG }}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: STATUS_BG }} />
+    <View className="flex-1" style={{ backgroundColor: PAGE_BG }}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: PAGE_BG }} />
       <View className="flex-1" style={{ backgroundColor: PAGE_BG }}>
         <ScrollView
           showsVerticalScrollIndicator={false}

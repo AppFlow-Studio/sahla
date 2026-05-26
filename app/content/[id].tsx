@@ -6,7 +6,6 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   Platform,
   Pressable,
@@ -19,6 +18,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -63,6 +63,46 @@ type Detail = {
   start_time: string | null;
   speakers: string[] | null;
 };
+
+function SkeletonPulse({ width, height, borderRadius = 8, style }: { width: number | string; height: number; borderRadius?: number; style?: any }) {
+  const opacity = useSharedValue(0.35);
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.8, { duration: 900 }), -1, true);
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return (
+    <Animated.View
+      style={[{ width, height, borderRadius, backgroundColor: "rgba(10,38,30,0.1)" }, animStyle, style]}
+    />
+  );
+}
+
+function ContentSkeleton() {
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Image placeholder */}
+      <SkeletonPulse width="100%" height={260} borderRadius={0} style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }} />
+
+      <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
+        {/* Title */}
+        <SkeletonPulse width="75%" height={28} borderRadius={6} style={{ marginBottom: 10 }} />
+        <SkeletonPulse width="50%" height={28} borderRadius={6} style={{ marginBottom: 20 }} />
+
+        {/* Speaker chip */}
+        <SkeletonPulse width={140} height={36} borderRadius={18} style={{ marginBottom: 24 }} />
+
+        {/* Description card */}
+        <View style={{ backgroundColor: CARD_BG, borderRadius: 16, padding: 16 }}>
+          <SkeletonPulse width={60} height={10} borderRadius={4} style={{ marginBottom: 14 }} />
+          <SkeletonPulse width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse width="60%" height={12} borderRadius={4} />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function CircleButton({
   children,
@@ -298,9 +338,7 @@ export default function ContentDetailScreen() {
         ]}
       >
         {status === "loading" ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={BUSH} />
-          </View>
+          <ContentSkeleton />
         ) : status === "error" || !detail ? (
           <View className="flex-1 items-center justify-center px-6">
             <Text style={{ color: BUSH }}>{error ?? "Not found"}</Text>

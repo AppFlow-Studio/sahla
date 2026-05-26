@@ -134,15 +134,18 @@ export default function DiscoverScreen() {
     }
   }, [nextTab, activeTab, direction]);
 
+  const [lastProcessedTab, setLastProcessedTab] = useState<string | null>(null);
   useEffect(() => {
     const requested = params.tab;
     if (!requested) return;
+    if (requested === lastProcessedTab) return;
     if (!(requested in TAB_INDEX)) return;
+    setLastProcessedTab(requested);
     const target = requested as DiscoverTab;
     if (target === activeTab) return;
     if (target === "Programs") setProgramsInitialFilter("All");
     switchTab(target);
-  }, [params.tab, activeTab, switchTab]);
+  }, [params.tab, activeTab, switchTab, lastProcessedTab]);
 
   const handleHeaderSelect = useCallback(
     (tab: DiscoverTab) => {
@@ -404,6 +407,7 @@ export default function DiscoverScreen() {
                     <RecommendedSection
                       items={recommendedItems}
                       onPressItem={(item) => openContent(item.id)}
+                      onPressSeeAll={() => switchTab("For You")}
                     />
                   )}
                 </View>

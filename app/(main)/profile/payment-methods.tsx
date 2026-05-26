@@ -10,7 +10,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
@@ -66,6 +73,65 @@ const getCardBrandIcon = (
   }
 };
 
+// ── Skeleton ──────────────────────────────────────────
+
+function SkeletonBox({ width, height, borderRadius = 8, style }: { width: number | string; height: number; borderRadius?: number; style?: any }) {
+  const opacity = useSharedValue(0.35);
+
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.8, { duration: 900 }), -1, true);
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  return (
+    <Animated.View
+      style={[
+        { width, height, borderRadius, backgroundColor: 'currentColor' },
+        animatedStyle,
+        style,
+      ]}
+    />
+  );
+}
+
+function PaymentMethodsSkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: string; cardRgb: string; fgRgb: string; insets: any }) {
+  const shimmerColor = `${fgRgb}18`;
+  return (
+    <View style={{ flex: 1, backgroundColor: bgRgb }}>
+      {/* Header skeleton */}
+      <View style={{ paddingTop: insets.top + 8, paddingBottom: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: shimmerColor, marginRight: 16 }} />
+        <SkeletonBox width={140} height={18} style={{ backgroundColor: shimmerColor }} />
+      </View>
+
+      <View style={{ padding: 16 }}>
+        {/* Security card skeleton */}
+        <View style={{ backgroundColor: cardRgb, borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: `${fgRgb}0D` }}>
+          <SkeletonBox width={150} height={12} style={{ backgroundColor: shimmerColor, marginBottom: 10 }} />
+          <SkeletonBox width="100%" height={10} style={{ backgroundColor: shimmerColor, marginBottom: 6 }} />
+          <SkeletonBox width="70%" height={10} style={{ backgroundColor: shimmerColor }} />
+        </View>
+
+        {/* Add card button skeleton */}
+        <SkeletonBox width="100%" height={48} borderRadius={14} style={{ backgroundColor: shimmerColor, marginBottom: 24 }} />
+
+        {/* Card skeletons */}
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={{ backgroundColor: cardRgb, borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: `${fgRgb}0D` }}>
+            <SkeletonBox width={32} height={22} borderRadius={4} style={{ backgroundColor: shimmerColor, marginRight: 14 }} />
+            <View style={{ flex: 1 }}>
+              <SkeletonBox width={100} height={14} style={{ backgroundColor: shimmerColor, marginBottom: 6 }} />
+              <SkeletonBox width={140} height={11} style={{ backgroundColor: shimmerColor }} />
+            </View>
+            <SkeletonBox width={40} height={40} borderRadius={20} style={{ backgroundColor: shimmerColor }} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 // ── Screen ─────────────────────────────────────────────
 
 export default function PaymentMethodsScreen() {
@@ -96,7 +162,8 @@ export default function PaymentMethodsScreen() {
         body: { user_id: profile.id, mosque_id: mosqueUuid },
       });
       if (error) {
-        console.log('Error loading payment methods:', error);
+        const body = error?.context ? await error.context.json().catch(() => null) : null;
+        console.log('Error loading payment methods:', body ?? error);
         return;
       }
       if (data?.methods) setCards(data.methods);
@@ -154,11 +221,7 @@ export default function PaymentMethodsScreen() {
   };
 
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: bgRgb, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={accentRgb} />
-      </View>
-    );
+    return <PaymentMethodsSkeleton bgRgb={bgRgb} cardRgb={cardRgb} fgRgb={fgRgb} insets={insets} />;
   }
 
   return (
@@ -170,15 +233,15 @@ export default function PaymentMethodsScreen() {
             paddingTop: insets.top + 8,
             paddingBottom: 16,
             paddingHorizontal: 20,
-            backgroundColor: primaryRgb,
+            backgroundColor: bgRgb,
             flexDirection: 'row',
             alignItems: 'center',
           }}
         >
           <Pressable onPress={() => router.back()} hitSlop={12} style={{ marginRight: 16 }}>
-            <Ionicons name="chevron-back" size={24} color={pfgRgb} />
+            <Ionicons name="chevron-back" size={24} color={fgRgb} />
           </Pressable>
-          <Text style={{ fontSize: 17, fontWeight: '600', color: pfgRgb }}>Payment Methods</Text>
+          <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>Payment Methods</Text>
         </View>
 
         <ScrollView
