@@ -30,8 +30,8 @@ const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
 const MASJID_ID = process.env.MASJID_ID ?? 'sahla';
 const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: 'Sahla' };
 
-const IOS_BUNDLE_ID = `com.appflowstudios.sahla.${MASJID_ID}`;
-const ANDROID_PACKAGE = `com.appflowstudios.sahla.${MASJID_ID.replace(/-/g, '_')}`;
+const IOS_BUNDLE_ID = `com.sahla.${MASJID_ID}`;
+const ANDROID_PACKAGE = `com.sahla.${MASJID_ID.replace(/-/g, '_')}`;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
