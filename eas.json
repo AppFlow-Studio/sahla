@@ -5,6 +5,7 @@
   },
   "build": {
     "base": {
+      "node": "24.10.0",
       "ios": {
         "resourceClass": "m-medium"
       }
