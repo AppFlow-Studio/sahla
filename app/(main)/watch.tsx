@@ -10,6 +10,7 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   Share,
   Text,
   useWindowDimensions,
@@ -324,6 +325,125 @@ function StatDivider() {
   return <View style={{ width: 0.5, backgroundColor: 'rgba(10,38,30,0.15)', marginVertical: 4 }} />;
 }
 
+function DescriptionPanel({
+  reel,
+  visible,
+  onClose,
+}: {
+  reel: Reel;
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const translateY = useSharedValue(500);
+  const backdropOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      translateY.value = withTiming(0, { duration: 320, easing: Easing.out(Easing.cubic) });
+      backdropOpacity.value = withTiming(1, { duration: 250 });
+    } else if (mounted) {
+      backdropOpacity.value = withTiming(0, { duration: 200 });
+      translateY.value = withTiming(500, { duration: 280, easing: Easing.in(Easing.cubic) }, (done) => {
+        if (done) runOnJS(setMounted)(false);
+      });
+    }
+  }, [visible, mounted, translateY, backdropOpacity]);
+
+  const panelStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
+
+  if (!mounted) return null;
+
+  return (
+    <Modal transparent visible animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Animated.View style={[{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }, backdropStyle]}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#1a1a1a',
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            maxHeight: '55%',
+          },
+          panelStyle,
+        ]}
+      >
+        {/* Drag handle */}
+        <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)' }} />
+        </View>
+
+        {/* Header */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 }}>
+          <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>Description</Text>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <Ionicons name="close" size={22} color="#ffffff" />
+          </Pressable>
+        </View>
+
+        <View style={{ height: 0.5, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+
+        {/* Content */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 }}
+        >
+          {reel.caption ? (
+            <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600', lineHeight: 22 }}>
+              {reel.caption}
+            </Text>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 12,
+                paddingVertical: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
+                {formatCount(reel.like_count ?? 0)}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>Likes</Text>
+            </View>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 12,
+                paddingVertical: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
+                {formatCount(reel.view_count ?? 0)}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>Views</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </Animated.View>
+    </Modal>
+  );
+}
+
 export function ReelItem({
   reel,
   height,
@@ -335,6 +455,8 @@ export function ReelItem({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [captionTruncated, setCaptionTruncated] = useState(false);
   // Local pause state — single-tapping the reel toggles play/pause (TikTok-style).
   const [paused, setPaused] = useState(false);
   const masjidName = useConfigStore((s) => s.config.displayName);
@@ -355,6 +477,7 @@ export function ReelItem({
   // Matches TikTok/IG behavior for short-form video.
   useEffect(() => {
     setPaused(false);
+    setDescriptionOpen(false);
     if (isActive) {
       player.currentTime = 0;
     }
@@ -493,7 +616,7 @@ export function ReelItem({
         </View>
 
         <View
-          style={{ position: 'absolute', right: 14, bottom: 220, gap: 22, alignItems: 'center' }}
+          style={{ position: 'absolute', right: 14, bottom: 120, gap: 22, alignItems: 'center' }}
         >
           <ActionButton
             icon={liked ? 'heart' : 'heart-outline'}
@@ -510,8 +633,8 @@ export function ReelItem({
           <ActionButton icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
 
-        <View style={{ paddingHorizontal: 20, paddingBottom: 130 }}>
-          <View className="flex-row items-center">
+        <View style={{ paddingHorizontal: 20, paddingBottom: 90 }}>
+          <Pressable onPress={() => setSheetOpen(true)} className="flex-row items-center active:opacity-80">
             <View
               style={{
                 width: 40,
@@ -533,27 +656,34 @@ export function ReelItem({
               </Text>
               <Text style={{ fontSize: 10, color: '#ffffff' }}>{masjidName}</Text>
             </View>
-            <Pressable
-              onPress={() => setSheetOpen(true)}
-              className="rounded-full bg-onboarding-surface active:opacity-80"
-              style={{
-                borderWidth: 0.5,
-                borderColor: '#ffffff',
-                paddingHorizontal: 16,
-                paddingVertical: 4,
-              }}
-            >
-              <Text style={{ fontSize: 10, fontWeight: '600', color: '#0A261E' }}>Visit</Text>
-            </Pressable>
-          </View>
-          <Text
-            numberOfLines={1}
-            style={{ fontSize: 10, color: '#ffffff', marginTop: 10 }}
-          >
-            {reel.caption}
-          </Text>
+          </Pressable>
+          {reel.caption ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 10 }}>
+              <Text
+                numberOfLines={2}
+                onTextLayout={(e) => setCaptionTruncated(e.nativeEvent.lines.length > 1)}
+                style={{ fontSize: 10, color: '#ffffff', flex: 1 }}
+              >
+                {reel.caption}
+              </Text>
+              {captionTruncated && (
+                <Pressable onPress={() => setDescriptionOpen(true)} hitSlop={8}>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: '#ffffff', marginLeft: 4 }}>
+                    more
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ) : null}
         </View>
       </SafeAreaView>
+
+      {/* Description panel — slides up from bottom, edge-to-edge */}
+      <DescriptionPanel
+        reel={reel}
+        visible={descriptionOpen}
+        onClose={() => setDescriptionOpen(false)}
+      />
 
       {menuOpen ? (
         <Pressable
@@ -575,6 +705,7 @@ export function ReelItem({
       <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
         <MasjidCard onClose={() => setSheetOpen(false)} />
       </BottomSheet>
+
     </Pressable>
   );
 }

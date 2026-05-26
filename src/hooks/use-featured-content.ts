@@ -8,6 +8,7 @@ export type FeaturedItem = {
   badge: string;
   title: string;
   subtitle: string;
+  image: string | null;
 };
 
 function formatSubtitle(item: {
@@ -36,7 +37,7 @@ export function useFeaturedContent() {
     queryFn: async (): Promise<FeaturedItem | null> => {
       const { data, error } = await supabase
         .from('content_items')
-        .select('content_id, name, type, days, start_time')
+        .select('content_id, name, type, days, start_time, image')
         .eq('mosque_id', mosqueUuid!)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -50,6 +51,7 @@ export function useFeaturedContent() {
         badge: data.type === 'program' ? 'Program' : data.type === 'event' ? 'Event' : 'Featured',
         title: data.name ?? 'Untitled',
         subtitle: formatSubtitle(data),
+        image: data.image ?? null,
       };
     },
     enabled: !!mosqueUuid,
