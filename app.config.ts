@@ -118,7 +118,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true,
   },
   extra: {
-
+    "eas": {
+        "projectId": "f5b5a34b-5283-4351-9e3c-b1059c5671a0"
+    },
     masjidId: MASJID_ID,
     /** Read from `.env` when Metro / prebuild evaluates this file — reliable for dev bypass. */
     devBypassAuth: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === 'true',
