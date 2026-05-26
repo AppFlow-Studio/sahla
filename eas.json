@@ -5,8 +5,6 @@
   },
   "build": {
     "base": {
-      "developmentClient": true,
-      "distribution": "internal",
       "ios": {
         "resourceClass": "m-medium"
       }
@@ -19,7 +17,9 @@
     },
     "sahla-preview": {
       "extends": "base",
-      "distribution": "internal",
+      "autoIncrement": true,
+      "environment": "preview",
+      "channel": "preview",
       "env": {
         "MASJID_ID": "sahla"
       }
