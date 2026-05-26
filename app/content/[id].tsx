@@ -83,8 +83,11 @@ function CircleButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
-      className="h-9 w-9 items-center justify-center rounded-full active:opacity-80"
-      style={{ backgroundColor: "#FFFFFF", opacity: disabled ? 0.5 : 1 }}
+      className="h-10 w-10 items-center justify-center rounded-full active:opacity-80"
+      style={{
+        backgroundColor: "rgba(255,255,255,0.5)",
+        opacity: disabled ? 0.5 : 1,
+      }}
     >
       {children}
     </Pressable>
@@ -285,29 +288,15 @@ export default function ContentDetailScreen() {
         className="flex-1"
         style={[
           {
-            marginHorizontal: 12,
             marginTop: Math.max(insets.top, 24) + 12,
-            marginBottom: 12,
-            borderRadius: SHEET_RADIUS,
+            borderTopLeftRadius: SHEET_RADIUS,
+            borderTopRightRadius: SHEET_RADIUS,
             backgroundColor: "#FFFFFF",
             overflow: "hidden",
           },
           sheetStyle,
         ]}
       >
-        <GestureDetector gesture={panGesture}>
-          <View className="items-center pt-3 pb-2">
-            <View
-              style={{
-                width: 40,
-                height: 5,
-                borderRadius: 999,
-                backgroundColor: "rgba(10,38,30,0.18)",
-              }}
-            />
-          </View>
-        </GestureDetector>
-
         {status === "loading" ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator color={BUSH} />
@@ -322,13 +311,41 @@ export default function ContentDetailScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 24 }}
             >
-              <View
-                style={{
-                  paddingTop: 8,
-                  paddingBottom: 16,
-                }}
-              >
-                <View className="flex-row items-center justify-between px-4">
+              <GestureDetector gesture={panGesture}>
+              <Animated.View style={{ position: "relative" }}>
+                <View
+                  style={{
+                    width: "100%",
+                    aspectRatio: imageAspect,
+                    backgroundColor: TRAY_BG,
+                    borderTopLeftRadius: SHEET_RADIUS,
+                    borderTopRightRadius: SHEET_RADIUS,
+                    overflow: "hidden",
+                  }}
+                >
+                  {detail.image ? (
+                    <Image
+                      source={{ uri: detail.image }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover"
+                      onLoad={(e) => {
+                        const w = e.source?.width;
+                        const h = e.source?.height;
+                        if (w && h) setImageAspect(w / h);
+                      }}
+                    />
+                  ) : null}
+                </View>
+
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 28,
+                    left: 16,
+                    right: 16,
+                  }}
+                  className="flex-row items-center justify-between"
+                >
                   <CircleButton
                     onPress={dismiss}
                     accessibilityLabel="Close"
@@ -342,7 +359,7 @@ export default function ContentDetailScreen() {
                         hitSlop={8}
                         className="flex-row items-center rounded-full px-3 active:opacity-80"
                         style={{
-                          backgroundColor: "rgba(10,38,30,0.06)",
+                          backgroundColor: "rgba(255,255,255,0.85)",
                           height: 28,
                         }}
                         accessibilityRole="button"
@@ -397,36 +414,8 @@ export default function ContentDetailScreen() {
                     </View>
                   </View>
                 </View>
-
-                <View className="mt-4 items-center px-4">
-                  <View
-                    className="overflow-hidden rounded-2xl"
-                    style={{
-                      width: "100%",
-                      backgroundColor: TRAY_BG,
-                      padding: 16,
-                    }}
-                  >
-                    <View
-                      className="overflow-hidden rounded-xl"
-                      style={{ aspectRatio: imageAspect }}
-                    >
-                      {detail.image ? (
-                        <Image
-                          source={{ uri: detail.image }}
-                          style={{ width: "100%", height: "100%" }}
-                          contentFit="cover"
-                          onLoad={(e) => {
-                            const w = e.source?.width;
-                            const h = e.source?.height;
-                            if (w && h) setImageAspect(w / h);
-                          }}
-                        />
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              </View>
+              </Animated.View>
+              </GestureDetector>
 
               <View className="px-5 pt-6">
                 <Text

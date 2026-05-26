@@ -3,12 +3,20 @@ import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Modal,
   Platform,
   Pressable,
   Text,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useSupabase } from "@/src/hooks/use-supabase";
@@ -59,6 +67,45 @@ export default function SpeakerInfoModal({
   const handleColor = `rgba(${fg}, 0.22)`;
   const sublabelColor = `rgba(${fg}, 0.55)`;
 
+  const screenHeight = Dimensions.get("window").height;
+  const translateY = useSharedValue(screenHeight);
+  const DISMISS_DISTANCE = 120;
+  const DISMISS_VELOCITY = 800;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.value = screenHeight;
+      translateY.value = withTiming(0, { duration: 280 });
+    }
+  }, [visible, screenHeight, translateY]);
+
+  const animateClose = () => {
+    translateY.value = withTiming(screenHeight, { duration: 280 }, (finished) => {
+      if (finished) runOnJS(onClose)();
+    });
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      translateY.value = Math.max(0, e.translationY);
+    })
+    .onEnd((e) => {
+      if (
+        e.translationY > DISMISS_DISTANCE ||
+        e.velocityY > DISMISS_VELOCITY
+      ) {
+        translateY.value = withTiming(screenHeight, { duration: 280 }, (finished) => {
+          if (finished) runOnJS(onClose)();
+        });
+      } else {
+        translateY.value = withTiming(0, { duration: 180 });
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
   const supabase = useSupabase();
   const [data, setData] = useState<SpeakerRow | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
@@ -103,12 +150,12 @@ export default function SpeakerInfoModal({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent
     >
       <Pressable
-        onPress={onClose}
+        onPress={animateClose}
         style={{
           flex: 1,
           backgroundColor: "rgba(0,0,0,0.55)",
@@ -118,16 +165,20 @@ export default function SpeakerInfoModal({
         }}
       >
         <Pressable onPress={() => {}}>
-          <View
-            style={{
-              backgroundColor: mutedRgb,
-              borderRadius: 48,
-              paddingTop: 12,
-              paddingBottom: 28,
-              paddingHorizontal: 24,
-              minHeight: 500,
-              overflow: "hidden",
-            }}
+          <GestureDetector gesture={panGesture}>
+          <Animated.View
+            style={[
+              {
+                backgroundColor: mutedRgb,
+                borderRadius: 48,
+                paddingTop: 12,
+                paddingBottom: 28,
+                paddingHorizontal: 24,
+                minHeight: 500,
+                overflow: "hidden",
+              },
+              sheetStyle,
+            ]}
           >
             <View
               style={{
@@ -142,7 +193,7 @@ export default function SpeakerInfoModal({
 
             <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
               <Pressable
-                onPress={onClose}
+                onPress={animateClose}
                 hitSlop={12}
                 accessibilityRole="button"
                 accessibilityLabel="Close speaker info"
@@ -274,7 +325,8 @@ export default function SpeakerInfoModal({
                 )}
               </>
             )}
-          </View>
+          </Animated.View>
+          </GestureDetector>
         </Pressable>
       </Pressable>
     </Modal>

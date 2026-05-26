@@ -172,6 +172,8 @@ export type UsePrayerTimesResult = {
   /** Decimal hours-of-day in mosque tz, used by the prayer screen ring. */
   nowHours: number;
   status: 'idle' | 'loading' | 'success' | 'error';
+  /** True when a background refetch is in-flight (e.g. switching dates). */
+  isFetching: boolean;
   error: string | null;
 };
 
@@ -182,15 +184,17 @@ export type UsePrayerTimesResult = {
  * when the day rolls over. A 1-second internal tick keeps the next-prayer
  * status, countdown label, and clock display fresh without needing to refetch.
  */
-export function usePrayerTimes(): UsePrayerTimesResult {
+export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
   const supabase = useSupabase();
   const config = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const timezone = config.timezone || 'UTC';
   const todayDateStr = getTodayDateStringInTz(timezone);
+  const dateStr = dateOverride ?? todayDateStr;
+  const isToday = dateStr === todayDateStr;
 
   const query = useQuery({
-    queryKey: ['prayer-times', mosqueUuid, todayDateStr],
+    queryKey: ['prayer-times', mosqueUuid, dateStr],
     queryFn: async (): Promise<TodaysPrayerRow[]> => {
       // Demo-day workaround: F-RLS-01 added per-org RLS on todays_prayers, but
       // the Clerk → Supabase JWT bridge isn't returning a usable auth context
@@ -201,7 +205,7 @@ export function usePrayerTimes(): UsePrayerTimesResult {
         rows: TodaysPrayerRow[];
         error?: string;
       }>('get-todays-prayers', {
-        body: { mosque_id: mosqueUuid, date: todayDateStr },
+        body: { mosque_id: mosqueUuid, date: dateStr },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -232,9 +236,15 @@ export function usePrayerTimes(): UsePrayerTimesResult {
 
     const now = getNowInTimezone(timezone);
 
-    const items: PrayerEntry[] = rows.map((r) => {
-      const athanSec = timeToSeconds(r.athan_time);
-      const status: PrayerStatus = athanSec <= now.totalSeconds ? 'passed' : 'upcoming';
+    const items: PrayerEntry[] = rows.map((r, i) => {
+      // A prayer is only "passed" once the next prayer's athan has arrived,
+      // since you can still pray it until then.
+      const nextAthanSec = i < rows.length - 1
+        ? timeToSeconds(rows[i + 1].athan_time)
+        : null;
+      const isPassed = isToday && nextAthanSec !== null && nextAthanSec <= now.totalSeconds;
+      const status: PrayerStatus =
+        isPassed ? 'passed' : 'upcoming';
       return {
         name: titleCase(r.prayer_name),
         rawName: r.prayer_name,
@@ -246,17 +256,41 @@ export function usePrayerTimes(): UsePrayerTimesResult {
       };
     });
 
-    // The first non-passed entry becomes "next".
-    const nextIdx = items.findIndex((p) => p.status !== 'passed');
-    if (nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
+    // The first prayer whose athan hasn't arrived yet is the countdown target.
+    const upcomingIdx = isToday
+      ? items.findIndex((p) => timeToSeconds(p.athanTimeRaw) > now.totalSeconds)
+      : -1;
 
-    const nextPrayer = nextIdx >= 0 ? items[nextIdx] : null;
-    const nextTimeRaw = nextPrayer
-      ? (nextPrayer.iqamahTimeRaw || nextPrayer.athanTimeRaw)
+    // The first non-passed entry becomes "next" in the list.
+    // If there's an upcoming prayer (athan not yet arrived), that's "next".
+    // Otherwise the current prayer window (athan passed, but next athan not yet) is "next".
+    const nextIdx = upcomingIdx >= 0
+      ? upcomingIdx
+      : items.findIndex((p) => p.status !== 'passed');
+    if (isToday && nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
+
+    // Countdown always targets the next upcoming athan (not yet arrived).
+    const countdownPrayer = isToday && upcomingIdx >= 0 ? items[upcomingIdx] : null;
+    const nextTimeRaw = countdownPrayer
+      ? (countdownPrayer.iqamahTimeRaw || countdownPrayer.athanTimeRaw)
       : null;
-    const secondsToIqamah = nextTimeRaw
-      ? timeToSeconds(nextTimeRaw) - now.totalSeconds
-      : null;
+
+    let secondsToIqamah: number | null = null;
+    let fallbackToFajr = false;
+
+    if (nextTimeRaw) {
+      secondsToIqamah = timeToSeconds(nextTimeRaw) - now.totalSeconds;
+    } else if (isToday) {
+      // All prayers passed — count down to tomorrow's Fajr
+      const fajr = items.find((p) => p.rawName === 'fajr');
+      if (fajr) {
+        const fajrSec = timeToSeconds(fajr.athanTimeRaw);
+        const DAY = 86400;
+        secondsToIqamah = fajrSec + DAY - now.totalSeconds;
+        fallbackToFajr = true;
+      }
+    }
+
     const countdownLabel =
       secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;
     const countdownClock =
@@ -270,13 +304,19 @@ export function usePrayerTimes(): UsePrayerTimesResult {
     }));
 
     const currentTimeStr = formatCurrentTimeInTz(timezone);
-    const nextPrayerInfo: NextPrayerInfo | null = nextPrayer
+    const nextPrayerInfo: NextPrayerInfo | null = countdownPrayer
       ? {
-          name: nextPrayer.name,
+          name: countdownPrayer.name,
           type: 'iqamah',
           timeRemaining: countdownLabel ?? '',
         }
-      : null;
+      : fallbackToFajr
+        ? {
+            name: 'Fajr',
+            type: 'athan',
+            timeRemaining: countdownLabel ?? '',
+          }
+        : null;
 
     return {
       items,
@@ -291,7 +331,7 @@ export function usePrayerTimes(): UsePrayerTimesResult {
     };
     // `tick` re-runs the memo every second so countdown / status / clock stay live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.data, timezone, tick]);
+  }, [query.data, timezone, tick, isToday]);
 
   const status: UsePrayerTimesResult['status'] = !mosqueUuid
     ? 'idle'
@@ -304,6 +344,7 @@ export function usePrayerTimes(): UsePrayerTimesResult {
   return {
     ...computed,
     status,
+    isFetching: query.isFetching,
     error: query.error?.message ?? null,
   };
 }
