@@ -17,7 +17,6 @@
     },
     "sahla-preview": {
       "extends": "base",
-      "autoIncrement": true,
       "environment": "preview",
       "channel": "preview",
       "env": {
