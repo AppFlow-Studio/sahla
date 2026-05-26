@@ -58,13 +58,6 @@ const SECTIONS: Section[] = [
         subtitle: 'Alert at athan time',
       },
       {
-        kind: 'toggle',
-        key: 'iqamah',
-        icon: 'notifications-outline',
-        label: 'Iqamah notifications',
-        subtitle: 'Alert when iqamah starts',
-      },
-      {
         kind: 'link',
         key: 'customize',
         icon: 'sunny-outline',
@@ -205,8 +198,7 @@ export function NotificationSettings({ onBack }: { onBack?: () => void }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: INK, paddingTop: insets.top }}>
-      <View style={{ flex: 1, backgroundColor: SURFACE }}>
+    <View style={{ flex: 1, backgroundColor: SURFACE, paddingTop: insets.top }}>
       <View
         style={{
           paddingHorizontal: 24,
@@ -268,7 +260,6 @@ export function NotificationSettings({ onBack }: { onBack?: () => void }) {
           </Fragment>
         ))}
       </ScrollView>
-      </View>
     </View>
   );
 }

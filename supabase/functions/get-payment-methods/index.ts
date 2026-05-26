@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import Stripe from "https://esm.sh/stripe@17.7.0?target=deno";
+import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -65,7 +65,7 @@ serve(async (req: Request) => {
     }
 
     const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2025-03-31.basil",
+      apiVersion: "2024-12-18.acacia",
       httpClient: Stripe.createFetchHttpClient(),
     });
 
@@ -88,10 +88,15 @@ serve(async (req: Request) => {
       JSON.stringify({ methods }),
       { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
     );
-  } catch (err) {
-    console.error("[get-payment-methods] Error:", err);
+  } catch (err: any) {
+    console.error("[get-payment-methods] Error:", err?.message ?? err, err?.type, err?.statusCode);
     return new Response(
-      JSON.stringify({ error: "Internal error", detail: String(err) }),
+      JSON.stringify({
+        error: "Internal error",
+        detail: err?.message ?? String(err),
+        type: err?.type,
+        statusCode: err?.statusCode,
+      }),
       { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
     );
   }

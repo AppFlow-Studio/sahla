@@ -155,7 +155,13 @@ export default function ProfileBody({
               router.push("/profile/notification-center?tab=Programs" as Href)
             }
           />
-          <RowItem icon={EVENTS_ICON} title="Events" onPress={() => {}} />
+          <RowItem
+            icon={EVENTS_ICON}
+            title="Events"
+            onPress={() =>
+              router.push("/profile/notification-center?tab=Events" as Href)
+            }
+          />
         </View>
         <SectionRule />
       </View>

@@ -175,6 +175,8 @@ export type UsePrayerTimesResult = {
   /** True when a background refetch is in-flight (e.g. switching dates). */
   isFetching: boolean;
   error: string | null;
+  /** Manually trigger a refetch of prayer times from the server. */
+  refetch: () => Promise<unknown>;
 };
 
 /**
@@ -346,5 +348,6 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
     status,
     isFetching: query.isFetching,
     error: query.error?.message ?? null,
+    refetch: () => query.refetch(),
   };
 }

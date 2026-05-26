@@ -28,7 +28,7 @@ export function RecommendedForYou() {
         <Text className="text-[13px] font-semibold uppercase tracking-[1px] text-foreground">
           Recommended for you
         </Text>
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/discover?tab=For You')}>
           <Text className="text-[10px] text-foreground/60">SEE ALL →</Text>
         </TouchableOpacity>
       </View>

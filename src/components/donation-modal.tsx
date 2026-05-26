@@ -828,6 +828,31 @@ export function DonationModal({
             <View className="px-6 pb-8 pt-3">
               <View style={{ height: 1, backgroundColor: `rgba(${fg},0.06)` }} />
 
+              {/* Save card toggle — must be before intent creation */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setSaveCard((v) => !v)}
+                className="flex-row items-center justify-center gap-2 py-4"
+              >
+                <View
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 4,
+                    borderWidth: 1.5,
+                    borderColor: saveCard ? accentRgb : `rgba(${fg},0.25)`,
+                    backgroundColor: saveCard ? accentRgb : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {saveCard && <Ionicons name="checkmark" size={10} color={bgRgb} />}
+                </View>
+                <Text style={{ fontSize: 11, color: `rgba(${fg},0.5)` }}>
+                  Save card for future donations
+                </Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={handleContinueToCard}
@@ -980,31 +1005,6 @@ export function DonationModal({
                 }}
                 accentRgb={accentRgb}
               />
-
-              {/* Save card toggle */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setSaveCard((v) => !v)}
-                className="flex-row items-center justify-center gap-2 py-4"
-              >
-                <View
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 4,
-                    borderWidth: 1.5,
-                    borderColor: saveCard ? accentRgb : `rgba(${fg},0.25)`,
-                    backgroundColor: saveCard ? accentRgb : 'transparent',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {saveCard && <Ionicons name="checkmark" size={10} color={bgRgb} />}
-                </View>
-                <Text style={{ fontSize: 11, color: `rgba(${fg},0.5)` }}>
-                  Save card for future donations
-                </Text>
-              </TouchableOpacity>
 
               {/* Pay button */}
               <TouchableOpacity

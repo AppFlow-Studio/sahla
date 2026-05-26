@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
+import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -123,17 +124,42 @@ function usePalette(): Palette {
 }
 
 const STARS = [
-  { x: 14, y: 12, size: 10, max: 1, delay: 0, duration: 1600 },
-  { x: 72, y: 6, size: 6, max: 0.9, delay: 800, duration: 2200 },
-  { x: 188, y: 2, size: 7, max: 1, delay: 400, duration: 1900 },
-  { x: 288, y: 8, size: 12, max: 1, delay: 1200, duration: 2400 },
-  { x: 356, y: 18, size: 8, max: 0.95, delay: 200, duration: 2000 },
-  { x: 8, y: 70, size: 6, max: 0.85, delay: 1500, duration: 1700 },
-  { x: 22, y: 190, size: 7, max: 0.9, delay: 600, duration: 2100 },
-  { x: 360, y: 70, size: 9, max: 1, delay: 1000, duration: 2300 },
-  { x: 352, y: 200, size: 5, max: 0.8, delay: 300, duration: 1800 },
-  { x: 4, y: 300, size: 5, max: 0.75, delay: 1400, duration: 2000 },
-  { x: 362, y: 300, size: 6, max: 0.85, delay: 900, duration: 2200 },
+  // Highest — deep pull-to-refresh zone
+  { x: 60, y: -160, size: 6, max: 0.85, delay: 400, duration: 4200 },
+  { x: 180, y: -170, size: 9, max: 1, delay: 1600, duration: 3800 },
+  { x: 300, y: -155, size: 5, max: 0.8, delay: 2800, duration: 4600 },
+  { x: 20, y: -145, size: 7, max: 0.9, delay: 1200, duration: 4000 },
+  { x: 350, y: -165, size: 8, max: 0.95, delay: 2000, duration: 3600 },
+  { x: 120, y: -140, size: 5, max: 0.75, delay: 3200, duration: 4400 },
+  { x: 240, y: -150, size: 10, max: 1, delay: 800, duration: 4800 },
+  // Upper — visible on normal overscroll
+  { x: 50, y: -115, size: 7, max: 0.9, delay: 2400, duration: 4000 },
+  { x: 170, y: -105, size: 5, max: 0.8, delay: 600, duration: 4400 },
+  { x: 280, y: -120, size: 8, max: 0.95, delay: 1800, duration: 3400 },
+  { x: 360, y: -100, size: 6, max: 0.85, delay: 3000, duration: 4200 },
+  { x: 15, y: -95, size: 9, max: 1, delay: 1000, duration: 3800 },
+  { x: 220, y: -90, size: 5, max: 0.75, delay: 2200, duration: 4600 },
+  // Mid-upper — visible on pull-to-refresh
+  { x: 40, y: -60, size: 5, max: 0.8, delay: 600, duration: 4000 },
+  { x: 150, y: -55, size: 8, max: 0.9, delay: 2200, duration: 3600 },
+  { x: 260, y: -65, size: 6, max: 0.85, delay: 1400, duration: 4400 },
+  { x: 340, y: -50, size: 7, max: 0.95, delay: 200, duration: 3800 },
+  { x: 90, y: -35, size: 10, max: 1, delay: 1000, duration: 4800 },
+  { x: 210, y: -30, size: 5, max: 0.75, delay: 2600, duration: 4200 },
+  { x: 320, y: -25, size: 9, max: 0.9, delay: 1800, duration: 3400 },
+  { x: 10, y: -40, size: 6, max: 0.85, delay: 3200, duration: 4600 },
+  // Original top row
+  { x: 14, y: 12, size: 10, max: 1, delay: 0, duration: 3200 },
+  { x: 72, y: 6, size: 6, max: 0.9, delay: 1600, duration: 4400 },
+  { x: 188, y: 2, size: 7, max: 1, delay: 800, duration: 3800 },
+  { x: 288, y: 8, size: 12, max: 1, delay: 2400, duration: 4800 },
+  { x: 356, y: 18, size: 8, max: 0.95, delay: 400, duration: 4000 },
+  { x: 8, y: 70, size: 6, max: 0.85, delay: 3000, duration: 3400 },
+  { x: 22, y: 190, size: 7, max: 0.9, delay: 1200, duration: 4200 },
+  { x: 360, y: 70, size: 9, max: 1, delay: 2000, duration: 4600 },
+  { x: 352, y: 200, size: 5, max: 0.8, delay: 600, duration: 3600 },
+  { x: 4, y: 300, size: 5, max: 0.75, delay: 2800, duration: 4000 },
+  { x: 362, y: 300, size: 6, max: 0.85, delay: 1800, duration: 4400 },
 ];
 
 function parseTimeToHours(time: string): number {
@@ -347,7 +373,7 @@ function TwinklingStar({
 
 function StarField({ color }: { color: string }) {
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 360 }}>
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 360, overflow: 'visible' }}>
       {STARS.map((s, i) => (
         <TwinklingStar key={i} star={s} color={color} />
       ))}
@@ -956,6 +982,37 @@ function SkeletonRow({ c, index }: { c: Palette; index: number }) {
   );
 }
 
+function DateBarSkeleton({ c }: { c: Palette }) {
+  const pulse = useSharedValue(0.08);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(0.18, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.08, { duration: 800, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [pulse]);
+  const shimmer = useAnimatedStyle(() => ({ opacity: pulse.value }));
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: c.depth30,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+      }}
+    >
+      <Animated.View style={[{ width: 180, height: 12, borderRadius: 6, backgroundColor: c.text }, shimmer]} />
+    </View>
+  );
+}
+
 const SKELETON_PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
 export default function PrayerScreen() {
@@ -997,7 +1054,18 @@ export default function PrayerScreen() {
     countdownClock,
     isFetching: prayersFetching,
     status: prayersStatus,
+    refetch: refetchPrayers,
   } = usePrayerTimes(isToday ? undefined : selectedDateStr);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setRefreshing(true);
+    refetchPrayers().finally(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setRefreshing(false);
+    });
+  }, [refetchPrayers]);
   const {
     toggles: prayerToggles,
     getSettings,
@@ -1042,8 +1110,19 @@ export default function PrayerScreen() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <Stack.Screen options={{ headerShown: false }} />
         <ScrollView
-          contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 160 }}
-          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={{ paddingBottom: 160 }}
+          scrollEventThrottle={16}
+          contentInset={{ top: insets.top }}
+          contentOffset={{ x: 0, y: -insets.top }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={c.gold}
+              colors={[c.gold]}
+              progressBackgroundColor={c.bg}
+            />
+          }
         >
           <View style={{ position: 'relative' }}>
             <StarField color={c.gold} />
@@ -1158,36 +1237,40 @@ export default function PrayerScreen() {
           </View>
 
           <View style={{ paddingHorizontal: 20, marginTop: 56 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: c.depth30,
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-              }}
-            >
-              <Pressable hitSlop={12} onPress={goBack} style={{ opacity: dayOffset > 0 ? 1 : 0.3 }}>
-                <MaterialCommunityIcons name="chevron-left" size={22} color={c.muted} />
-              </Pressable>
-              <Pressable onPress={() => setDayOffset(0)} hitSlop={8}>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ color: c.text, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }}>
-                    {selectedDateFormatted}
-                  </Text>
-                  {!isToday && (
-                    <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
-                      TAP TO RETURN TO TODAY
+            {refreshing ? (
+              <DateBarSkeleton c={c} />
+            ) : (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: c.depth30,
+                  borderRadius: 16,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                }}
+              >
+                <Pressable hitSlop={12} onPress={goBack} style={{ opacity: dayOffset > 0 ? 1 : 0.3 }}>
+                  <MaterialCommunityIcons name="chevron-left" size={22} color={c.muted} />
+                </Pressable>
+                <Pressable onPress={() => setDayOffset(0)} hitSlop={8}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: c.text, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }}>
+                      {selectedDateFormatted}
                     </Text>
-                  )}
-                </View>
-              </Pressable>
-              <Pressable hitSlop={12} onPress={goForward} style={{ opacity: dayOffset < 7 ? 1 : 0.3 }}>
-                <MaterialCommunityIcons name="chevron-right" size={22} color={c.muted} />
-              </Pressable>
-            </View>
+                    {!isToday && (
+                      <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
+                        TAP TO RETURN TO TODAY
+                      </Text>
+                    )}
+                  </View>
+                </Pressable>
+                <Pressable hitSlop={12} onPress={goForward} style={{ opacity: dayOffset < 7 ? 1 : 0.3 }}>
+                  <MaterialCommunityIcons name="chevron-right" size={22} color={c.muted} />
+                </Pressable>
+              </View>
+            )}
 
             <View
               style={{
@@ -1213,7 +1296,7 @@ export default function PrayerScreen() {
               <View style={{ width: 20 }} />
             </View>
 
-            {prayersFetching && prayerRows.length === 0 ? (
+            {refreshing || (prayersFetching && prayerRows.length === 0) ? (
               SKELETON_PRAYERS.map((name, i) => (
                 <SkeletonRow key={name} c={c} index={i} />
               ))

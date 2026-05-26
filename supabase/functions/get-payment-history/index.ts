@@ -67,7 +67,7 @@ serve(async (req: Request) => {
     const connectedAccountId = mosque.stripe_account_id;
 
     const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2025-03-31.basil",
+      apiVersion: "2024-12-18.acacia",
       httpClient: Stripe.createFetchHttpClient(),
     });
 
@@ -135,10 +135,15 @@ serve(async (req: Request) => {
       JSON.stringify({ payments }),
       { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
     );
-  } catch (err) {
-    console.error("[get-payment-history] Error:", err);
+  } catch (err: any) {
+    console.error("[get-payment-history] Error:", err?.message ?? err, err?.type, err?.statusCode);
     return new Response(
-      JSON.stringify({ error: "Internal error", detail: String(err) }),
+      JSON.stringify({
+        error: "Internal error",
+        detail: err?.message ?? String(err),
+        type: err?.type,
+        statusCode: err?.statusCode,
+      }),
       { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
     );
   }
