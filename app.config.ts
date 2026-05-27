@@ -1,4 +1,4 @@
-import type { ConfigContext, ExpoConfig } from 'expo/config';
+import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /**
  * Dynamic app config.
@@ -23,25 +23,25 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 type BuildTimeMasjid = { displayName: string };
 
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
-  sahla: { displayName: 'Sahla Demo Masjid' },
-  'mas-cnj': { displayName: 'MAS Central New Jersey' },
+  sahla: { displayName: "Sahla Demo Masjid" },
+  "mas-cnj": { displayName: "MAS Central New Jersey" },
 };
 
-const MASJID_ID = process.env.MASJID_ID ?? 'sahla';
-const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: 'Sahla' };
+const MASJID_ID = process.env.MASJID_ID ?? "sahla";
+const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: "Sahla" };
 
 const IOS_BUNDLE_ID = `com.sahla.${MASJID_ID}`;
-const ANDROID_PACKAGE = `com.sahla.${MASJID_ID.replace(/-/g, '_')}`;
+const ANDROID_PACKAGE = `com.sahla.${MASJID_ID.replace(/-/g, "_")}`;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: masjid.displayName,
-  slug: 'sahla',
-  version: '1.0.0',
-  orientation: 'portrait',
-  icon: './assets/images/sahla-logo-arabic.svg',
+  slug: "sahla",
+  version: "1.0.0",
+  orientation: "portrait",
+  icon: "./assets/images/sahla-logo-arabic.png",
   scheme: `sahla-${MASJID_ID}`,
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
@@ -50,63 +50,63 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
-      foregroundImage: './assets/images/sahla-logo-arabic.svg',
+      backgroundColor: "#E6F4FE",
+      foregroundImage: "./assets/images/sahla-logo-arabic.png",
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: ANDROID_PACKAGE,
   },
   web: {
-    output: 'static',
-    favicon: './assets/images/favicon.png',
+    output: "static",
+    favicon: "./assets/images/favicon.png",
   },
   plugins: [
     [
-      'expo-build-properties',
+      "expo-build-properties",
       {
         ios: {
-          deploymentTarget: '16.0',
+          deploymentTarget: "16.0",
         },
       },
     ],
-    'expo-router',
-    'expo-sqlite',
-    'expo-asset',
-    'expo-apple-authentication',
+    "expo-router",
+    "expo-sqlite",
+    "expo-asset",
+    "expo-apple-authentication",
     [
-      'expo-image-picker',
+      "expo-image-picker",
       {
         photosPermission:
-          'Allow $(PRODUCT_NAME) to access your photos to set your profile picture.',
+          "Allow $(PRODUCT_NAME) to access your photos to set your profile picture.",
         cameraPermission:
-          'Allow $(PRODUCT_NAME) to access your camera to take a profile picture.',
+          "Allow $(PRODUCT_NAME) to access your camera to take a profile picture.",
       },
     ],
-    'expo-video',
+    "expo-video",
     [
-      '@stripe/stripe-react-native',
+      "@stripe/stripe-react-native",
       {
         merchantIdentifier: `merchant.${IOS_BUNDLE_ID}`,
         enableGooglePay: true,
       },
     ],
     [
-      'expo-notifications',
+      "expo-notifications",
       {
-        icon: './assets/images/sahla-logo-arabic.svg',
-        color: '#0A261E',
+        icon: "./assets/images/sahla-logo-arabic.png",
+        color: "#0A261E",
       },
     ],
     [
-      'expo-splash-screen',
+      "expo-splash-screen",
       {
-        image: './assets/images/splash-icon.png',
+        image: "./assets/images/splash-icon.png",
         imageWidth: 200,
-        resizeMode: 'contain',
-        backgroundColor: '#ffffff',
+        resizeMode: "contain",
+        backgroundColor: "#ffffff",
         dark: {
-          backgroundColor: '#000000',
+          backgroundColor: "#000000",
         },
       },
     ],
@@ -116,11 +116,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true,
   },
   extra: {
-    "eas": {
-        "projectId": "f5b5a34b-5283-4351-9e3c-b1059c5671a0"
+    eas: {
+      projectId: "f5b5a34b-5283-4351-9e3c-b1059c5671a0",
     },
     masjidId: MASJID_ID,
     /** Read from `.env` when Metro / prebuild evaluates this file — reliable for dev bypass. */
-    devBypassAuth: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === 'true',
+    devBypassAuth: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === "true",
   },
 });
