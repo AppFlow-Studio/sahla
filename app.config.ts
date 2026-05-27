@@ -39,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'sahla',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: './assets/images/sahla-logo-arabic.svg',
   scheme: `sahla-${MASJID_ID}`,
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
@@ -51,9 +51,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
-      foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundImage: './assets/images/android-icon-background.png',
-      monochromeImage: './assets/images/android-icon-monochrome.png',
+      foregroundImage: './assets/images/sahla-logo-arabic.svg',
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
@@ -96,7 +94,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-notifications',
       {
-        icon: './assets/images/icon.png',
+        icon: './assets/images/sahla-logo-arabic.svg',
         color: '#0A261E',
       },
     ],
