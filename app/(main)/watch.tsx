@@ -7,6 +7,7 @@ import NoWifiSignal from '@/assets/images/no_wifi_signal.png';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -36,6 +37,12 @@ import { useReels, type Reel } from '@/src/hooks/use-reels';
 import { useDismissReel } from '@/src/hooks/use-dismissed-reels';
 import { useIsReelLiked, useToggleReelLike } from '@/src/hooks/use-liked-reels';
 import { useIsReelSaved, useToggleReelSave } from '@/src/hooks/use-saved-reels';
+import {
+  useReportReel,
+  useBlockReelSource,
+  REEL_REPORT_REASONS,
+  type ReelReportReason,
+} from '@/src/hooks/use-report-reel';
 import { useConfigStore } from '@/src/stores/config-store';
 
 
@@ -444,6 +451,81 @@ function DescriptionPanel({
   );
 }
 
+function ReportSheet({
+  visible,
+  onClose,
+  masjidName,
+  onSelectReason,
+  onBlock,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  masjidName: string;
+  onSelectReason: (reason: ReelReportReason) => void;
+  onBlock: () => void;
+}) {
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View
+        style={{
+          backgroundColor: 'rgba(253, 249, 240, 0.98)',
+          borderRadius: 28,
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOpacity: 0.2,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 10,
+        }}
+      >
+        <View
+          style={{
+            alignSelf: 'center',
+            width: 36,
+            height: 5,
+            borderRadius: 3,
+            backgroundColor: 'rgba(10, 38, 30, 0.25)',
+            marginTop: 10,
+          }}
+        />
+        <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 6 }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: '#0A261E' }}>
+            Report this reel
+          </Text>
+          <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)', marginTop: 4 }}>
+            Why are you reporting this?
+          </Text>
+        </View>
+
+        {REEL_REPORT_REASONS.map((r) => (
+          <Pressable
+            key={r.value}
+            onPress={() => onSelectReason(r.value)}
+            className="flex-row items-center justify-between active:opacity-60"
+            style={{ paddingHorizontal: 22, paddingVertical: 14 }}
+          >
+            <Text style={{ fontSize: 15, color: '#0A261E' }}>{r.label}</Text>
+            <Ionicons name="chevron-forward" size={16} color="rgba(10,38,30,0.4)" />
+          </Pressable>
+        ))}
+
+        <View style={{ height: 0.5, backgroundColor: 'rgba(10,38,30,0.12)', marginHorizontal: 22 }} />
+
+        <Pressable
+          onPress={onBlock}
+          className="flex-row items-center active:opacity-60"
+          style={{ paddingHorizontal: 22, paddingVertical: 16 }}
+        >
+          <Ionicons name="ban-outline" size={16} color="#B00020" />
+          <Text style={{ marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#B00020' }}>
+            Block {masjidName}
+          </Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
+  );
+}
+
 export function ReelItem({
   reel,
   height,
@@ -455,6 +537,7 @@ export function ReelItem({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [captionTruncated, setCaptionTruncated] = useState(false);
   // Local pause state — single-tapping the reel toggles play/pause (TikTok-style).
@@ -467,6 +550,44 @@ export function ReelItem({
   const toggleLike = useToggleReelLike(reel.reel_id, reel.mosque_id);
   const liked = !!isLikedQ.data;
   const dismissReel = useDismissReel(reel.reel_id, reel.mosque_id);
+  const reportReel = useReportReel(reel.reel_id, reel.mosque_id);
+  const blockSource = useBlockReelSource(reel.mosque_id);
+
+  const handleSelectReason = (reason: ReelReportReason) => {
+    setReportOpen(false);
+    reportReel.mutate(
+      { reason },
+      {
+        onSuccess: () =>
+          Alert.alert(
+            'Report received',
+            "Thank you. Our team will review this content. We've also hidden it from your feed.",
+          ),
+        onError: () =>
+          Alert.alert('Couldn’t submit report', 'Please check your connection and try again.'),
+      },
+    );
+  };
+
+  const handleBlock = () => {
+    setReportOpen(false);
+    Alert.alert(
+      `Block ${masjidName}?`,
+      `You won't see reels from ${masjidName} anymore. You can’t undo this from the app.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () =>
+            blockSource.mutate(undefined, {
+              onError: () =>
+                Alert.alert('Couldn’t block', 'Please check your connection and try again.'),
+            }),
+        },
+      ],
+    );
+  };
 
   const player = useVideoPlayer(reel.video_url, (p) => {
     p.loop = true;
@@ -696,7 +817,10 @@ export function ReelItem({
                 setMenuOpen(false);
                 dismissReel.mutate();
               }}
-              onReport={() => setMenuOpen(false)}
+              onReport={() => {
+                setMenuOpen(false);
+                setReportOpen(true);
+              }}
             />
           </View>
         </Pressable>
@@ -705,6 +829,14 @@ export function ReelItem({
       <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
         <MasjidCard onClose={() => setSheetOpen(false)} />
       </BottomSheet>
+
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        masjidName={reel.title ?? masjidName}
+        onSelectReason={handleSelectReason}
+        onBlock={handleBlock}
+      />
 
     </Pressable>
   );
