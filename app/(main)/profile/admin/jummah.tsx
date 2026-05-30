@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   Easing,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
@@ -25,6 +28,12 @@ import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
 import { useSpeakers, type SpeakerRow } from '@/src/hooks/use-speakers';
+import {
+  jummahTimeToMinutes,
+  jummahTitle,
+  MAX_REGULAR_JUMMAHS,
+} from '@/src/hooks/use-jummah-schedule';
+import { TimePicker } from '@/src/components/admin/time-picker';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -34,6 +43,7 @@ type JummahRow = {
   speaker: string | null;
   topic: string | null;
   prayer_time: string | null;
+  is_school: boolean;
   speaker_data: {
     speaker_id: string;
     speaker_name: string | null;
@@ -51,14 +61,16 @@ function useJummahAdmin() {
       const { data, error } = await supabase
         .from('jummah')
         .select(
-          `id, mosque_id, speaker, topic, prayer_time,
+          `id, mosque_id, speaker, topic, prayer_time, is_school,
            speaker_data!jummah_speaker_fkey (speaker_id, speaker_name, speaker_img)`,
         )
-        .eq('mosque_id', mosqueUuid!)
-        .order('prayer_time', { ascending: true });
+        .eq('mosque_id', mosqueUuid!);
 
       if (error) throw new Error(error.message);
-      return (data as unknown as JummahRow[]) ?? [];
+      const rows = (data as unknown as JummahRow[]) ?? [];
+      return rows.sort(
+        (a, b) => jummahTimeToMinutes(a.prayer_time) - jummahTimeToMinutes(b.prayer_time),
+      );
     },
     enabled: !!mosqueUuid,
   });
@@ -81,15 +93,17 @@ function useUpdateJummah() {
       speaker,
       topic,
       prayer_time,
+      is_school,
     }: {
       id: number;
       speaker?: string | null;
       topic?: string | null;
       prayer_time?: string | null;
+      is_school?: boolean;
     }) => {
       const { error } = await supabase
         .from('jummah')
-        .update({ speaker, topic, prayer_time })
+        .update({ speaker, topic, prayer_time, is_school })
         .eq('id', id);
       if (error) throw new Error(error.message);
     },
@@ -110,10 +124,12 @@ function useCreateJummah() {
       speaker,
       topic,
       prayer_time,
+      is_school,
     }: {
       speaker?: string | null;
       topic?: string | null;
       prayer_time?: string | null;
+      is_school?: boolean;
     }) => {
       if (!mosqueUuid) throw new Error('No mosque configured');
       const { error } = await supabase.from('jummah').insert({
@@ -121,7 +137,25 @@ function useCreateJummah() {
         speaker: speaker ?? null,
         topic: topic ?? null,
         prayer_time: prayer_time ?? '12:15 PM',
+        is_school: is_school ?? false,
       });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jummah-admin', mosqueUuid] });
+      queryClient.invalidateQueries({ queryKey: ['jummah', mosqueUuid] });
+    },
+  });
+}
+
+function useDeleteJummah() {
+  const supabase = useSupabase();
+  const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from('jummah').delete().eq('id', id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
@@ -141,6 +175,19 @@ export default function JummahAdminScreen() {
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
 
   const { slots, isLoading } = useJummahAdmin();
+  const deleteJummah = useDeleteJummah();
+
+  const regularCount = slots.filter((s) => !s.is_school).length;
+  const schoolCount = slots.filter((s) => s.is_school).length;
+  const atCapacity = regularCount >= MAX_REGULAR_JUMMAHS && schoolCount >= 1;
+
+  // slots arrive sorted by time; number the regular ones, label the school one.
+  let regularSeen = 0;
+  const labeled = slots.map((slot) => {
+    if (slot.is_school) return { slot, title: 'School Jummah', badge: '' };
+    regularSeen += 1;
+    return { slot, title: jummahTitle(false, regularSeen - 1), badge: String(regularSeen) };
+  });
 
   const [editingSlot, setEditingSlot] = useState<JummahRow | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -155,6 +202,21 @@ export default function JummahAdminScreen() {
     setShowForm(true);
   };
 
+  const handleDelete = (slot: JummahRow, title: string) => {
+    Alert.alert(
+      'Delete slot',
+      `Delete "${title}"? This removes it from the home-page schedule.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteJummah.mutate(slot.id),
+        },
+      ],
+    );
+  };
+
   return (
     <View className="flex-1 bg-card" style={{ paddingTop: insets.top }}>
       {/* Header */}
@@ -167,7 +229,13 @@ export default function JummahAdminScreen() {
             Jummah Schedule
           </Text>
         </View>
-        <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
+        <TouchableOpacity
+          onPress={handleAdd}
+          activeOpacity={0.7}
+          hitSlop={8}
+          disabled={atCapacity}
+          style={{ opacity: atCapacity ? 0.35 : 1 }}
+        >
           <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
         </TouchableOpacity>
       </View>
@@ -185,18 +253,20 @@ export default function JummahAdminScreen() {
         </View>
       ) : (
         <FlatList
-          data={slots}
-          keyExtractor={(s) => String(s.id)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          renderItem={({ item, index }) => (
+          data={labeled}
+          keyExtractor={(l) => String(l.slot.id)}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40 }}
+          renderItem={({ item }) => (
             <JummahCard
-              slot={item}
-              index={index}
+              slot={item.slot}
+              title={item.title}
+              badge={item.badge}
               fgRgb={fgRgb}
               mutedRgb={mutedRgb}
               borderColor={borderColor}
               accentRgb={accentRgb}
-              onEdit={() => handleEdit(item)}
+              onEdit={() => handleEdit(item.slot)}
+              onDelete={() => handleDelete(item.slot, item.title)}
             />
           )}
         />
@@ -205,6 +275,8 @@ export default function JummahAdminScreen() {
       <JummahFormModal
         visible={showForm}
         slot={editingSlot}
+        regularUsed={slots.filter((s) => !s.is_school && s.id !== editingSlot?.id).length}
+        schoolUsed={slots.filter((s) => s.is_school && s.id !== editingSlot?.id).length}
         onClose={() => setShowForm(false)}
       />
     </View>
@@ -215,20 +287,24 @@ export default function JummahAdminScreen() {
 
 function JummahCard({
   slot,
-  index,
+  title,
+  badge,
   fgRgb,
   mutedRgb,
   borderColor,
   accentRgb,
   onEdit,
+  onDelete,
 }: {
   slot: JummahRow;
-  index: number;
+  title: string;
+  badge: string;
   fgRgb: string;
   mutedRgb: string;
   borderColor: string;
   accentRgb: string;
   onEdit: () => void;
+  onDelete: () => void;
 }) {
   const speakerName =
     (slot.speaker_data as JummahRow['speaker_data'])?.speaker_name ?? 'Unassigned';
@@ -256,14 +332,18 @@ function JummahCard({
           marginRight: 12,
         }}
       >
-        <Text style={{ color: accentRgb, fontSize: 13, fontWeight: '700' }}>
-          {index + 1}
-        </Text>
+        {slot.is_school ? (
+          <Ionicons name="school-outline" size={18} color={accentRgb} />
+        ) : (
+          <Text style={{ color: accentRgb, fontSize: 13, fontWeight: '700' }}>
+            {badge}
+          </Text>
+        )}
       </View>
 
       <View className="flex-1">
         <Text style={{ color: fgRgb, fontSize: 14, fontWeight: '600' }}>
-          Jummah {index + 1}
+          {title}
         </Text>
         <Text style={{ color: mutedRgb, fontSize: 11, marginTop: 2 }}>
           {speakerName} · {slot.prayer_time ?? 'No time set'}
@@ -281,7 +361,12 @@ function JummahCard({
         </View>
       ) : null}
 
-      <Ionicons name="pencil-outline" size={16} color={mutedRgb} />
+      <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 16 }}>
+        <Ionicons name="pencil-outline" size={16} color={mutedRgb} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onDelete} hitSlop={8}>
+        <Ionicons name="trash-outline" size={16} color="rgb(239,68,68)" />
+      </TouchableOpacity>
     </Pressable>
   );
 }
@@ -291,13 +376,19 @@ function JummahCard({
 function JummahFormModal({
   visible,
   slot,
+  regularUsed,
+  schoolUsed,
   onClose,
 }: {
   visible: boolean;
   slot: JummahRow | null;
+  /** Regular/school slots already taken by *other* slots (excludes this one). */
+  regularUsed: number;
+  schoolUsed: number;
   onClose: () => void;
 }) {
   const { colors } = useMasjidConfig();
+  const insets = useSafeAreaInsets();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const bgRgb = `rgb(${colors.card.replace(/ /g, ',')})`;
   const labelColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.6)`;
@@ -314,18 +405,55 @@ function JummahFormModal({
   const [selectedSpeaker, setSelectedSpeaker] = useState<string | null>(null);
   const [topic, setTopic] = useState('');
   const [prayerTime, setPrayerTime] = useState('');
+  const [isSchool, setIsSchool] = useState(false);
+
+  const canRegular = regularUsed < MAX_REGULAR_JUMMAHS;
+  const canSchool = schoolUsed < 1;
 
   const [mounted, setMounted] = useState(false);
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const translateY = useRef(new Animated.Value(SCREEN_H)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const animate = (duration?: number) =>
+      LayoutAnimation.configureNext({
+        duration: duration ?? 250,
+        update: { type: LayoutAnimation.Types.keyboard ?? LayoutAnimation.Types.easeInEaseOut },
+      });
+    const showSub = Keyboard.addListener(showEvt, (e) => {
+      animate(e.duration);
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+      setKeyboardUp(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvt, (e) => {
+      animate(e?.duration);
+      setKeyboardUp(false);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // When the keyboard is up, shrink the sheet from the top so the whole thing
+  // fits in the space above the keyboard instead of clipping.
+  const sheetMaxHeight = keyboardUp
+    ? SCREEN_H - keyboardHeight - insets.top - 20
+    : SCREEN_H * 0.75;
 
   useEffect(() => {
     if (visible) {
       setSelectedSpeaker(slot?.speaker ?? null);
       setTopic(slot?.topic ?? '');
       setPrayerTime(slot?.prayer_time ?? '12:15 PM');
+      // Editing keeps its type; new slots default to regular when there's room.
+      setIsSchool(slot ? slot.is_school : !canRegular && canSchool);
     }
-  }, [visible, slot]);
+  }, [visible, slot, canRegular, canSchool]);
 
   useEffect(() => {
     if (visible) {
@@ -370,6 +498,7 @@ function JummahFormModal({
           speaker: selectedSpeaker,
           topic: topic.trim() || null,
           prayer_time: prayerTime.trim() || null,
+          is_school: isSchool,
         },
         { onSuccess: onClose },
       );
@@ -379,6 +508,7 @@ function JummahFormModal({
           speaker: selectedSpeaker,
           topic: topic.trim() || null,
           prayer_time: prayerTime.trim() || null,
+          is_school: isSchool,
         },
         { onSuccess: onClose },
       );
@@ -389,7 +519,7 @@ function JummahFormModal({
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1 justify-end px-2 pb-3"
+        className="flex-1 justify-end px-2"
       >
         <Animated.View
           pointerEvents={visible ? 'auto' : 'none'}
@@ -410,13 +540,14 @@ function JummahFormModal({
           style={{
             backgroundColor: bgRgb,
             borderRadius: 48,
+            marginBottom: keyboardUp ? 8 : 12,
             transform: [{ translateY }],
             shadowColor: fgRgb,
             shadowOffset: { width: 0, height: 8 },
             shadowOpacity: 0.12,
             shadowRadius: 24,
             elevation: 12,
-            maxHeight: SCREEN_H * 0.75,
+            maxHeight: sheetMaxHeight,
           }}
         >
           <View className="items-center pb-2 pt-3">
@@ -437,7 +568,73 @@ function JummahFormModal({
             </Text>
           </View>
 
-          <ScrollView className="px-6" style={{ maxHeight: SCREEN_H * 0.45 }}>
+          <ScrollView
+            className="px-6"
+            keyboardShouldPersistTaps="handled"
+            style={{
+              maxHeight: keyboardUp
+                ? Math.max(sheetMaxHeight - 190, 120)
+                : SCREEN_H * 0.45,
+            }}
+          >
+            {/* Type: Regular vs School Jummah */}
+            <Text
+              style={{
+                fontSize: 10,
+                fontWeight: '700',
+                letterSpacing: 1.4,
+                textTransform: 'uppercase',
+                color: labelColor,
+                marginBottom: 8,
+              }}
+            >
+              Type
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                backgroundColor: borderColor,
+                borderRadius: 12,
+                padding: 3,
+                marginBottom: 20,
+              }}
+            >
+              {[
+                { label: 'Regular Jummah', value: false, enabled: canRegular },
+                { label: 'School Jummah', value: true, enabled: canSchool },
+              ].map((opt) => {
+                const active = isSchool === opt.value;
+                const disabled = !active && !opt.enabled;
+                return (
+                  <TouchableOpacity
+                    key={opt.label}
+                    activeOpacity={0.8}
+                    disabled={disabled}
+                    onPress={() => setIsSchool(opt.value)}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 9,
+                      borderRadius: 10,
+                      backgroundColor: active ? accentRgb : 'transparent',
+                      opacity: disabled ? 0.35 : 1,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: active ? bgRgb : labelColor,
+                      }}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             {/* Speaker Picker */}
             <Text
               style={{
@@ -576,20 +773,12 @@ function JummahFormModal({
               >
                 Prayer Time
               </Text>
-              <TextInput
+              <TimePicker
                 value={prayerTime}
-                onChangeText={setPrayerTime}
-                placeholder="e.g. 12:15 PM"
-                placeholderTextColor={placeholderColor}
-                style={{
-                  fontSize: 14,
-                  fontWeight: '500',
-                  color: fgRgb,
-                  borderBottomWidth: 1,
-                  borderBottomColor: borderColor,
-                  paddingBottom: 8,
-                  paddingTop: 2,
-                }}
+                onChange={setPrayerTime}
+                accentRgb={accentRgb}
+                fgRgb={fgRgb}
+                borderColor={borderColor}
               />
             </View>
           </ScrollView>

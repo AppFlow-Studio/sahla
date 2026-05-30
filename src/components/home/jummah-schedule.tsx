@@ -20,7 +20,7 @@ export function JummahScheduleCard() {
   if (slots.length === 0) return null;
 
   return (
-    <View className="px-5 pt-2">
+    <View className="px-5 pb-5 pt-2">
       <View
         className="self-start"
         style={{

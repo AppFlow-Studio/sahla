@@ -6,7 +6,9 @@ import {
   Dimensions,
   Easing,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
@@ -34,6 +36,8 @@ import {
   type AdminContentItem,
   type ContentType,
 } from '@/src/hooks/use-content-admin';
+import { TimePicker } from '@/src/components/admin/time-picker';
+import { DatePicker } from '@/src/components/admin/date-picker';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -113,7 +117,7 @@ export default function ProgramsScreen() {
         <FlatList
           data={items}
           keyExtractor={(i) => i.content_id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40 }}
           renderItem={({ item }) => (
             <ContentCard
               item={item}
@@ -214,6 +218,7 @@ function ContentFormModal({
   onClose: () => void;
 }) {
   const { colors } = useMasjidConfig();
+  const insets = useSafeAreaInsets();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const bgRgb = `rgb(${colors.card.replace(/ /g, ',')})`;
   const labelColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.6)`;
@@ -245,8 +250,39 @@ function ContentFormModal({
   const [isYoungPros, setIsYoungPros] = useState(false);
 
   const [mounted, setMounted] = useState(false);
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const translateY = useRef(new Animated.Value(SCREEN_H)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const animate = (duration?: number) =>
+      LayoutAnimation.configureNext({
+        duration: duration ?? 250,
+        update: { type: LayoutAnimation.Types.keyboard ?? LayoutAnimation.Types.easeInEaseOut },
+      });
+    const showSub = Keyboard.addListener(showEvt, (e) => {
+      animate(e.duration);
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+      setKeyboardUp(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvt, (e) => {
+      animate(e?.duration);
+      setKeyboardUp(false);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // When the keyboard is up, shrink the sheet from the top so the whole thing
+  // fits in the space above the keyboard instead of clipping.
+  const sheetMaxHeight = keyboardUp
+    ? SCREEN_H - keyboardHeight - insets.top - 20
+    : SCREEN_H * 0.84;
 
   useEffect(() => {
     if (visible) {
@@ -258,7 +294,7 @@ function ContentFormModal({
       setDays(item?.days ?? []);
       setStartDate(item?.start_date ?? '');
       setEndDate(item?.end_date ?? '');
-      setStartTime(item?.start_time ?? '');
+      setStartTime(item?.start_time ?? '16:00');
       setSelectedSpeakers(item?.speakers ?? []);
       setIsKids(item?.is_kids ?? false);
       setIsFourteenPlus(item?.is_fourteen_plus ?? false);
@@ -377,7 +413,7 @@ function ContentFormModal({
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1 justify-end px-2 pb-3"
+        className="flex-1 justify-end px-2"
       >
         <Animated.View
           pointerEvents={visible ? 'auto' : 'none'}
@@ -398,7 +434,8 @@ function ContentFormModal({
           style={{
             backgroundColor: bgRgb,
             borderRadius: 40,
-            maxHeight: SCREEN_H * 0.88,
+            maxHeight: sheetMaxHeight,
+            marginBottom: keyboardUp ? 8 : 12,
             transform: [{ translateY }],
             shadowColor: fgRgb,
             shadowOffset: { width: 0, height: 8 },
@@ -573,41 +610,42 @@ function ContentFormModal({
               </View>
             ) : (
               <View style={{ marginBottom: 20 }}>
-                {sectionLabel('Date (YYYY-MM-DD)')}
-                <TextInput
+                {sectionLabel('Date')}
+                <DatePicker
                   value={startDate}
-                  onChangeText={setStartDate}
-                  placeholder="2026-06-15"
-                  placeholderTextColor={placeholderColor}
-                  keyboardType="numbers-and-punctuation"
-                  style={inputStyle}
+                  onChange={setStartDate}
+                  accentRgb={accentRgb}
+                  fgRgb={fgRgb}
+                  labelColor={labelColor}
+                  borderColor={borderColor}
                 />
               </View>
             )}
 
             {/* Time */}
             <View style={{ marginBottom: 20 }}>
-              {sectionLabel('Start time (HH:MM, 24h)')}
-              <TextInput
+              {sectionLabel('Start time')}
+              <TimePicker
                 value={startTime}
-                onChangeText={setStartTime}
-                placeholder="16:00"
-                placeholderTextColor={placeholderColor}
-                keyboardType="numbers-and-punctuation"
-                style={inputStyle}
+                onChange={setStartTime}
+                mode="24h"
+                accentRgb={accentRgb}
+                fgRgb={fgRgb}
+                borderColor={borderColor}
               />
             </View>
 
             {/* End date (optional) */}
             <View style={{ marginBottom: 20 }}>
-              {sectionLabel('End date (optional, YYYY-MM-DD)')}
-              <TextInput
+              {sectionLabel('End date (optional)')}
+              <DatePicker
                 value={endDate}
-                onChangeText={setEndDate}
-                placeholder="Leave blank for single day"
-                placeholderTextColor={placeholderColor}
-                keyboardType="numbers-and-punctuation"
-                style={inputStyle}
+                onChange={setEndDate}
+                accentRgb={accentRgb}
+                fgRgb={fgRgb}
+                labelColor={labelColor}
+                borderColor={borderColor}
+                allowClear
               />
             </View>
 

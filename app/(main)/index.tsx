@@ -19,28 +19,29 @@ import { RecommendedForYou } from '@/src/components/home/recommended-for-you';
 import { CommunityPartners } from '@/src/components/home/community-partners';
 import { CommunityPartnerCta } from '@/src/components/home/community-partner-cta';
 import { JummahScheduleCard } from '@/src/components/home/jummah-schedule';
-import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
-
-const JUMMAH_HEIGHT = 360;
+import { useJummahSchedule, useJummahWindow } from '@/src/hooks/use-jummah-schedule';
 
 export default function HomeScreen() {
-  const { features } = useMasjidConfig();
-  const { prayers } = usePrayerTimes();
-  const showJummah = features.jumaahRegistration;
-  const isMaghribTime =
-    prayers.find((p) => p.name === 'Maghrib')?.isActive ?? false;
+  // The Jummah card is driven entirely by the admin schedule: it shows whenever
+  // the mosque has configured at least one slot and we're inside the weekly
+  // window (Thursday Maghrib → Friday Asr).
+  const { slots } = useJummahSchedule();
+  const jummahWindowOpen = useJummahWindow();
+  const showJummah = slots.length > 0 && jummahWindowOpen;
   const progress = useSharedValue(0);
+  // Measured natural height of the card, so the reveal grows/shrinks with the
+  // number of jummah slots instead of using a fixed height.
+  const cardHeight = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming(isMaghribTime && showJummah ? 1 : 0, {
+    progress.value = withTiming(showJummah ? 1 : 0, {
       duration: 850,
       easing: Easing.inOut(Easing.cubic),
     });
-  }, [isMaghribTime, showJummah, progress]);
+  }, [showJummah, progress]);
 
   const revealStyle = useAnimatedStyle(() => ({
-    height: interpolate(progress.value, [0, 1], [0, JUMMAH_HEIGHT]),
+    height: progress.value * cardHeight.value,
   }));
 
   const cardStyle = useAnimatedStyle(() => ({
@@ -51,10 +52,26 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-primary">
       <StatusBar style="light" />
+
+      {/* Hidden measurer: renders the card at its natural height (outside the
+          clipped reveal container, which would otherwise clamp it to 0) so we
+          know how far to expand the reveal. */}
+      {slots.length > 0 && (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, opacity: 0 }}
+          onLayout={(e) => {
+            cardHeight.value = e.nativeEvent.layout.height;
+          }}
+        >
+          <JummahScheduleCard />
+        </View>
+      )}
+
       <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
         <HomeHeader />
 
-        {showJummah && (
+        {slots.length > 0 && (
           <Animated.View style={[{ overflow: 'hidden' }, revealStyle]}>
             <Animated.View style={cardStyle}>
               <JummahScheduleCard />

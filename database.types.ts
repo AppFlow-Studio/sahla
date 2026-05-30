@@ -1197,6 +1197,7 @@ export type Database = {
           capacity_status: string | null
           created_at: string
           id: number
+          is_school: boolean
           mosque_id: string
           prayer_time: string | null
           speaker: string | null
@@ -1207,6 +1208,7 @@ export type Database = {
           capacity_status?: string | null
           created_at?: string
           id?: never
+          is_school?: boolean
           mosque_id: string
           prayer_time?: string | null
           speaker?: string | null
@@ -1217,6 +1219,7 @@ export type Database = {
           capacity_status?: string | null
           created_at?: string
           id?: never
+          is_school?: boolean
           mosque_id?: string
           prayer_time?: string | null
           speaker?: string | null
