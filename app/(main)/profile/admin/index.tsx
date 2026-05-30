@@ -74,6 +74,15 @@ export default function AdminHub() {
           borderColor={borderColor}
           onPress={() => router.push('/profile/admin/jummah')}
         />
+        <AdminRow
+          title="Iqamah Times"
+          subtitle="Set iqamah for each daily prayer"
+          icon="time-outline"
+          fgRgb={fgRgb}
+          mutedRgb={mutedRgb}
+          borderColor={borderColor}
+          onPress={() => router.push('/profile/admin/iqamah')}
+        />
       </ScrollView>
     </View>
   );

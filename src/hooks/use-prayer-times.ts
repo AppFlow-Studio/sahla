@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
+import { computeIqamahTime, useIqamahConfig, type IqamahRule } from '@/src/hooks/use-iqamah';
 
 export type PrayerStatus = 'passed' | 'next' | 'upcoming';
 
@@ -18,7 +19,8 @@ export type PrayerEntry = {
   iqamah: string;
   /** Raw HH:MM:SS time-of-day from the DB. */
   athanTimeRaw: string;
-  iqamahTimeRaw: string;
+  /** Computed iqamah time-of-day, or null when no rule/value applies. */
+  iqamahTimeRaw: string | null;
   status: PrayerStatus;
 };
 
@@ -222,6 +224,16 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
     enabled: !!mosqueUuid,
   });
 
+  // Iqamah is derived from per-prayer rules (fixed time or athan+offset) rather
+  // than stored per day, so sync-prayer-times can leave todays_prayers.iqamah_time
+  // null and we compute it here from the day's athan.
+  const { rules } = useIqamahConfig();
+  const ruleMap = useMemo(() => {
+    const m = new Map<string, IqamahRule>();
+    for (const r of rules) m.set(r.prayer_name.toLowerCase(), r);
+    return m;
+  }, [rules]);
+
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
@@ -247,13 +259,17 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
       const isPassed = isToday && nextAthanSec !== null && nextAthanSec <= now.totalSeconds;
       const status: PrayerStatus =
         isPassed ? 'passed' : 'upcoming';
+      // Prefer the configured rule; fall back to any iqamah_time already stored.
+      const iqamahRaw =
+        computeIqamahTime(r.athan_time, ruleMap.get(r.prayer_name.toLowerCase())) ??
+        r.iqamah_time;
       return {
         name: titleCase(r.prayer_name),
         rawName: r.prayer_name,
         athan: formatTo12Hour(r.athan_time),
-        iqamah: formatTo12Hour(r.iqamah_time),
+        iqamah: formatTo12Hour(iqamahRaw),
         athanTimeRaw: r.athan_time,
-        iqamahTimeRaw: r.iqamah_time,
+        iqamahTimeRaw: iqamahRaw,
         status,
       };
     });
@@ -333,7 +349,7 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
     };
     // `tick` re-runs the memo every second so countdown / status / clock stay live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.data, timezone, tick, isToday]);
+  }, [query.data, timezone, tick, isToday, ruleMap]);
 
   const status: UsePrayerTimesResult['status'] = !mosqueUuid
     ? 'idle'
