@@ -119,7 +119,7 @@ export default function IqamahScreen() {
       ) : (
         <ScrollView
           className="flex-1 px-5"
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 24 }}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 140 }}
           showsVerticalScrollIndicator={false}
         >
           <Text style={{ color: mutedRgb, fontSize: 12, lineHeight: 18, marginBottom: 16 }}>
@@ -232,26 +232,14 @@ export default function IqamahScreen() {
               </View>
             );
           })}
-        </ScrollView>
-      )}
 
-      {/* Save */}
-      {!isLoading && (
-        <View
-          className="px-5"
-          style={{
-            paddingTop: 12,
-            paddingBottom: insets.bottom + 12,
-            borderTopWidth: 0.5,
-            borderTopColor: borderColor,
-          }}
-        >
+          {/* Save */}
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleSave}
             disabled={!dirty || save.isPending}
             className="items-center justify-center rounded-full bg-primary"
-            style={{ height: 48, opacity: !dirty || save.isPending ? 0.5 : 1 }}
+            style={{ height: 48, marginTop: 8, opacity: !dirty || save.isPending ? 0.5 : 1 }}
           >
             <Text className="text-[15px] font-semibold text-primary-foreground">
               {save.isPending ? 'Saving...' : save.isSuccess && !dirty ? 'Saved' : 'Save'}
@@ -262,7 +250,7 @@ export default function IqamahScreen() {
               {save.error?.message ?? 'Failed to save'}
             </Text>
           )}
-        </View>
+        </ScrollView>
       )}
     </View>
   );
