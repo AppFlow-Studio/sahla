@@ -21,3 +21,6 @@ verify_jwt = false
 
 [functions.get-content-items]
 verify_jwt = false
+
+[functions.send-prayer-notifications]
+verify_jwt = false
