@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useContentItems, type ContentItem } from '@/src/hooks/use-content-items';
+import { describeRecurrence, ruleFromRow } from '@/src/lib/recurrence';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -14,6 +15,10 @@ const SHORT_MONTHS = [
 ];
 
 function formatProgramDate(item: ContentItem): string {
+  // Recurring programs have no single start_date — describe the pattern.
+  if (item.recurrence_freq && item.recurrence_freq !== 'once') {
+    return describeRecurrence(ruleFromRow(item)) ?? (item.days ?? []).join(', ');
+  }
   if (item.start_date) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(item.start_date);
     if (m) {

@@ -21,10 +21,14 @@ export type ContentItem = {
   is_pace: boolean;
   is_quran: boolean;
   is_weekly_program: boolean;
+  recurrence_freq?: string | null;
+  recurrence_interval?: number | null;
+  recurrence_anchor?: string | null;
+  week_of_month?: number | null;
 };
 
 const SELECT =
-  'content_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_kids, is_fourteen_plus, is_young_professionals, is_pace, is_quran, is_weekly_program' as const;
+  'content_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_kids, is_fourteen_plus, is_young_professionals, is_pace, is_quran, is_weekly_program, recurrence_freq, recurrence_interval, recurrence_anchor, week_of_month' as const;
 
 // --- MOCK DATA: used when auth is bypassed ---
 const MOCK_CONTENT_ITEMS: ContentItem[] = [

@@ -551,12 +551,16 @@ export type Database = {
           name: string | null
           paid_link: string | null
           price: number | null
+          recurrence_anchor: string | null
+          recurrence_freq: string
+          recurrence_interval: number
           speakers: string[] | null
           start_date: string | null
           start_time: string | null
           stripe_price_id: string | null
           stripe_product_id: string | null
           type: string
+          week_of_month: number | null
         }
         Insert: {
           content_id?: string
@@ -581,12 +585,16 @@ export type Database = {
           name?: string | null
           paid_link?: string | null
           price?: number | null
+          recurrence_anchor?: string | null
+          recurrence_freq?: string
+          recurrence_interval?: number
           speakers?: string[] | null
           start_date?: string | null
           start_time?: string | null
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           type: string
+          week_of_month?: number | null
         }
         Update: {
           content_id?: string
@@ -611,12 +619,16 @@ export type Database = {
           name?: string | null
           paid_link?: string | null
           price?: number | null
+          recurrence_anchor?: string | null
+          recurrence_freq?: string
+          recurrence_interval?: number
           speakers?: string[] | null
           start_date?: string | null
           start_time?: string | null
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           type?: string
+          week_of_month?: number | null
         }
         Relationships: [
           {

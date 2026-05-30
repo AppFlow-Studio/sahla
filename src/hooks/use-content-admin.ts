@@ -38,6 +38,10 @@ export type AdminContentItem = {
   days: string[] | null;
   speakers: string[] | null;
   is_weekly_program: boolean;
+  recurrence_freq: string | null;
+  recurrence_interval: number | null;
+  recurrence_anchor: string | null;
+  week_of_month: number | null;
   is_kids: boolean | null;
   is_fourteen_plus: boolean | null;
   is_young_professionals: boolean | null;
@@ -45,7 +49,7 @@ export type AdminContentItem = {
 };
 
 const SELECT =
-  'content_id, mosque_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_weekly_program, is_kids, is_fourteen_plus, is_young_professionals, created_at' as const;
+  'content_id, mosque_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_weekly_program, recurrence_freq, recurrence_interval, recurrence_anchor, week_of_month, is_kids, is_fourteen_plus, is_young_professionals, created_at' as const;
 
 /** All of this mosque's content items (newest first) for the admin list. */
 export function useAdminContentItems() {
@@ -85,6 +89,10 @@ export type ContentItemInput = {
   days?: string[] | null;
   speakers?: string[] | null;
   is_weekly_program?: boolean;
+  recurrence_freq?: string;
+  recurrence_interval?: number;
+  recurrence_anchor?: string | null;
+  week_of_month?: number | null;
   is_kids?: boolean;
   is_fourteen_plus?: boolean;
   is_young_professionals?: boolean;

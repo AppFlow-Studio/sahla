@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
+import { occursOn, ruleFromRow } from '@/src/lib/recurrence';
 
 export type TodaysEvent = {
   id: string;
@@ -26,10 +27,6 @@ export function useTodaysEvents() {
 
   const now = new Date();
   const todayStr = now.toLocaleDateString('en-CA', { timeZone: timezone });
-  const todayDayName = now.toLocaleDateString('en-US', {
-    timeZone: timezone,
-    weekday: 'long',
-  });
   const todayFormatted = now.toLocaleDateString('en-US', {
     timeZone: timezone,
     month: 'short',
@@ -40,10 +37,13 @@ export function useTodaysEvents() {
   const query = useQuery({
     queryKey: ['todays-events', mosqueUuid, todayStr],
     queryFn: async (): Promise<TodaysEvent[]> => {
-      // Fetch events where today falls in range OR today's day name is in days[]
+      // Fetch everything for this mosque and decide locally whether each item
+      // happens today — recurrence math lives in src/lib/recurrence.
       const { data, error } = await supabase
         .from('content_items')
-        .select('content_id, name, type, start_time, days, start_date, end_date')
+        .select(
+          'content_id, name, type, start_time, days, start_date, end_date, recurrence_freq, recurrence_interval, recurrence_anchor, week_of_month',
+        )
         .eq('mosque_id', mosqueUuid!)
         .order('start_time', { ascending: true });
 
@@ -52,26 +52,19 @@ export function useTodaysEvents() {
 
       return data
         .filter((item) => {
-          const startDate = item.start_date?.split('T')[0] ?? null;
-          const endDate = item.end_date?.split('T')[0] ?? null;
-          const days: string[] | null = item.days;
+          const freq = item.recurrence_freq ?? 'once';
 
-          // Recurring: today's day name is in the days array
-          if (days && days.includes(todayDayName)) {
-            if (startDate && startDate > todayStr) return false;
-            if (endDate && endDate < todayStr) return false;
-            return true;
+          // One-time items may span a date range (e.g. a multi-day event) —
+          // show them on every day within the window.
+          if (freq === 'once') {
+            const startDate = item.start_date?.split('T')[0] ?? null;
+            const endDate = item.end_date?.split('T')[0] ?? null;
+            if (!startDate || startDate > todayStr) return false;
+            if (endDate) return endDate >= todayStr;
+            return startDate === todayStr;
           }
 
-          // Date-range: today falls within start_date..end_date
-          if (startDate) {
-            if (startDate > todayStr) return false;
-            if (endDate && endDate < todayStr) return false;
-            if (!endDate && startDate === todayStr) return true;
-            if (endDate) return true;
-          }
-
-          return false;
+          return occursOn(ruleFromRow(item), todayStr);
         })
         .map((item) => ({
           id: item.content_id,

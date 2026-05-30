@@ -38,6 +38,11 @@ import {
 } from '@/src/hooks/use-content-admin';
 import { TimePicker } from '@/src/components/admin/time-picker';
 import { DatePicker } from '@/src/components/admin/date-picker';
+import {
+  WEEK_OF_MONTH_OPTIONS,
+  describeRecurrence,
+  type RecurrenceFreq,
+} from '@/src/lib/recurrence';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -153,9 +158,20 @@ function ContentCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const schedule = item.is_weekly_program
-    ? (item.days ?? []).map((d) => d.slice(0, 3)).join(', ')
-    : (item.start_date ?? '');
+  const schedule =
+    item.recurrence_freq && item.recurrence_freq !== 'once'
+      ? (describeRecurrence({
+          freq: item.recurrence_freq as RecurrenceFreq,
+          interval: item.recurrence_interval ?? 1,
+          days: item.days,
+          anchor: item.recurrence_anchor,
+          weekOfMonth: item.week_of_month,
+          startDate: item.start_date,
+          endDate: item.end_date,
+        }) ?? '')
+      : item.is_weekly_program
+        ? (item.days ?? []).map((d) => d.slice(0, 3)).join(', ')
+        : (item.start_date ?? '');
   const sub = [typeLabel(item.type), schedule, item.start_time].filter(Boolean).join(' · ');
 
   return (
@@ -232,6 +248,8 @@ function ContentFormModal({
   const { pickAndUpload, isUploading } = useUploadContentImage();
   const { speakers } = useSpeakers();
 
+  const todayStr = new Date().toLocaleDateString('en-CA');
+
   const isEditing = item !== null;
   const mutation = isEditing ? updateItem : createItem;
 
@@ -239,7 +257,10 @@ function ContentFormModal({
   const [type, setType] = useState<ContentType>('event');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<string | null>(null);
-  const [isWeekly, setIsWeekly] = useState(false);
+  const [freq, setFreq] = useState<RecurrenceFreq>('once');
+  const [repeatInterval, setRepeatInterval] = useState(1);
+  const [weekOfMonth, setWeekOfMonth] = useState(1);
+  const [anchor, setAnchor] = useState('');
   const [days, setDays] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -290,7 +311,13 @@ function ContentFormModal({
       setType((item?.type as ContentType) ?? 'event');
       setDescription(item?.description ?? '');
       setImage(item?.image ?? null);
-      setIsWeekly(item?.is_weekly_program ?? false);
+      const initFreq: RecurrenceFreq =
+        (item?.recurrence_freq as RecurrenceFreq) ??
+        (item?.is_weekly_program ? 'weekly' : 'once');
+      setFreq(initFreq);
+      setRepeatInterval(item?.recurrence_interval ?? 1);
+      setWeekOfMonth(item?.week_of_month ?? 1);
+      setAnchor(item?.recurrence_anchor ?? todayStr);
       setDays(item?.days ?? []);
       setStartDate(item?.start_date ?? '');
       setEndDate(item?.end_date ?? '');
@@ -347,13 +374,23 @@ function ContentFormModal({
     }
   }, [item, pickAndUpload]);
 
+  // Weekly programs can land on several weekdays; monthly "Nth weekday" picks
+  // exactly one.
   const toggleDay = (day: string) =>
-    setDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+    setDays((prev) =>
+      freq === 'monthly'
+        ? [day]
+        : prev.includes(day)
+          ? prev.filter((d) => d !== day)
+          : [...prev, day],
+    );
 
   const toggleSpeaker = (n: string) =>
     setSelectedSpeakers((prev) =>
       prev.includes(n) ? prev.filter((s) => s !== n) : [...prev, n],
     );
+
+  const isRecurring = freq !== 'once';
 
   const handleSave = () => {
     const payload = {
@@ -363,11 +400,16 @@ function ContentFormModal({
       image,
       start_time: startTime.trim() || null,
       end_date: endDate.trim() || null,
-      is_weekly_program: isWeekly,
-      // Weekly programs recur on days[] with no single start_date; one-time
-      // events use start_date and carry no recurring days.
-      days: isWeekly ? days : null,
-      start_date: isWeekly ? null : startDate.trim() || null,
+      // is_weekly_program is kept for back-compat reads; recurrence_* is the
+      // source of truth. Recurring items repeat on days[] from recurrence_anchor
+      // with no single start_date; one-time events use start_date only.
+      is_weekly_program: isRecurring,
+      recurrence_freq: freq,
+      recurrence_interval: isRecurring ? repeatInterval : 1,
+      recurrence_anchor: isRecurring ? anchor.trim() || null : null,
+      week_of_month: freq === 'monthly' ? weekOfMonth : null,
+      days: isRecurring ? days : null,
+      start_date: isRecurring ? null : startDate.trim() || null,
       speakers: selectedSpeakers.length > 0 ? selectedSpeakers : null,
       is_kids: isKids,
       is_fourteen_plus: isFourteenPlus,
@@ -381,8 +423,25 @@ function ContentFormModal({
     }
   };
 
-  const scheduleValid = isWeekly ? days.length > 0 : startDate.trim().length > 0;
+  const scheduleValid =
+    freq === 'once'
+      ? startDate.trim().length > 0
+      : freq === 'weekly'
+        ? days.length > 0 && anchor.trim().length > 0
+        : days.length === 1 && anchor.trim().length > 0;
   const canSave = name.trim().length > 0 && scheduleValid && !mutation.isPending;
+
+  const recurrencePreview = isRecurring
+    ? describeRecurrence({
+        freq,
+        interval: repeatInterval,
+        days,
+        anchor,
+        weekOfMonth,
+        startDate: null,
+        endDate: endDate.trim() || null,
+      })
+    : null;
 
   const sectionLabel = (text: string) => (
     <Text
@@ -397,6 +456,26 @@ function ContentFormModal({
     >
       {text}
     </Text>
+  );
+
+  const pill = (label: string, active: boolean, onPress: () => void) => (
+    <TouchableOpacity
+      key={label}
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={{
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 999,
+        backgroundColor: active ? accentRgb : 'transparent',
+        borderWidth: 1,
+        borderColor: active ? accentRgb : borderColor,
+      }}
+    >
+      <Text style={{ fontSize: 12, fontWeight: '600', color: active ? '#fff' : fgRgb }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
   );
 
   const inputStyle = {
@@ -549,18 +628,26 @@ function ContentFormModal({
               />
             </View>
 
-            {/* Schedule: one-time vs recurring */}
+            {/* Schedule: how often it repeats */}
             {sectionLabel('Schedule')}
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-              {[
-                { label: 'One-time', recurring: false },
-                { label: 'Recurring', recurring: true },
-              ].map((opt) => {
-                const active = isWeekly === opt.recurring;
+              {(
+                [
+                  { label: 'One-time', value: 'once' },
+                  { label: 'Weekly', value: 'weekly' },
+                  { label: 'Monthly', value: 'monthly' },
+                ] as { label: string; value: RecurrenceFreq }[]
+              ).map((opt) => {
+                const active = freq === opt.value;
                 return (
                   <TouchableOpacity
-                    key={opt.label}
-                    onPress={() => setIsWeekly(opt.recurring)}
+                    key={opt.value}
+                    onPress={() => {
+                      setFreq(opt.value);
+                      if (opt.value !== 'once' && !anchor) setAnchor(todayStr);
+                      // Monthly picks a single weekday; trim any extra selection.
+                      if (opt.value === 'monthly' && days.length > 1) setDays(days.slice(0, 1));
+                    }}
                     activeOpacity={0.8}
                     style={{
                       flex: 1,
@@ -580,35 +667,8 @@ function ContentFormModal({
               })}
             </View>
 
-            {isWeekly ? (
-              <View style={{ marginBottom: 20 }}>
-                {sectionLabel('Repeats on')}
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {WEEK_DAYS.map((d) => {
-                    const active = days.includes(d);
-                    return (
-                      <TouchableOpacity
-                        key={d}
-                        onPress={() => toggleDay(d)}
-                        activeOpacity={0.8}
-                        style={{
-                          paddingVertical: 8,
-                          paddingHorizontal: 12,
-                          borderRadius: 999,
-                          backgroundColor: active ? accentRgb : 'transparent',
-                          borderWidth: 1,
-                          borderColor: active ? accentRgb : borderColor,
-                        }}
-                      >
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: active ? '#fff' : fgRgb }}>
-                          {d.slice(0, 3)}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : (
+            {/* One-time: single date */}
+            {freq === 'once' && (
               <View style={{ marginBottom: 20 }}>
                 {sectionLabel('Date')}
                 <DatePicker
@@ -619,6 +679,89 @@ function ContentFormModal({
                   labelColor={labelColor}
                   borderColor={borderColor}
                 />
+              </View>
+            )}
+
+            {/* Weekly: how often + which weekdays */}
+            {freq === 'weekly' && (
+              <>
+                <View style={{ marginBottom: 20 }}>
+                  {sectionLabel('How often')}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {[
+                      { label: 'Every week', value: 1 },
+                      { label: 'Every other', value: 2 },
+                      { label: 'Every 3 weeks', value: 3 },
+                    ].map((o) => pill(o.label, repeatInterval === o.value, () => setRepeatInterval(o.value)))}
+                  </View>
+                </View>
+                <View style={{ marginBottom: 20 }}>
+                  {sectionLabel('Repeats on')}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {WEEK_DAYS.map((d) => pill(d.slice(0, 3), days.includes(d), () => toggleDay(d)))}
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* Monthly: which week of the month + which weekday */}
+            {freq === 'monthly' && (
+              <>
+                <View style={{ marginBottom: 20 }}>
+                  {sectionLabel('Which week')}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {WEEK_OF_MONTH_OPTIONS.map((o) =>
+                      pill(o.label, weekOfMonth === o.value, () => setWeekOfMonth(o.value)),
+                    )}
+                  </View>
+                </View>
+                <View style={{ marginBottom: 20 }}>
+                  {sectionLabel('On')}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {WEEK_DAYS.map((d) => pill(d.slice(0, 3), days.includes(d), () => toggleDay(d)))}
+                  </View>
+                </View>
+                <View style={{ marginBottom: 20 }}>
+                  {sectionLabel('How often')}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {[
+                      { label: 'Every month', value: 1 },
+                      { label: 'Every other month', value: 2 },
+                    ].map((o) => pill(o.label, repeatInterval === o.value, () => setRepeatInterval(o.value)))}
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* Recurring: when the series starts (anchors "every other" parity) */}
+            {isRecurring && (
+              <View style={{ marginBottom: 20 }}>
+                {sectionLabel('Starts on')}
+                <DatePicker
+                  value={anchor}
+                  onChange={setAnchor}
+                  accentRgb={accentRgb}
+                  fgRgb={fgRgb}
+                  labelColor={labelColor}
+                  borderColor={borderColor}
+                />
+              </View>
+            )}
+
+            {recurrencePreview && (
+              <View
+                style={{
+                  marginBottom: 20,
+                  marginTop: -4,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: `rgba(${colors.accent.replace(/ /g, ',')}, 0.08)`,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '600', color: accentRgb }}>
+                  {recurrencePreview}
+                </Text>
               </View>
             )}
 
