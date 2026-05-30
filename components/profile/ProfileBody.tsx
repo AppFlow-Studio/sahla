@@ -1,11 +1,12 @@
 import { SendFeedback } from "@/src/components/send_feedback";
 import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useSupabase } from "@/src/hooks/use-supabase";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
 import { useAuth } from "@clerk/clerk-expo";
 import { router, type Href } from "expo-router";
 import { useCallback, useState } from "react";
-import { Platform, Pressable, Share, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, Share, Text, View } from "react-native";
 import DonateCard from "./DonateCard";
 import Notifications from "./Notifications";
 import PersonalizedCard from "./PersonalizedCard";
@@ -52,6 +53,58 @@ function SignOutButton() {
     >
       <Text className="text-red-500" style={{ fontSize: 14, fontWeight: '600' }}>
         Sign Out
+      </Text>
+    </Pressable>
+  );
+}
+
+function DeleteAccountButton() {
+  const { signOut } = useAuth();
+  const supabase = useSupabase();
+  const resetOnboarding = useOnboardingStore((s) => s.reset);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = useCallback(() => {
+    Alert.alert(
+      "Delete Account",
+      "This permanently deletes your Sahla account and all your data — saved items, preferences, notifications, and history. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const { error } = await supabase.functions.invoke("delete-account", {
+                body: {},
+              });
+              if (error) throw error;
+              resetOnboarding();
+              await signOut();
+            } catch (err: any) {
+              setDeleting(false);
+              Alert.alert(
+                "Couldn't delete account",
+                err?.message || "Something went wrong. Please try again or contact support.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [supabase, resetOnboarding, signOut]);
+
+  return (
+    <Pressable
+      onPress={confirmDelete}
+      disabled={deleting}
+      className="mt-4 flex-row items-center active:opacity-70"
+      style={{ opacity: deleting ? 0.5 : 1 }}
+    >
+      {deleting && <ActivityIndicator size="small" color="#9ca3af" style={{ marginRight: 8 }} />}
+      <Text className="text-foreground/40" style={{ fontSize: 13, fontWeight: '500' }}>
+        {deleting ? "Deleting…" : "Delete Account"}
       </Text>
     </Pressable>
   );
@@ -233,6 +286,7 @@ export default function ProfileBody({
       {/* SIGN OUT */}
       <View className="items-center" style={{ paddingBottom: 120, paddingTop: 20 }}>
         <SignOutButton />
+        <DeleteAccountButton />
       </View>
       <SendFeedback
         visible={feedbackOpen}
