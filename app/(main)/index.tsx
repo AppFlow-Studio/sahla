@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { ScrollView, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import Animated, {
   Easing,
   interpolate,
@@ -20,6 +19,7 @@ import { CommunityPartners } from '@/src/components/home/community-partners';
 import { CommunityPartnerCta } from '@/src/components/home/community-partner-cta';
 import { JummahScheduleCard } from '@/src/components/home/jummah-schedule';
 import { useJummahSchedule, useJummahWindow } from '@/src/hooks/use-jummah-schedule';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 export default function HomeScreen() {
   // The Jummah card is driven entirely by the admin schedule: it shows whenever
@@ -28,6 +28,7 @@ export default function HomeScreen() {
   const { slots } = useJummahSchedule();
   const jummahWindowOpen = useJummahWindow();
   const showJummah = slots.length > 0 && jummahWindowOpen;
+  useStatusBarStyle('light');
   const progress = useSharedValue(0);
   // Measured natural height of the card, so the reveal grows/shrinks with the
   // number of jummah slots instead of using a fixed height.
@@ -51,7 +52,6 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-primary">
-      <StatusBar style="light" />
 
       {/* Hidden measurer: renders the card at its natural height (outside the
           clipped reveal container, which would otherwise clamp it to 0) so we
@@ -86,6 +86,7 @@ export default function HomeScreen() {
           <View className="gap-7 px-5 pt-5" style={{ paddingBottom: 160 }}>
             <DonateBanner />
             <TodaysEvents />
+            <View className="h-px bg-foreground/10" />
             <FeaturedCard />
             <QuickActions />
             <ProgramsSection />

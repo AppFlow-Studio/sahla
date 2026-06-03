@@ -35,23 +35,44 @@ export function useFeaturedContent() {
   const query = useQuery({
     queryKey: ['featured', mosqueUuid],
     queryFn: async (): Promise<FeaturedItem | null> => {
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+      // Pull a small recent batch and pick the newest one that hasn't passed,
+      // rather than always surfacing the most-recently-created row.
       const { data, error } = await supabase
         .from('content_items')
-        .select('content_id, name, type, days, start_time, image')
+        .select('content_id, name, type, days, start_time, image, start_date, end_date')
         .eq('mosque_id', mosqueUuid!)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(25);
 
       if (error) throw new Error(error.message);
-      if (!data) return null;
+      if (!data || data.length === 0) return null;
+
+      // Keep ongoing/recurring programs and upcoming/active events; drop items
+      // whose date has already fully passed. ISO date strings compare lexically.
+      const isCurrent = (item: {
+        type: string | null;
+        start_date: string | null;
+        end_date: string | null;
+      }) => {
+        if (item.end_date) return item.end_date >= today;
+        if (item.type === 'program') return true; // recurring / no fixed end
+        if (item.start_date) return item.start_date >= today;
+        return true;
+      };
+
+      const item = data.find(isCurrent);
+      if (!item) return null;
 
       return {
-        id: data.content_id,
-        badge: data.type === 'program' ? 'Program' : data.type === 'event' ? 'Event' : 'Featured',
-        title: data.name ?? 'Untitled',
-        subtitle: formatSubtitle(data),
-        image: data.image ?? null,
+        id: item.content_id,
+        badge: 'Featured',
+        title: item.name ?? 'Untitled',
+        subtitle: formatSubtitle(item),
+        image: item.image ?? null,
       };
     },
     enabled: !!mosqueUuid,

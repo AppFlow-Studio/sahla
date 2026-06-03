@@ -1,5 +1,6 @@
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 
 import { useFeaturedContent } from '@/src/hooks/use-featured-content';
 
@@ -9,14 +10,14 @@ export function FeaturedCard() {
   if (!featured) return null;
 
   return (
-    <View
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => router.push(`/content/${featured.id}`)}
       className="flex-row overflow-hidden rounded-2xl bg-primary"
       style={{ minHeight: 110 }}
     >
       <View className="flex-1 px-5 pb-4 pt-4">
-        <View className="self-start rounded-full border border-accent/40 px-2.5 py-0.5">
-          <Text className="text-[10px] text-accent">{featured.badge}</Text>
-        </View>
+        <Text className="text-[10px] text-accent">{featured.badge}</Text>
 
         <View className="mt-3">
           <Text
@@ -38,6 +39,6 @@ export function FeaturedCard() {
           contentFit="cover"
         />
       )}
-    </View>
+    </TouchableOpacity>
   );
 }

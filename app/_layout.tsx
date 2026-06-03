@@ -130,6 +130,20 @@ function RootNavigator() {
             animation: 'slide_from_right',
           }}
         />
+        <Stack.Screen
+          name="saved-library"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="reminders-settings"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={showOnboarding}>
         <Stack.Screen name="(onboarding)" />

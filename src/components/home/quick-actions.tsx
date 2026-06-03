@@ -19,6 +19,7 @@ export function QuickActions() {
   const { open: openDonation } = useDonation();
   const router = useRouter();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
+  const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
 
   const handlePress = (id: string) => {
     if (id === 'donate') openDonation();
@@ -50,7 +51,7 @@ export function QuickActions() {
             <MaterialCommunityIcons
               name={action.icon as IconName}
               size={24}
-              color={fgRgb}
+              color={primaryRgb}
             />
           </View>
           <Text className="text-[8px] font-bold uppercase tracking-[1px] text-foreground/60">

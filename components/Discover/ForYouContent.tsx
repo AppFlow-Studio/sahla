@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { Platform, Pressable, Text, View } from "react-native";
 
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useUserPreferences } from "@/src/hooks/use-user-preferences";
 
 const platformUiFont = Platform.select({
   ios: "SF Pro Text",
@@ -26,7 +27,15 @@ type Props = {
   onPressEdit?: () => void;
 };
 
-function CustomizedPill({ onPress }: { onPress?: () => void }) {
+type PrefState = "none" | "started" | "complete";
+
+function CustomizedPill({
+  onPress,
+  prefState,
+}: {
+  onPress?: () => void;
+  prefState: PrefState;
+}) {
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -35,11 +44,34 @@ function CustomizedPill({ onPress }: { onPress?: () => void }) {
   const accent = colors.accent.replace(/ /g, ",");
   const pillBg = `rgba(${accent}, 0.2)`;
 
+  const copy = {
+    complete: {
+      action: "Edit",
+      title: "Customized for you",
+      subtitle: "Based on your preferences",
+      a11y: "Edit your preferences",
+    },
+    started: {
+      action: "Continue",
+      title: "Finish personalizing",
+      subtitle: "Pick up where you left off",
+      a11y: "Continue setting your preferences",
+    },
+    none: {
+      action: "Get started",
+      title: "Personalize your feed",
+      subtitle: "Tell us what you're interested in",
+      a11y: "Set your preferences",
+    },
+  }[prefState];
+
+  const { action: actionLabel, title, subtitle } = copy;
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Edit your preferences"
+      accessibilityLabel={copy.a11y}
       className="flex-row items-center rounded-full px-4 py-3"
       style={{ backgroundColor: pillBg }}
     >
@@ -54,7 +86,7 @@ function CustomizedPill({ onPress }: { onPress?: () => void }) {
             lineHeight: 16,
           }}
         >
-          Customized for you
+          {title}
         </Text>
         <Text
           style={{
@@ -65,7 +97,7 @@ function CustomizedPill({ onPress }: { onPress?: () => void }) {
             marginTop: 2,
           }}
         >
-          Based on your preferences
+          {subtitle}
         </Text>
       </View>
       <Text
@@ -76,7 +108,7 @@ function CustomizedPill({ onPress }: { onPress?: () => void }) {
           marginRight: 4,
         }}
       >
-        Edit
+        {actionLabel}
       </Text>
       <AntDesign name="right" size={10} color={accentRgb} />
     </Pressable>
@@ -209,10 +241,33 @@ export default function ForYouContent({
   onPressItem,
   onPressEdit,
 }: Props) {
+  const { preferences } = useUserPreferences();
+
+  // Three states for the banner:
+  //  - complete : finished the flow (reached all-set) → "Edit"
+  //  - started  : saved at least one step but didn't finish → "Continue"
+  //  - none     : nothing yet → "Get started"
+  // "started" reads only personalization-exclusive columns so a user who did
+  // the initial onboarding (which writes knowledge level / demographics) isn't
+  // mistaken for having started this flow.
+  const completed = !!preferences?.personalization_completed_at;
+  const started =
+    !!preferences &&
+    ((preferences.attendance_reasons?.length ?? 0) > 0 ||
+      (preferences.programs_for?.length ?? 0) > 0 ||
+      (preferences.attendance_windows?.length ?? 0) > 0 ||
+      (preferences.additional_preferences?.length ?? 0) > 0);
+
+  const prefState: PrefState = completed
+    ? "complete"
+    : started
+      ? "started"
+      : "none";
+
   return (
     <View>
       <View className="px-6" style={{ marginTop: 33 }}>
-        <CustomizedPill onPress={onPressEdit} />
+        <CustomizedPill onPress={onPressEdit} prefState={prefState} />
       </View>
 
       {events.length > 0 ? (

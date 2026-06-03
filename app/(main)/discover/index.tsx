@@ -3,6 +3,8 @@ import {
   useFonts,
 } from "@expo-google-fonts/playfair-display";
 import { router, useLocalSearchParams } from "expo-router";
+
+import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import Animated, {
@@ -308,6 +310,8 @@ export default function DiscoverScreen() {
   const openContent = useCallback((id: string) => {
     router.push(`/content/${id}`);
   }, []);
+
+  useStatusBarStyle("dark");
 
   if (!fontsLoaded) {
     return (

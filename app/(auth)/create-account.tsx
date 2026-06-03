@@ -91,13 +91,70 @@ export default function CreateAccountScreen() {
     async (result: any) => {
       const { createdSessionId, setActive, signIn, signUp } = result;
 
-      const sessionId =
+      console.log('[Auth] OAuth result:', JSON.stringify({
+        createdSessionId,
+        signUpStatus: signUp?.status,
+        signUpSessionId: signUp?.createdSessionId,
+        signInStatus: signIn?.status,
+        signInSessionId: signIn?.createdSessionId,
+        externalAccountStatus: signUp?.verifications?.externalAccount?.status,
+      }, null, 2));
+
+      let sessionId =
         createdSessionId ??
-        (signUp?.status === 'complete' ? signUp.createdSessionId : null) ??
-        (signIn?.status === 'complete' ? signIn.createdSessionId : null);
+        signUp?.createdSessionId ??
+        signIn?.createdSessionId ??
+        null;
+
+      // Handle transfer: user already has an account or Clerk created both signUp + signIn
+      if (!sessionId && signIn) {
+        try {
+          console.log('[Auth] No session yet, attempting sign-in transfer.');
+          const transfer = await signIn.create({ transfer: true });
+          sessionId = transfer.createdSessionId;
+        } catch (transferErr) {
+          console.warn('[Auth] Transfer failed:', transferErr);
+        }
+      }
+
+      // Handle sign-up with missing_requirements — fill missing fields from OAuth profile
+      if (!sessionId && signUp && signUp.status === 'missing_requirements') {
+        try {
+          const missing = signUp.missingFields || [];
+          console.log('[Auth] Sign-up missing fields:', missing);
+
+          // Extract name from Google/Apple external account profile
+          const ext = signUp.verifications?.externalAccount;
+          const firstName = signUp.firstName || ext?.firstName || 'User';
+          const lastName = signUp.lastName || ext?.lastName || '';
+
+          const updates: Record<string, string> = {};
+          if (missing.includes('first_name') || missing.includes('last_name')) {
+            updates.firstName = firstName;
+            updates.lastName = lastName;
+          }
+          if (missing.includes('username')) {
+            updates.username = `user_${Date.now()}`;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            console.log('[Auth] Updating sign-up with:', updates);
+            const updated = await signUp.update(updates);
+            sessionId = updated.createdSessionId;
+          }
+
+          if (!sessionId) {
+            await signUp.reload();
+            sessionId = signUp.createdSessionId;
+          }
+        } catch (updateErr) {
+          console.warn('[Auth] Sign-up update failed:', updateErr);
+        }
+      }
 
       if (!sessionId || !setActive) {
         console.warn('[Auth] OAuth flow did not produce a session.');
+        setError('Sign-in could not be completed. Please try again.');
         return;
       }
 

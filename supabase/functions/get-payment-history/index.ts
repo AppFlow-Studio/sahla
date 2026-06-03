@@ -79,8 +79,16 @@ serve(async (req: Request) => {
       stripeAccountOpts,
     );
 
+    // Drop abandoned checkouts: a PaymentIntent still awaiting a payment method
+    // with none ever attached means the donor opened the sheet and left without
+    // entering a card. These are noise, not real transactions, so they should
+    // not show up in payment history.
+    const relevantIntents = paymentIntents.data.filter(
+      (pi) => !(pi.status === "requires_payment_method" && !pi.payment_method),
+    );
+
     const payments = await Promise.all(
-      paymentIntents.data.map(async (pi) => {
+      relevantIntents.map(async (pi) => {
         let paymentMethod: { type: string; brand: string | null; last4: string | null } | null = null;
 
         if (pi.payment_method && typeof pi.payment_method === "string") {

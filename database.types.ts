@@ -3744,6 +3744,7 @@ export type Database = {
           is_revert: boolean | null
           islamic_knowledge_level: string | null
           mosque_id: string
+          personalization_completed_at: string | null
           preferred_days: string[] | null
           preferred_times: string[] | null
           programs_for: string[]
@@ -3761,6 +3762,7 @@ export type Database = {
           is_revert?: boolean | null
           islamic_knowledge_level?: string | null
           mosque_id: string
+          personalization_completed_at?: string | null
           preferred_days?: string[] | null
           preferred_times?: string[] | null
           programs_for?: string[]
@@ -3778,6 +3780,7 @@ export type Database = {
           is_revert?: boolean | null
           islamic_knowledge_level?: string | null
           mosque_id?: string
+          personalization_completed_at?: string | null
           preferred_days?: string[] | null
           preferred_times?: string[] | null
           programs_for?: string[]

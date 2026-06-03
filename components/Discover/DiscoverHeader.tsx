@@ -141,6 +141,12 @@ export default function DiscoverHeader({
                 placeholderTextColor={mutedFgRgb}
                 value={value}
                 onChangeText={setValue}
+                onBlur={() => {
+                  // Dismissing the keyboard with an empty field collapses the
+                  // search bar back to the title. A typed query keeps the bar
+                  // so results stay browsable without the keyboard.
+                  if (!value) setIsSearching(false);
+                }}
                 returnKeyType="search"
                 style={{
                   flex: 1,

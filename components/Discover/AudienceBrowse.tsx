@@ -8,6 +8,14 @@ import {
   Text,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  SlideInLeft,
+  SlideInRight,
+  SlideOutLeft,
+  SlideOutRight,
+} from "react-native-reanimated";
 
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
@@ -394,6 +402,62 @@ function Section({
   );
 }
 
+function EmptyState({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+
+  return (
+    <View className="items-center px-6" style={{ marginTop: 64 }}>
+      <View
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: `rgba(${fg}, 0.05)`,
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 14,
+        }}
+      >
+        <AntDesign name="calendar" size={26} color={mutedFgRgb} />
+      </View>
+      <Text
+        style={{
+          fontFamily: platformUiFont,
+          fontSize: 14,
+          fontWeight: "600",
+          color: fgRgb,
+          textAlign: "center",
+        }}
+      >
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text
+          style={{
+            fontFamily: platformUiFont,
+            fontSize: 12,
+            color: mutedFgRgb,
+            textAlign: "center",
+            marginTop: 4,
+            lineHeight: 17,
+          }}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 function matchesAudience(
   item: AudienceItem,
   audience: Exclude<AudienceFilter, "All">,
@@ -412,10 +476,24 @@ export default function AudienceBrowse({
   initialFilter,
 }: Props) {
   const [filter, setFilter] = useState<AudienceFilter>(initialFilter ?? "All");
+  const [direction, setDirection] = useState<"left" | "right">("right");
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (initialFilter) setFilter(initialFilter);
   }, [initialFilter]);
+
+  // Change filter while recording the swipe/tap direction so the new content
+  // slides in from the matching side.
+  const goToFilter = (next: AudienceFilter) => {
+    if (next === filter) return;
+    setDirection(FILTERS.indexOf(next) > FILTERS.indexOf(filter) ? "right" : "left");
+    setFilter(next);
+  };
 
   const grouped = useMemo(() => {
     const kids: AudienceItem[] = [];
@@ -446,25 +524,76 @@ export default function AudienceBrowse({
   const showYouth = filter === "All" || filter === "Youth";
   const showAdults = filter === "All" || filter === "Adults";
 
+  const kindNoun = kind === "programs" ? "programs" : "events";
+
+  // Swipe horizontally to move through the All / Kids / Youth / Adults filters.
+  const cycleFilter = (dir: 1 | -1) => {
+    const next = FILTERS.indexOf(filter) + dir;
+    if (next >= 0 && next < FILTERS.length) goToFilter(FILTERS[next]);
+  };
+
+  const swipe = useMemo(
+    () =>
+      Gesture.Pan()
+        // Only claim decisive horizontal swipes; let vertical page scroll and
+        // the All-view card carousels keep working.
+        .activeOffsetX([-25, 25])
+        .failOffsetY([-15, 15])
+        .onEnd((e) => {
+          if (e.translationX < -55 || e.velocityX < -600) runOnJS(cycleFilter)(1);
+          else if (e.translationX > 55 || e.velocityX > 600) runOnJS(cycleFilter)(-1);
+        }),
+    [filter],
+  );
+
   return (
+    <GestureDetector gesture={swipe}>
     <View>
       <View style={{ marginTop: 22 }}>
-        <FilterPills active={filter} onSelect={setFilter} />
+        <FilterPills active={filter} onSelect={goToFilter} />
       </View>
 
+      <View style={{ overflow: "hidden" }}>
+      <Animated.View
+        key={filter}
+        entering={
+          hasMounted
+            ? direction === "right"
+              ? SlideInRight.duration(220)
+              : SlideInLeft.duration(220)
+            : undefined
+        }
+        exiting={
+          direction === "right"
+            ? SlideOutLeft.duration(220)
+            : SlideOutRight.duration(220)
+        }
+      >
       {showAudienceList ? (
-        <>
-          <ListSection
-            label={allLabel}
-            items={itemsForAudience}
-            onPressItem={onPressItem}
+        itemsForAudience.length === 0 ? (
+          <EmptyState
+            title={`No ${filter.toLowerCase()} ${kindNoun}`}
+            subtitle="Check back soon or try another filter."
           />
-          <ListSection
-            label={secondaryLabel}
-            items={itemsForAudience.filter(secondaryFilter)}
-            onPressItem={onPressItem}
-          />
-        </>
+        ) : (
+          <>
+            <ListSection
+              label={allLabel}
+              items={itemsForAudience}
+              onPressItem={onPressItem}
+            />
+            <ListSection
+              label={secondaryLabel}
+              items={itemsForAudience.filter(secondaryFilter)}
+              onPressItem={onPressItem}
+            />
+          </>
+        )
+      ) : items.length === 0 ? (
+        <EmptyState
+          title={`No ${kindNoun} yet`}
+          subtitle={`New ${kindNoun} will appear here when they're added.`}
+        />
       ) : (
         <>
           {showKids ? (
@@ -474,7 +603,7 @@ export default function AudienceBrowse({
               onPressItem={onPressItem}
               onPressSeeAll={() => {
                 if (onPressSeeAll) onPressSeeAll("Kids");
-                else setFilter("Kids");
+                else goToFilter("Kids");
               }}
             />
           ) : null}
@@ -485,7 +614,7 @@ export default function AudienceBrowse({
               onPressItem={onPressItem}
               onPressSeeAll={() => {
                 if (onPressSeeAll) onPressSeeAll("Youth");
-                else setFilter("Youth");
+                else goToFilter("Youth");
               }}
             />
           ) : null}
@@ -496,7 +625,7 @@ export default function AudienceBrowse({
               onPressItem={onPressItem}
               onPressSeeAll={() => {
                 if (onPressSeeAll) onPressSeeAll("Adults");
-                else setFilter("Adults");
+                else goToFilter("Adults");
               }}
             />
           ) : null}
@@ -508,6 +637,9 @@ export default function AudienceBrowse({
           {allTabFooter}
         </View>
       ) : null}
+      </Animated.View>
+      </View>
     </View>
+    </GestureDetector>
   );
 }

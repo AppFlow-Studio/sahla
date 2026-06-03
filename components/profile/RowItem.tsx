@@ -3,6 +3,7 @@ import type { ImageSourcePropType } from "react-native";
 import { Platform, Pressable, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 type Props = {
   title: string;
@@ -11,13 +12,21 @@ type Props = {
 };
 
 export default function RowItem({ title, icon, onPress }: Props) {
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   return (
     <Pressable
       onPress={onPress}
       className="flex-row items-center justify-between px-4 py-3"
     >
       <View className="flex-row items-center gap-2">
-        <Image source={icon} style={{ width: 16, height: 16 }} contentFit="contain" />
+        {/* Tint the (monochrome) icon glyph so it follows the masjid theme. */}
+        <Image
+          source={icon}
+          style={{ width: 16, height: 16 }}
+          contentFit="contain"
+          tintColor={fgRgb}
+        />
         <Text
           className="text-foreground"
           style={{

@@ -40,6 +40,7 @@ function ReelThumb({ url }: { url: string }) {
       style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       contentFit="cover"
       nativeControls={false}
+      allowsVideoFrameAnalysis={false}
     />
   );
 }
@@ -65,7 +66,8 @@ export default function SavedClipsScreen() {
       }}
       className="active:opacity-80"
     >
-      {/* Server-side thumbnail when available; otherwise first-frame preview. */}
+      {/* Server-side thumbnail when available; otherwise first-frame preview.
+          Nothing is drawn on top — the cell is just the video frame. */}
       {item.thumbnail_url ? (
         <Image
           source={{ uri: item.thumbnail_url }}
@@ -75,35 +77,6 @@ export default function SavedClipsScreen() {
       ) : (
         <ReelThumb url={item.video_url} />
       )}
-
-      {/* Bottom dark gradient + title overlay (YouTube-style). */}
-      {item.title ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            paddingHorizontal: 6,
-            paddingTop: 18,
-            paddingBottom: 6,
-            backgroundColor: 'rgba(0,0,0,0.45)',
-          }}
-        >
-          <Text
-            numberOfLines={2}
-            style={{
-              color: '#fffbf2',
-              fontSize: 11,
-              fontWeight: '500',
-              lineHeight: 14,
-            }}
-          >
-            {item.title}
-          </Text>
-        </View>
-      ) : null}
     </Pressable>
   );
 
