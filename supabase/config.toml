@@ -62,3 +62,7 @@ verify_jwt = false
 # Mosque-admin approve/decline/cancel decisions (app + CRM call this).
 [functions.admin-ad-decision]
 verify_jwt = false
+
+# Public list of approved business ads for the app's Community Partners section.
+[functions.get-community-partners]
+verify_jwt = false

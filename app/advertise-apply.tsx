@@ -2,10 +2,11 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -43,7 +44,7 @@ export default function AdvertiseApplyScreen() {
   const { user } = useUser();
   const supabase = useSupabase();
   const { profile } = useProfile();
-  const { id: mosqueSlug, colors } = useMasjidConfig();
+  const { id: mosqueSlug, colors, displayName } = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const { confirmPayment } = useConfirmPayment();
   const { setStripeAccountId } = useStripeAccount();
@@ -345,7 +346,8 @@ export default function AdvertiseApplyScreen() {
 
                 <View className="mt-8 w-full">
                   <ReceiptCard
-                    title="Receipt"
+                    title="Payment Receipt"
+                    merchant={displayName}
                     monthly={monthlyDisplay}
                     onboarding={onboardingDisplay}
                     total={firstPaymentDisplay}
@@ -353,12 +355,14 @@ export default function AdvertiseApplyScreen() {
                     paid
                     cardBrand={cardBrand || undefined}
                     last4={cardLast4}
+                    reference={subscriptionId ?? undefined}
                     dateStr={new Date().toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                     tint={primaryRgb}
+                    pageColor={bgRgb}
                   />
                 </View>
 
@@ -389,9 +393,12 @@ export default function AdvertiseApplyScreen() {
                 {/* Order receipt (pre-purchase) */}
                 <ReceiptCard
                   title="Order Summary"
+                  merchant={displayName}
                   monthly={monthlyDisplay}
                   onboarding={onboardingDisplay}
                   total={firstPaymentDisplay}
+                  tint={primaryRgb}
+                  pageColor={bgRgb}
                 />
 
                 {/* Card entry */}
@@ -825,18 +832,111 @@ function FormField({
   );
 }
 
-function ReceiptRow({ label, value }: { label: string; value: string }) {
+function ReceiptRow({
+  label,
+  value,
+  bold,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+}) {
   return (
     <View className="flex-row items-center justify-between">
-      <Text className="text-[14px] text-foreground/70">{label}</Text>
-      <Text className="text-[14px] font-semibold text-foreground">{value}</Text>
+      <Text className={`text-[14px] ${bold ? 'font-bold text-foreground' : 'text-foreground/70'}`}>
+        {label}
+      </Text>
+      <Text
+        className={`text-[14px] ${bold ? 'text-[15px] font-bold' : 'font-semibold'} text-foreground`}
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
 
+// A dashed separator with two notch "punches" at the edges — the classic
+// ticket / receipt tear line. `pageColor` fills the notches to match the page.
+function TearLine({ pageColor }: { pageColor?: string }) {
+  return (
+    <View className="my-1" style={{ position: 'relative', justifyContent: 'center', height: 16 }}>
+      <View
+        style={{
+          borderBottomWidth: 1,
+          borderColor: 'rgba(0,0,0,0.18)',
+          borderStyle: 'dashed',
+          marginHorizontal: 4,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute', left: -10, width: 16, height: 16, borderRadius: 8,
+          backgroundColor: pageColor ?? 'transparent',
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute', right: -10, width: 16, height: 16, borderRadius: 8,
+          backgroundColor: pageColor ?? 'transparent',
+        }}
+      />
+    </View>
+  );
+}
+
+// Deterministic faux barcode — sells the "official receipt" look.
+const BARCODE = [2, 1, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 1, 2, 2, 1, 3, 1, 2, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 1, 2];
+function Barcode() {
+  return (
+    <View className="flex-row items-end justify-center" style={{ height: 36 }}>
+      {BARCODE.map((w, i) => (
+        <View
+          key={i}
+          className="bg-foreground"
+          style={{ width: w, height: 36, marginRight: 2, opacity: 0.85 }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Animated rubber "PAID" stamp — slams down into the top-right of the receipt.
+function PaidStamp({ tint }: { tint?: string }) {
+  const a = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(350),
+      Animated.spring(a, { toValue: 1, friction: 5, tension: 90, useNativeDriver: true }),
+    ]).start();
+  }, [a]);
+  const scale = a.interpolate({ inputRange: [0, 1], outputRange: [2.6, 1] });
+  const opacity = a.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.9, 0.9] });
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 14,
+        right: 14,
+        zIndex: 10,
+        opacity,
+        transform: [{ rotate: '-11deg' }, { scale }],
+      }}
+    >
+      <View className="rounded-md border-2 px-2 py-0.5" style={{ borderColor: tint }}>
+        <Text className="text-[13px] font-extrabold tracking-[2px]" style={{ color: tint }}>
+          PAID
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 /**
- * Itemized receipt. Used before purchase (paid=false → "Due today") and on the
- * success screen (paid=true → "Total paid" + card/date footer).
+ * Itemized receipt styled like a real one. Used before purchase
+ * (paid=false → "Due today") and on the success screen (paid=true → "Total
+ * paid" + card/date + barcode).
  */
 function ReceiptCard({
   title,
@@ -844,78 +944,137 @@ function ReceiptCard({
   onboarding,
   total,
   businessName,
+  merchant,
   paid = false,
   cardBrand,
   last4,
   dateStr,
+  reference,
   tint,
+  pageColor,
 }: {
   title: string;
   monthly: string;
   onboarding: string;
   total: string;
   businessName?: string;
+  merchant?: string;
   paid?: boolean;
   cardBrand?: string;
   last4?: string;
   dateStr?: string;
+  reference?: string;
   tint?: string;
+  pageColor?: string;
 }) {
+  const ref = reference
+    ? reference.replace(/[^a-zA-Z0-9]/g, '').slice(-10).toUpperCase()
+    : null;
+
   return (
-    <View className="w-full overflow-hidden rounded-2xl border border-foreground/10 bg-muted/40">
-      <View className="flex-row items-center justify-between border-b border-foreground/10 px-5 py-3.5">
-        <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
+    <View
+      className="w-full rounded-2xl border border-foreground/10 bg-muted"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 2,
+      }}
+    >
+      {paid ? <PaidStamp tint={tint} /> : null}
+
+      {/* Header */}
+      <View className="items-center px-5 pb-3 pt-5">
+        <View
+          className="mb-2 h-9 w-9 items-center justify-center rounded-full"
+          style={{ backgroundColor: `${tint ?? '#0A261E'}1A` }}
+        >
+          <MaterialCommunityIcons name="storefront" size={18} color={tint} />
+        </View>
+        {merchant ? (
+          <Text className="text-[13px] font-semibold text-foreground" numberOfLines={1}>
+            {merchant}
+          </Text>
+        ) : null}
+        <Text className="mt-1 text-[11px] font-semibold uppercase tracking-[3px] text-foreground/45">
           {title}
         </Text>
-        {paid ? (
-          <View className="flex-row items-center gap-1">
-            <MaterialCommunityIcons name="check-circle" size={14} color={tint} />
-            <Text className="text-[11px] font-semibold text-foreground/50">Paid</Text>
-          </View>
+        {(ref || dateStr) && paid ? (
+          <Text className="mt-1 text-[11px] text-foreground/40" style={{ fontVariant: ['tabular-nums'] }}>
+            {ref ? `No. ${ref}` : ''}{ref && dateStr ? '  ·  ' : ''}{dateStr ?? ''}
+          </Text>
         ) : null}
       </View>
-      <View className="gap-3 px-5 py-4">
+
+      <TearLine pageColor={pageColor} />
+
+      {/* Line items */}
+      <View className="gap-3 px-5 pt-3">
         <ReceiptRow label="One-time onboarding fee" value={onboarding} />
         <ReceiptRow label="First month" value={monthly} />
-        <View className="mt-1 border-t border-foreground/10 pt-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[15px] font-bold text-foreground">
-              {paid ? 'Total paid' : 'Due today'}
-            </Text>
-            <Text className="text-[15px] font-bold text-foreground">{total}</Text>
-          </View>
-          <Text className="mt-1 text-[12px] text-foreground/40">
-            Then {monthly}/month
-          </Text>
-        </View>
-        {paid && (businessName || last4 || dateStr) ? (
-          <View className="mt-1 gap-1.5 border-t border-foreground/10 pt-3">
+      </View>
+
+      <View className="px-5">
+        <View
+          className="my-3"
+          style={{ borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.12)', borderStyle: 'dashed' }}
+        />
+        <ReceiptRow label={paid ? 'Total paid' : 'Due today'} value={total} bold />
+        <Text className="mt-1 text-[12px] text-foreground/40">Then {monthly}/month</Text>
+      </View>
+
+      {/* Meta */}
+      {paid && (businessName || last4) ? (
+        <View className="px-5">
+          <View
+            className="my-3"
+            style={{ borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.12)', borderStyle: 'dashed' }}
+          />
+          <View className="gap-1.5">
             {businessName ? (
               <View className="flex-row items-center justify-between">
                 <Text className="text-[12px] text-foreground/40">Business</Text>
-                <Text className="text-[12px] font-medium text-foreground/70">
-                  {businessName}
-                </Text>
+                <Text className="text-[12px] font-medium text-foreground/70">{businessName}</Text>
               </View>
             ) : null}
             {last4 ? (
               <View className="flex-row items-center justify-between">
                 <Text className="text-[12px] text-foreground/40">Payment</Text>
-                <Text className="text-[12px] font-medium text-foreground/70">
+                <Text
+                  className="text-[12px] font-medium text-foreground/70"
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
                   {cardBrand ? `${cardBrand} ` : ''}•••• {last4}
                 </Text>
               </View>
             ) : null}
-            {dateStr ? (
-              <View className="flex-row items-center justify-between">
-                <Text className="text-[12px] text-foreground/40">Date</Text>
-                <Text className="text-[12px] font-medium text-foreground/70">
-                  {dateStr}
-                </Text>
-              </View>
-            ) : null}
           </View>
-        ) : null}
+        </View>
+      ) : null}
+
+      {/* Footer */}
+      <View className="items-center px-5 pb-5 pt-4">
+        {paid ? (
+          <>
+            <Text className="mb-3 text-[11px] italic text-foreground/40">
+              Thank you for advertising with us
+            </Text>
+            <Barcode />
+            {ref ? (
+              <Text
+                className="mt-1.5 text-[10px] tracking-[2px] text-foreground/45"
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {ref}
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <Text className="text-[11px] text-foreground/35">
+            You won't be charged until you confirm
+          </Text>
+        )}
       </View>
     </View>
   );

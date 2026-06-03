@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useMyAds, useCancelAdSubscription, type MyAd } from '@/src/hooks/use-my-ads';
@@ -35,6 +35,7 @@ function statusFor(ad: MyAd): { label: string; tone: 'good' | 'warn' | 'muted' }
 
 export default function AdvertiseStatusScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
@@ -76,11 +77,17 @@ export default function AdvertiseStatusScreen() {
         </View>
 
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
+          <View
+            className="flex-1 items-center justify-center"
+            style={{ marginBottom: insets.top + 52 }}
+          >
             <ActivityIndicator color={fgRgb} />
           </View>
         ) : !ads || ads.length === 0 ? (
-          <View className="flex-1 items-center justify-center px-10">
+          <View
+            className="flex-1 items-center justify-center px-10"
+            style={{ marginBottom: insets.top + 52 }}
+          >
             <MaterialCommunityIcons name="storefront-outline" size={40} color={mutedRgb} />
             <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
               You haven't applied for any business ads yet.
