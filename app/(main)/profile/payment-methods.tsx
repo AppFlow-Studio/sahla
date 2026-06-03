@@ -206,7 +206,13 @@ export default function PaymentMethodsScreen() {
               const { error } = await supabase.functions.invoke('delete-payment-method', {
                 body: { user_id: profile?.id, paymentMethodId: card.id, mosque_id: mosqueUuid },
               });
-              if (error) throw error;
+              if (error) {
+                // supabase-js collapses any non-2xx into a generic message;
+                // the function returns the real reason in the response body.
+                const body = error?.context ? await error.context.json().catch(() => null) : null;
+                console.log('Error deleting payment method:', body ?? error);
+                throw new Error(body?.error || body?.detail || error.message);
+              }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               setCards((prev) => prev.filter((c) => c.id !== card.id));
             } catch (err: any) {
@@ -309,7 +315,7 @@ export default function PaymentMethodsScreen() {
                   width: 80,
                   height: 80,
                   borderRadius: 40,
-                  backgroundColor: `${accentRgb}20`,
+                  backgroundColor: `rgba(${colors.accent.replace(/ /g, ',')},0.12)`,
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginBottom: 16,

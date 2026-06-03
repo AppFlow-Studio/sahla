@@ -82,7 +82,7 @@ export default function SignUpScreen() {
     setSubmitting(true);
     try {
       const attempt = await signUp.attemptEmailAddressVerification({ code });
-      if (attempt.status === 'complete') {
+      if (attempt.status === 'complete' || attempt.createdSessionId) {
         await setActive({ session: attempt.createdSessionId });
         const userId = clerk.user?.id;
         if (userId) await joinAndActivateOrg(userId);

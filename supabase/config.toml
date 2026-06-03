@@ -21,3 +21,28 @@ verify_jwt = false
 
 [functions.get-content-items]
 verify_jwt = false
+
+[functions.send-prayer-notifications]
+verify_jwt = false
+
+# Payment/management functions: the mobile app authenticates with Clerk and
+# these self-authenticate via user_id in the body + service role, so the edge
+# gateway must NOT enforce a native JWT. Without these entries the CLI defaults
+# verify_jwt to true on every deploy and silently 401s the app.
+[functions.get-payment-methods]
+verify_jwt = false
+
+[functions.get-payment-history]
+verify_jwt = false
+
+[functions.delete-payment-method]
+verify_jwt = false
+
+[functions.reels-actions]
+verify_jwt = false
+
+[functions.reels-upload]
+verify_jwt = false
+
+[functions.ct02-actions]
+verify_jwt = false

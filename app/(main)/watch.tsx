@@ -2,11 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
+
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import MasjidLogo from '@/assets/masjid-logo.svg';
 import NoWifiSignal from '@/assets/images/no_wifi_signal.png';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -26,8 +29,12 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -36,6 +43,12 @@ import { useReels, type Reel } from '@/src/hooks/use-reels';
 import { useDismissReel } from '@/src/hooks/use-dismissed-reels';
 import { useIsReelLiked, useToggleReelLike } from '@/src/hooks/use-liked-reels';
 import { useIsReelSaved, useToggleReelSave } from '@/src/hooks/use-saved-reels';
+import {
+  useReportReel,
+  useBlockReelSource,
+  REEL_REPORT_REASONS,
+  type ReelReportReason,
+} from '@/src/hooks/use-report-reel';
 import { useConfigStore } from '@/src/stores/config-store';
 
 
@@ -72,6 +85,52 @@ function ActionButton({
           {label}
         </Text>
       ) : null}
+    </Pressable>
+  );
+}
+
+function LikeButton({
+  liked,
+  count,
+  onPress,
+}: {
+  liked: boolean;
+  count: string;
+  onPress: () => void;
+}) {
+  const scale = useSharedValue(1);
+  const prevLiked = useRef(liked);
+
+  useEffect(() => {
+    // Only pop on the false → true transition (an actual like, not unlike).
+    if (liked && !prevLiked.current) {
+      scale.value = withSequence(
+        withTiming(1.35, { duration: 130, easing: Easing.out(Easing.quad) }),
+        withSpring(1, { damping: 8, stiffness: 230 }),
+      );
+    }
+    prevLiked.current = liked;
+  }, [liked, scale]);
+
+  const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const handlePress = () => {
+    if (!liked) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
+  return (
+    <Pressable onPress={handlePress} className="items-center active:opacity-70">
+      <Animated.View style={heartStyle}>
+        <Ionicons
+          name={liked ? 'heart' : 'heart-outline'}
+          size={28}
+          color={liked ? '#FF0005' : '#ffffff'}
+        />
+      </Animated.View>
+      <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
+        {count}
+      </Text>
     </Pressable>
   );
 }
@@ -359,10 +418,25 @@ function DescriptionPanel({
     opacity: backdropOpacity.value,
   }));
 
+  // Swipe-down-to-dismiss. Attached to the non-scrolling handle/header so it
+  // never fights the description ScrollView.
+  const pan = Gesture.Pan()
+    .onUpdate((e) => {
+      if (e.translationY > 0) translateY.value = e.translationY;
+    })
+    .onEnd((e) => {
+      if (e.translationY > 80 || e.velocityY > 600) {
+        runOnJS(onClose)();
+      } else {
+        translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      }
+    });
+
   if (!mounted) return null;
 
   return (
     <Modal transparent visible animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <Animated.View style={[{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }, backdropStyle]}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
       </Animated.View>
@@ -382,18 +456,22 @@ function DescriptionPanel({
           panelStyle,
         ]}
       >
-        {/* Drag handle */}
-        <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
-          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)' }} />
-        </View>
+        <GestureDetector gesture={pan}>
+          <View>
+            {/* Drag handle */}
+            <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)' }} />
+            </View>
 
-        {/* Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 }}>
-          <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>Description</Text>
-          <Pressable onPress={onClose} hitSlop={12}>
-            <Ionicons name="close" size={22} color="#ffffff" />
-          </Pressable>
-        </View>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 }}>
+              <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>Description</Text>
+              <Pressable onPress={onClose} hitSlop={12}>
+                <Ionicons name="close" size={22} color="#ffffff" />
+              </Pressable>
+            </View>
+          </View>
+        </GestureDetector>
 
         <View style={{ height: 0.5, backgroundColor: 'rgba(255,255,255,0.12)' }} />
 
@@ -440,7 +518,83 @@ function DescriptionPanel({
           </View>
         </ScrollView>
       </Animated.View>
+      </GestureHandlerRootView>
     </Modal>
+  );
+}
+
+function ReportSheet({
+  visible,
+  onClose,
+  masjidName,
+  onSelectReason,
+  onBlock,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  masjidName: string;
+  onSelectReason: (reason: ReelReportReason) => void;
+  onBlock: () => void;
+}) {
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View
+        style={{
+          backgroundColor: 'rgba(253, 249, 240, 0.98)',
+          borderRadius: 28,
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOpacity: 0.2,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 10,
+        }}
+      >
+        <View
+          style={{
+            alignSelf: 'center',
+            width: 36,
+            height: 5,
+            borderRadius: 3,
+            backgroundColor: 'rgba(10, 38, 30, 0.25)',
+            marginTop: 10,
+          }}
+        />
+        <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 6 }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: '#0A261E' }}>
+            Report this reel
+          </Text>
+          <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)', marginTop: 4 }}>
+            Why are you reporting this?
+          </Text>
+        </View>
+
+        {REEL_REPORT_REASONS.map((r) => (
+          <Pressable
+            key={r.value}
+            onPress={() => onSelectReason(r.value)}
+            className="flex-row items-center justify-between active:opacity-60"
+            style={{ paddingHorizontal: 22, paddingVertical: 14 }}
+          >
+            <Text style={{ fontSize: 15, color: '#0A261E' }}>{r.label}</Text>
+            <Ionicons name="chevron-forward" size={16} color="rgba(10,38,30,0.4)" />
+          </Pressable>
+        ))}
+
+        <View style={{ height: 0.5, backgroundColor: 'rgba(10,38,30,0.12)', marginHorizontal: 22 }} />
+
+        <Pressable
+          onPress={onBlock}
+          className="flex-row items-center active:opacity-60"
+          style={{ paddingHorizontal: 22, paddingVertical: 16 }}
+        >
+          <Ionicons name="ban-outline" size={16} color="#B00020" />
+          <Text style={{ marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#B00020' }}>
+            Block {masjidName}
+          </Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
   );
 }
 
@@ -455,6 +609,7 @@ export function ReelItem({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [captionTruncated, setCaptionTruncated] = useState(false);
   // Local pause state — single-tapping the reel toggles play/pause (TikTok-style).
@@ -467,6 +622,44 @@ export function ReelItem({
   const toggleLike = useToggleReelLike(reel.reel_id, reel.mosque_id);
   const liked = !!isLikedQ.data;
   const dismissReel = useDismissReel(reel.reel_id, reel.mosque_id);
+  const reportReel = useReportReel(reel.reel_id, reel.mosque_id);
+  const blockSource = useBlockReelSource(reel.mosque_id);
+
+  const handleSelectReason = (reason: ReelReportReason) => {
+    setReportOpen(false);
+    reportReel.mutate(
+      { reason },
+      {
+        onSuccess: () =>
+          Alert.alert(
+            'Report received',
+            "Thank you. Our team will review this content. We've also hidden it from your feed.",
+          ),
+        onError: () =>
+          Alert.alert('Couldn’t submit report', 'Please check your connection and try again.'),
+      },
+    );
+  };
+
+  const handleBlock = () => {
+    setReportOpen(false);
+    Alert.alert(
+      `Block ${masjidName}?`,
+      `You won't see reels from ${masjidName} anymore. You can’t undo this from the app.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () =>
+            blockSource.mutate(undefined, {
+              onError: () =>
+                Alert.alert('Couldn’t block', 'Please check your connection and try again.'),
+            }),
+        },
+      ],
+    );
+  };
 
   const player = useVideoPlayer(reel.video_url, (p) => {
     p.loop = true;
@@ -492,6 +685,66 @@ export function ReelItem({
     }
   }, [isActive, paused, player]);
 
+  // ── Double-tap-to-like (TikTok/IG style) ───────────────────────────────
+  // Manual tap detection so the existing single-tap (play/pause) and the
+  // nested action-button Pressables keep working via RN's responder system —
+  // swapping the root for an RNGH gesture would double-fire on those buttons.
+  const lastTapAt = useRef(0);
+  const tapLoc = useRef({ x: 0, y: 0 });
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const burstScale = useSharedValue(0);
+  const burstOpacity = useSharedValue(0);
+  const burstX = useSharedValue(0);
+  const burstY = useSharedValue(0);
+
+  useEffect(() => () => {
+    if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+  }, []);
+
+  const burstStyle = useAnimatedStyle(() => ({
+    opacity: burstOpacity.value,
+    transform: [
+      { translateX: burstX.value - 55 },
+      { translateY: burstY.value - 55 },
+      { scale: burstScale.value },
+    ],
+  }));
+
+  const fireHeartBurst = () => {
+    burstX.value = tapLoc.current.x;
+    burstY.value = tapLoc.current.y;
+    burstScale.value = 0;
+    burstOpacity.value = 1;
+    burstScale.value = withSpring(1, { damping: 11, stiffness: 180 });
+    burstOpacity.value = withDelay(450, withTiming(0, { duration: 250 }));
+  };
+
+  const handleDoubleTapLike = () => {
+    // Double-tap always likes, never unlikes (matches TikTok/IG).
+    if (!liked) toggleLike.mutate(liked);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    fireHeartBurst();
+  };
+
+  const onTapVideo = () => {
+    const now = Date.now();
+    if (now - lastTapAt.current < 280) {
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = null;
+      }
+      lastTapAt.current = 0;
+      handleDoubleTapLike();
+    } else {
+      lastTapAt.current = now;
+      // Defer the play/pause toggle briefly to see if a second tap arrives.
+      singleTapTimer.current = setTimeout(() => {
+        setPaused((p) => !p);
+        singleTapTimer.current = null;
+      }, 280);
+    }
+  };
+
   const handleShare = async () => {
     const arabic = 'arabic' in reel ? (reel.arabic as string | undefined) : undefined;
     const translation =
@@ -515,7 +768,10 @@ export function ReelItem({
     // Nested Pressables (action buttons, menu, sheet) capture their own taps.
     // FlatList claims vertical pans, so swiping doesn't fire onPress.
     <Pressable
-      onPress={() => setPaused((p) => !p)}
+      onPressIn={(e) => {
+        tapLoc.current = { x: e.nativeEvent.locationX, y: e.nativeEvent.locationY };
+      }}
+      onPress={onTapVideo}
       style={{ height, width: '100%' }}
       className="bg-black"
     >
@@ -558,6 +814,17 @@ export function ReelItem({
           </View>
         </View>
       ) : null}
+
+      {/* Double-tap heart burst — pops at the tap point, then fades. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          { position: 'absolute', top: 0, left: 0, width: 110, height: 110, alignItems: 'center', justifyContent: 'center' },
+          burstStyle,
+        ]}
+      >
+        <Ionicons name="heart" size={104} color="#FF0005" style={{ transform: [{ rotate: '-12deg' }] }} />
+      </Animated.View>
 
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-1 justify-center px-6">
@@ -616,12 +883,11 @@ export function ReelItem({
         </View>
 
         <View
-          style={{ position: 'absolute', right: 14, bottom: 120, gap: 22, alignItems: 'center' }}
+          style={{ position: 'absolute', right: 14, bottom: 280, gap: 28, alignItems: 'center' }}
         >
-          <ActionButton
-            icon={liked ? 'heart' : 'heart-outline'}
-            color={liked ? '#FF0005' : '#ffffff'}
-            label={formatCount(reel.like_count ?? 0)}
+          <LikeButton
+            liked={liked}
+            count={formatCount(reel.like_count ?? 0)}
             onPress={() => toggleLike.mutate(liked)}
           />
           <ActionButton icon="paper-plane-outline" onPress={handleShare} />
@@ -661,6 +927,7 @@ export function ReelItem({
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 10 }}>
               <Text
                 numberOfLines={2}
+                onPress={() => setDescriptionOpen(true)}
                 onTextLayout={(e) => setCaptionTruncated(e.nativeEvent.lines.length > 1)}
                 style={{ fontSize: 10, color: '#ffffff', flex: 1 }}
               >
@@ -696,7 +963,10 @@ export function ReelItem({
                 setMenuOpen(false);
                 dismissReel.mutate();
               }}
-              onReport={() => setMenuOpen(false)}
+              onReport={() => {
+                setMenuOpen(false);
+                setReportOpen(true);
+              }}
             />
           </View>
         </Pressable>
@@ -705,6 +975,14 @@ export function ReelItem({
       <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
         <MasjidCard onClose={() => setSheetOpen(false)} />
       </BottomSheet>
+
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        masjidName={reel.title ?? masjidName}
+        onSelectReason={handleSelectReason}
+        onBlock={handleBlock}
+      />
 
     </Pressable>
   );
@@ -741,6 +1019,9 @@ export default function WatchScreen() {
       if (idx != null) setActiveIndex(idx);
     },
   );
+
+  useStatusBarStyle('light');
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-black items-center justify-center">

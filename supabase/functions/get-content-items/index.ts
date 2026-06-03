@@ -23,7 +23,7 @@ const CORS = {
 };
 
 const SELECT =
-  'content_id, name, description, image, type, start_date, end_date, start_time, days';
+  'content_id, name, description, image, type, start_date, end_date, start_time, days, is_weekly_program, recurrence_freq, recurrence_interval, recurrence_anchor, week_of_month';
 
 type Body = {
   mosque_id?: string;

@@ -48,6 +48,15 @@ export default function AdminHub() {
         </Text>
 
         <AdminRow
+          title="Programs & Events"
+          subtitle="Create and manage programs and events"
+          icon="megaphone-outline"
+          fgRgb={fgRgb}
+          mutedRgb={mutedRgb}
+          borderColor={borderColor}
+          onPress={() => router.push('/profile/admin/programs')}
+        />
+        <AdminRow
           title="Sheikhs"
           subtitle="Add, edit, or remove speakers"
           icon="people-outline"
@@ -64,6 +73,15 @@ export default function AdminHub() {
           mutedRgb={mutedRgb}
           borderColor={borderColor}
           onPress={() => router.push('/profile/admin/jummah')}
+        />
+        <AdminRow
+          title="Iqamah Times"
+          subtitle="Set iqamah for each daily prayer"
+          icon="time-outline"
+          fgRgb={fgRgb}
+          mutedRgb={mutedRgb}
+          borderColor={borderColor}
+          onPress={() => router.push('/profile/admin/iqamah')}
         />
       </ScrollView>
     </View>

@@ -13,6 +13,7 @@ import {
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -20,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
+import { useToggleSave } from '@/src/hooks/use-saved-content';
 
 type SavedEvent = {
   content_id: string;
@@ -31,17 +33,6 @@ type SavedEvent = {
   local_image?: number;
   subtitle_override?: string;
 };
-
-const FALLBACK_EVENTS: SavedEvent[] = Array.from({ length: 5 }, (_, i) => ({
-  content_id: `fallback-post-fajir-breakfast-${i}`,
-  name: 'Post-Fajir Breakfast',
-  image: null,
-  type: null,
-  start_date: 'April 19, 2026',
-  start_time: '2 hours',
-  local_image: require('@/assets/images/Aboodi.png'),
-  subtitle_override: 'April 19, 2026 • 2 hours',
-}));
 
 const PAGE_BG = '#FFFBF2';
 const STATUS_BG = '#0A261E';
@@ -91,10 +82,20 @@ export default function Saved_Events() {
   }));
 
   const [events, setEvents] = useState<SavedEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mosqueId, setMosqueId] = useState<string | null>(null);
+
+  const removeItem = (contentId: string) =>
+    setEvents((prev) => prev.filter((e) => e.content_id !== contentId));
 
   useEffect(() => {
-    if (!isLoaded || !userId) return;
+    if (!isLoaded) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
+    setLoading(true);
 
     (async () => {
       const { data: mosque } = await supabaseRef.current
@@ -103,7 +104,12 @@ export default function Saved_Events() {
         .eq('slug', config.id)
         .maybeSingle();
 
-      if (cancelled || !mosque) return;
+      if (cancelled) return;
+      if (!mosque) {
+        setLoading(false);
+        return;
+      }
+      setMosqueId(mosque.id);
 
       const { data, error } = await supabaseRef.current
         .from('saved_content')
@@ -116,6 +122,7 @@ export default function Saved_Events() {
       if (cancelled) return;
       if (error) {
         console.warn('[Saved_Events] fetch failed', error);
+        setLoading(false);
         return;
       }
 
@@ -131,6 +138,7 @@ export default function Saved_Events() {
         .filter((r) => r.type === 'event' || r.type === 'program');
 
       setEvents(rows);
+      setLoading(false);
     })();
 
     return () => {
@@ -193,12 +201,16 @@ export default function Saved_Events() {
                     ]}
                   >
                     <View style={{ width: screenWidth }}>
-                      {eventItems.length > 0 ? (
+                      {loading ? (
+                        <SkeletonList />
+                      ) : eventItems.length > 0 ? (
                         eventItems.map((item, idx, arr) => (
                           <SavedRow
                             key={`events-${item.content_id}`}
                             item={item}
                             isLast={idx === arr.length - 1}
+                            mosqueId={mosqueId}
+                            onRemove={removeItem}
                           />
                         ))
                       ) : (
@@ -206,16 +218,21 @@ export default function Saved_Events() {
                       )}
                     </View>
                     <View style={{ width: screenWidth }}>
-                      {(programItems.length > 0
-                        ? programItems
-                        : FALLBACK_EVENTS
-                      ).map((item, idx, arr) => (
-                        <SavedRow
-                          key={`programs-${item.content_id}`}
-                          item={item}
-                          isLast={idx === arr.length - 1}
-                        />
-                      ))}
+                      {loading ? (
+                        <SkeletonList />
+                      ) : programItems.length > 0 ? (
+                        programItems.map((item, idx, arr) => (
+                          <SavedRow
+                            key={`programs-${item.content_id}`}
+                            item={item}
+                            isLast={idx === arr.length - 1}
+                            mosqueId={mosqueId}
+                            onRemove={removeItem}
+                          />
+                        ))
+                      ) : (
+                        <EmptyState label="No saved programs yet" />
+                      )}
                     </View>
                   </Animated.View>
                 </View>
@@ -392,6 +409,59 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
+function SkeletonPulse({
+  width,
+  height,
+  radius = 6,
+  style,
+}: {
+  width: number | `${number}%`;
+  height: number;
+  radius?: number;
+  style?: any;
+}) {
+  const opacity = useSharedValue(0.4);
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.85, { duration: 850 }), -1, true);
+  }, [opacity]);
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return (
+    <Animated.View
+      style={[
+        { width, height, borderRadius: radius, backgroundColor: 'rgba(10,38,30,0.08)' },
+        animStyle,
+        style,
+      ]}
+    />
+  );
+}
+
+function SkeletonRow({ isLast }: { isLast: boolean }) {
+  return (
+    <View className="px-5">
+      <View className="flex-row items-center" style={{ paddingVertical: 14 }}>
+        <SkeletonPulse width={50} height={50} radius={10} style={{ marginRight: 16 }} />
+        <View className="flex-1">
+          <SkeletonPulse width="55%" height={11} radius={5} />
+          <SkeletonPulse width="35%" height={9} radius={5} style={{ marginTop: 7 }} />
+        </View>
+        <SkeletonPulse width={20} height={20} radius={10} style={{ marginLeft: 8 }} />
+      </View>
+      {!isLast && <View style={{ height: 1, backgroundColor: DIVIDER }} />}
+    </View>
+  );
+}
+
+function SkeletonList({ count = 4 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonRow key={`skeleton-${i}`} isLast={i === count - 1} />
+      ))}
+    </>
+  );
+}
+
 const SHORT_MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -407,11 +477,35 @@ function formatSavedDate(startDate: string | null): string {
   return `${month} ${Number(d)}, ${y}`;
 }
 
-function SavedRow({ item, isLast }: { item: SavedEvent; isLast: boolean }) {
+function SavedRow({
+  item,
+  isLast,
+  mosqueId,
+  onRemove,
+}: {
+  item: SavedEvent;
+  isLast: boolean;
+  mosqueId: string | null;
+  onRemove: (contentId: string) => void;
+}) {
   const subtitle = item.subtitle_override ?? formatSavedDate(item.start_date);
+  const toggleSave = useToggleSave(item.content_id, mosqueId);
+  // Demo placeholder rows have no real saved_content row to remove.
+  const isFallback = item.content_id.startsWith('fallback-');
+
+  const handleUnsave = () => {
+    if (isFallback || toggleSave.isPending) return;
+    onRemove(item.content_id); // optimistic: drop the row immediately
+    toggleSave.mutate(true); // persist the un-save (true = currently saved)
+  };
+
   return (
     <View className="px-5">
-      <Pressable className="flex-row items-center" style={{ paddingVertical: 14 }}>
+      <Pressable
+        onPress={() => router.push(`/content/${item.content_id}`)}
+        className="flex-row items-center active:opacity-70"
+        style={{ paddingVertical: 14 }}
+      >
         <View
           className="mr-4 overflow-hidden rounded-[10px]"
           style={{ width: 50, height: 50, backgroundColor: '#CFE0EA' }}
@@ -453,7 +547,15 @@ function SavedRow({ item, isLast }: { item: SavedEvent; isLast: boolean }) {
             {subtitle}
           </Text>
         </View>
-        <Pressable hitSlop={8} className="ml-2 items-center justify-center" style={{ width: 36, height: 40 }}>
+        <Pressable
+          onPress={handleUnsave}
+          disabled={isFallback || toggleSave.isPending}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${item.name ?? 'item'} from saved`}
+          className="ml-2 items-center justify-center active:opacity-60"
+          style={{ width: 36, height: 40 }}
+        >
           <Text
             style={{
               color: GOLD,

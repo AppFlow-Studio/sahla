@@ -74,6 +74,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-sqlite",
     "expo-asset",
     "expo-apple-authentication",
+    "@react-native-community/datetimepicker",
     [
       "expo-image-picker",
       {

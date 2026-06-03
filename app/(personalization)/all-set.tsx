@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import Mandala from '@/assets/onboarding/mandala.svg';
+import { useUserPreferences } from '@/src/hooks/use-user-preferences';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 const SERIF = 'PlayfairDisplay_500Medium';
@@ -45,6 +46,15 @@ function CreamHalo() {
 export default function AllSetScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const { markPersonalizationComplete } = useUserPreferences();
+
+  // Reaching this screen means the personalization flow is finished — stamp it
+  // server-side so completion follows the user across devices.
+  useEffect(() => {
+    markPersonalizationComplete.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const storedName = useOnboardingStore((s) => s.firstName);
   const firstName =
     user?.firstName?.trim() || storedName.trim().split(/\s+/)[0] || 'Friend';

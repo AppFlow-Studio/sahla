@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
-import { router, Stack } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, Stack, useFocusEffect } from 'expo-router';
+
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -442,6 +444,10 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
   const remaining = Math.max(0, goal - pages);
   const ringSize = 64;
 
+  // No saved last-viewed position → the user hasn't read yet, so prompt them to
+  // "Start Reading" rather than "Continue Reading".
+  const hasRead = useMemo(() => getLastViewed() != null, [version]);
+
   return (
     <View
       style={{
@@ -506,7 +512,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
               }}
             >
               <Text style={{ color: c.text, fontSize: 12, fontWeight: '500' }}>
-                Continue Reading
+                {hasRead ? 'Continue Reading' : 'Start Reading'}
               </Text>
             </GlassView>
           </Pressable>
@@ -840,6 +846,22 @@ function SupportMasjidCard({ c }: { c: Palette }) {
   );
 }
 
+// Icon per prayer, matching the time of day it falls in.
+function prayerIcon(
+  name: string,
+): React.ComponentProps<typeof MaterialCommunityIcons>['name'] {
+  const n = name.toLowerCase();
+  if (n.includes('fajr')) return 'weather-sunset-up'; // dawn
+  if (n.includes('sunrise') || n.includes('shuru') || n.includes('shorooq'))
+    return 'weather-sunny'; // sun up
+  if (n.includes('dhuhr') || n.includes('zuhr') || n.includes('duhr'))
+    return 'white-balance-sunny'; // midday
+  if (n.includes('asr')) return 'weather-partly-cloudy'; // afternoon
+  if (n.includes('maghrib')) return 'weather-sunset-down'; // sunset
+  if (n.includes('isha')) return 'weather-night'; // night
+  return 'weather-sunny';
+}
+
 function PrayerRowItem({
   row,
   c,
@@ -873,7 +895,7 @@ function PrayerRowItem({
     >
       <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
         <MaterialCommunityIcons
-          name="weather-sunny"
+          name={prayerIcon(row.name)}
           size={22}
           color={isNext ? c.gold : isPassed ? c.muted : c.text}
         />
@@ -1106,11 +1128,24 @@ export default function PrayerScreen() {
 
   const insets = useSafeAreaInsets();
 
+  useStatusBarStyle('light');
+
+  // Always start the Prayer page at the top each time it's focused, rather than
+  // restoring the previous scroll position.
+  const scrollRef = useRef<ScrollView>(null);
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: -insets.top, animated: false });
+    }, [insets.top]),
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <Stack.Screen options={{ headerShown: false }} />
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={{ paddingBottom: 160 }}
+          indicatorStyle="white"
           scrollEventThrottle={16}
           contentInset={{ top: insets.top }}
           contentOffset={{ x: 0, y: -insets.top }}

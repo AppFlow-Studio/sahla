@@ -551,12 +551,16 @@ export type Database = {
           name: string | null
           paid_link: string | null
           price: number | null
+          recurrence_anchor: string | null
+          recurrence_freq: string
+          recurrence_interval: number
           speakers: string[] | null
           start_date: string | null
           start_time: string | null
           stripe_price_id: string | null
           stripe_product_id: string | null
           type: string
+          week_of_month: number | null
         }
         Insert: {
           content_id?: string
@@ -581,12 +585,16 @@ export type Database = {
           name?: string | null
           paid_link?: string | null
           price?: number | null
+          recurrence_anchor?: string | null
+          recurrence_freq?: string
+          recurrence_interval?: number
           speakers?: string[] | null
           start_date?: string | null
           start_time?: string | null
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           type: string
+          week_of_month?: number | null
         }
         Update: {
           content_id?: string
@@ -611,12 +619,16 @@ export type Database = {
           name?: string | null
           paid_link?: string | null
           price?: number | null
+          recurrence_anchor?: string | null
+          recurrence_freq?: string
+          recurrence_interval?: number
           speakers?: string[] | null
           start_date?: string | null
           start_time?: string | null
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           type?: string
+          week_of_month?: number | null
         }
         Relationships: [
           {
@@ -1197,6 +1209,7 @@ export type Database = {
           capacity_status: string | null
           created_at: string
           id: number
+          is_school: boolean
           mosque_id: string
           prayer_time: string | null
           speaker: string | null
@@ -1207,6 +1220,7 @@ export type Database = {
           capacity_status?: string | null
           created_at?: string
           id?: never
+          is_school?: boolean
           mosque_id: string
           prayer_time?: string | null
           speaker?: string | null
@@ -1217,6 +1231,7 @@ export type Database = {
           capacity_status?: string | null
           created_at?: string
           id?: never
+          is_school?: boolean
           mosque_id?: string
           prayer_time?: string | null
           speaker?: string | null
@@ -3729,6 +3744,7 @@ export type Database = {
           is_revert: boolean | null
           islamic_knowledge_level: string | null
           mosque_id: string
+          personalization_completed_at: string | null
           preferred_days: string[] | null
           preferred_times: string[] | null
           programs_for: string[]
@@ -3746,6 +3762,7 @@ export type Database = {
           is_revert?: boolean | null
           islamic_knowledge_level?: string | null
           mosque_id: string
+          personalization_completed_at?: string | null
           preferred_days?: string[] | null
           preferred_times?: string[] | null
           programs_for?: string[]
@@ -3763,6 +3780,7 @@ export type Database = {
           is_revert?: boolean | null
           islamic_knowledge_level?: string | null
           mosque_id?: string
+          personalization_completed_at?: string | null
           preferred_days?: string[] | null
           preferred_times?: string[] | null
           programs_for?: string[]

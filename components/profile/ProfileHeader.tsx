@@ -162,7 +162,7 @@ export default function ProfileHeader() {
             className="mt-3 text-center text-primary-foreground"
             style={{
               fontFamily: 'CormorantGaramond_600SemiBold',
-              fontSize: 20,
+              fontSize: 21,
             }}
           >
             {fullName}
@@ -178,7 +178,7 @@ export default function ProfileHeader() {
                   default: undefined,
                 }),
                 fontWeight: '400',
-                fontSize: 8,
+                fontSize: 10,
               }}
             >
               Member Since {createdYear}
@@ -186,35 +186,35 @@ export default function ProfileHeader() {
           )}
 
           {/* Action buttons */}
-          <View className="mt-2 flex-row items-center justify-center gap-2">
+          <View className="mt-2.5 flex-row items-center justify-center gap-2">
             {!isProfileComplete && (
               <Pressable
-                className="flex-row items-center justify-center rounded-full border-accent/50"
+                className="flex-row items-center justify-center rounded-full border-accent/50 active:opacity-80"
                 style={{
-                  borderWidth: 0.5,
-                  paddingHorizontal: 14,
+                  borderWidth: 0.75,
+                  paddingHorizontal: 11,
                   paddingVertical: 4,
                 }}
               >
-                <View className="mr-1.5 items-center justify-center">
-                  <View className="absolute h-3 w-3 rounded-full bg-accent opacity-20" />
+                <View className="mr-1 items-center justify-center">
+                  <View className="absolute h-2.5 w-2.5 rounded-full bg-accent opacity-20" />
                   <View className="rounded-full bg-accent" style={{ width: 4, height: 4 }} />
                 </View>
-                <Text className="text-accent" style={{ fontSize: 8, fontWeight: '400' }}>
+                <Text className="text-accent" style={{ fontSize: 9, fontWeight: '500' }}>
                   Complete Profile
                 </Text>
               </Pressable>
             )}
             <Pressable
               onPress={() => setEditVisible(true)}
-              className="items-center justify-center rounded-full border-primary-foreground/50"
+              className="items-center justify-center rounded-full border-primary-foreground/50 active:opacity-80"
               style={{
-                borderWidth: 0.5,
-                paddingHorizontal: 14,
+                borderWidth: 0.75,
+                paddingHorizontal: 11,
                 paddingVertical: 4,
               }}
             >
-              <Text className="text-primary-foreground" style={{ fontSize: 8, fontWeight: '400' }}>
+              <Text className="text-primary-foreground" style={{ fontSize: 9, fontWeight: '500' }}>
                 Edit Profile
               </Text>
             </Pressable>

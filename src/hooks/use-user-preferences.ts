@@ -5,7 +5,7 @@ import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
 
 const COLUMNS =
-  'id, user_id, mosque_id, attendance_reasons, programs_for, attendance_windows, additional_preferences, gender, birth_year, has_children, children_ages, is_revert, islamic_knowledge_level, preferred_days, preferred_times' as const;
+  'id, user_id, mosque_id, attendance_reasons, programs_for, attendance_windows, additional_preferences, gender, birth_year, has_children, children_ages, is_revert, islamic_knowledge_level, preferred_days, preferred_times, personalization_completed_at' as const;
 
 export type UserPreferencesRow = {
   id: number;
@@ -23,6 +23,7 @@ export type UserPreferencesRow = {
   islamic_knowledge_level: string | null;
   preferred_days: string[] | null;
   preferred_times: string[] | null;
+  personalization_completed_at: string | null;
 };
 
 /**
@@ -169,6 +170,29 @@ export function useUserPreferences() {
     },
   });
 
+  // Stamp completion when the user reaches the end of the personalization flow.
+  const markPersonalizationComplete = useMutation({
+    mutationFn: async () => {
+      if (!userId || !mosqueUuid) {
+        throw new Error('Cannot save — user or mosque not ready.');
+      }
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert(
+          {
+            user_id: userId,
+            mosque_id: mosqueUuid,
+            personalization_completed_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,mosque_id' },
+        );
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
   return {
     preferences: query.data ?? null,
     status: !isLoaded || !mosqueUuid
@@ -184,5 +208,6 @@ export function useUserPreferences() {
     upsertAttendanceWindows,
     upsertIslamicKnowledgeLevel,
     upsertAnythingElse,
+    markPersonalizationComplete,
   };
 }

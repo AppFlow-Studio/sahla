@@ -6,10 +6,13 @@ import {
   Dimensions,
   Easing,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -104,7 +107,7 @@ export default function SheikhsScreen() {
         <FlatList
           data={speakers}
           keyExtractor={(s) => s.speaker_id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40 }}
           renderItem={({ item }) => (
             <SpeakerCard
               speaker={item}
@@ -206,6 +209,7 @@ function SpeakerFormModal({
   onClose: () => void;
 }) {
   const { colors } = useMasjidConfig();
+  const insets = useSafeAreaInsets();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const bgRgb = `rgb(${colors.card.replace(/ /g, ',')})`;
   const labelColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.6)`;
@@ -226,8 +230,37 @@ function SpeakerFormModal({
   const [speakerId, setSpeakerId] = useState<string | null>(null);
 
   const [mounted, setMounted] = useState(false);
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const translateY = useRef(new Animated.Value(SCREEN_H)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const animate = (duration?: number) =>
+      LayoutAnimation.configureNext({
+        duration: duration ?? 250,
+        update: { type: LayoutAnimation.Types.keyboard ?? LayoutAnimation.Types.easeInEaseOut },
+      });
+    const showSub = Keyboard.addListener(showEvt, (e) => {
+      animate(e.duration);
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+      setKeyboardUp(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvt, (e) => {
+      animate(e?.duration);
+      setKeyboardUp(false);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // When the keyboard is up, cap the sheet height so the whole thing fits in
+  // the space above the keyboard instead of clipping. Content-sized otherwise.
+  const sheetMaxHeight = keyboardUp ? SCREEN_H - keyboardHeight - insets.top - 20 : undefined;
 
   useEffect(() => {
     if (visible) {
@@ -317,7 +350,7 @@ function SpeakerFormModal({
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1 justify-end px-2 pb-3"
+        className="flex-1 justify-end px-2"
       >
         <Animated.View
           pointerEvents={visible ? 'auto' : 'none'}
@@ -338,6 +371,8 @@ function SpeakerFormModal({
           style={{
             backgroundColor: bgRgb,
             borderRadius: 48,
+            marginBottom: keyboardUp ? 8 : 12,
+            maxHeight: sheetMaxHeight,
             transform: [{ translateY }],
             shadowColor: fgRgb,
             shadowOffset: { width: 0, height: 8 },
@@ -364,6 +399,11 @@ function SpeakerFormModal({
             </Text>
           </View>
 
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 8 }}
+          >
           {/* Photo */}
           <View className="items-center pb-4">
             <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.7} disabled={isUploading}>
@@ -475,6 +515,7 @@ function SpeakerFormModal({
               </Text>
             )}
           </View>
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>

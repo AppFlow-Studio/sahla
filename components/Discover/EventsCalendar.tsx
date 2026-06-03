@@ -2,11 +2,16 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  runOnJS,
   SlideInLeft,
   SlideInRight,
   SlideOutLeft,
   SlideOutRight,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
 
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
@@ -502,6 +507,34 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
   const goNext = () =>
     setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1));
 
+  // Swipe left/right on the grid to change months. activeOffsetX / failOffsetY
+  // keep it from hijacking the page's vertical scroll.
+  const gridX = useSharedValue(0);
+  const monthSwipe = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-16, 16])
+    .onUpdate((e) => {
+      gridX.value = e.translationX * 0.3; // light rubber-band resistance
+    })
+    .onEnd((e) => {
+      if (e.translationX > 50 || e.velocityX > 500) runOnJS(goPrev)();
+      else if (e.translationX < -50 || e.velocityX < -500) runOnJS(goNext)();
+      gridX.value = withTiming(0, { duration: 180 });
+    });
+
+  const gridStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: gridX.value }],
+  }));
+
+  // Swipe the list area to switch between Today / Upcoming.
+  const modeSwipe = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-16, 16])
+    .onEnd((e) => {
+      if (e.translationX < -50 || e.velocityX < -500) runOnJS(setMode)("Upcoming");
+      else if (e.translationX > 50 || e.velocityX > 500) runOnJS(setMode)("Today");
+    });
+
   const handleSelect = (d: Date) => {
     setSelectedDate(d);
     if (
@@ -516,14 +549,19 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
   return (
     <View>
       <MonthHeader viewMonth={viewMonth} onPrev={goPrev} onNext={goNext} />
-      <CalendarGrid
-        viewMonth={viewMonth}
-        selectedDate={selectedDate}
-        eventDates={eventDates}
-        onSelect={handleSelect}
-      />
+      <GestureDetector gesture={monthSwipe}>
+        <Animated.View style={gridStyle}>
+          <CalendarGrid
+            viewMonth={viewMonth}
+            selectedDate={selectedDate}
+            eventDates={eventDates}
+            onSelect={handleSelect}
+          />
+        </Animated.View>
+      </GestureDetector>
       <ModeToggle mode={mode} onChange={setMode} />
 
+      <GestureDetector gesture={modeSwipe}>
       <View style={{ overflow: "hidden" }}>
         {mode === "Today" ? (
           <Animated.View
@@ -598,6 +636,7 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
           </Animated.View>
         )}
       </View>
+      </GestureDetector>
     </View>
   );
 }

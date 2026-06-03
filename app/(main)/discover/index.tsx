@@ -3,6 +3,8 @@ import {
   useFonts,
 } from "@expo-google-fonts/playfair-display";
 import { router, useLocalSearchParams } from "expo-router";
+
+import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import Animated, {
@@ -34,6 +36,7 @@ import UpcomingEventsSection, {
 } from "@/components/Discover/UpcomingEventsSection";
 import DonateCard from "@/components/profile/DonateCard";
 import { useContentItems } from "@/src/hooks/use-content-items";
+import { describeRecurrence, ruleFromRow } from "@/src/lib/recurrence";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useRecommendation } from "@/src/hooks/use-Recommendation";
 
@@ -74,13 +77,24 @@ function toTitleCase(s: string): string {
     .join("");
 }
 
-function formatCardDate(
-  startDate: string | null,
-  startTime: string | null,
-): string {
-  const time = formatTime12(startTime);
-  if (!startDate) return time;
-  const start = new Date(startDate).toLocaleDateString(undefined, {
+function formatCardDate(item: {
+  start_date: string | null;
+  start_time: string | null;
+  recurrence_freq?: string | null;
+  recurrence_interval?: number | null;
+  recurrence_anchor?: string | null;
+  week_of_month?: number | null;
+  days?: string[] | null;
+  end_date?: string | null;
+}): string {
+  const time = formatTime12(item.start_time);
+  // Recurring items have no single start_date \u2014 describe the pattern instead.
+  if (item.recurrence_freq && item.recurrence_freq !== "once") {
+    const label = describeRecurrence(ruleFromRow(item));
+    if (label) return time ? `${label} \u2022 ${time}` : label;
+  }
+  if (!item.start_date) return time;
+  const start = new Date(item.start_date).toLocaleDateString(undefined, {
     month: "long",
     day: "numeric",
   });
@@ -223,7 +237,7 @@ export default function DiscoverScreen() {
       filteredItems.slice(0, 3).map((r) => ({
         id: r.content_id,
         title: toTitleCase(r.name ?? "Untitled"),
-        dateLabel: formatCardDate(r.start_date, r.start_time),
+        dateLabel: formatCardDate(r),
         category: deriveCategory(r),
         thumbnail: r.image ? { uri: r.image } : undefined,
       })),
@@ -271,7 +285,7 @@ export default function DiscoverScreen() {
         .map((r) => ({
           id: r.content_id,
           title: toTitleCase(r.name ?? "Untitled"),
-          dateLabel: formatCardDate(r.start_date, r.start_time),
+          dateLabel: formatCardDate(r),
           image: r.image ? { uri: r.image } : undefined,
           isKids: r.is_kids === true,
           isYouth: r.is_fourteen_plus === true,
@@ -296,6 +310,8 @@ export default function DiscoverScreen() {
   const openContent = useCallback((id: string) => {
     router.push(`/content/${id}`);
   }, []);
+
+  useStatusBarStyle("dark");
 
   if (!fontsLoaded) {
     return (

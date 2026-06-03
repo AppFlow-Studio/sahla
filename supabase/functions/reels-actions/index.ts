@@ -21,6 +21,10 @@
  *   dismiss_reel       → "Not interested": record a dismissed_reels row (so the
  *                        reel never resurfaces) and decrement the user's
  *                        interest_level for each of the reel's tags
+ *   report_reel        → record a reel_reports row (objectionable content) and
+ *                        hide the reel from the reporter (writes dismissed_reels)
+ *   block_source       → block a masjid's reels: record a blocked_reel_sources
+ *                        row; the feed filters every reel from that mosque_id
  *
  * ⚠️  SECURITY — staging/demo only. `user_id` comes from the request body, not
  * a verified JWT — it's spoofable. Acceptable for the demo; do not promote to
@@ -82,6 +86,19 @@ type Body =
       user_id: string;
       mosque_id: string;
       reel_id: string;
+    }
+  | {
+      action: 'report_reel';
+      user_id: string;
+      mosque_id: string;
+      reel_id: string;
+      reason: string;
+      details?: string;
+    }
+  | {
+      action: 'block_source';
+      user_id: string;
+      mosque_id: string;
     };
 
 // ─── Handler ────────────────────────────────────────────────────────────────
@@ -138,16 +155,18 @@ serve(async (req) => {
         let reelsQuery = supabase.from('reels').select('*').eq('is_published', true);
         if (scope === 'own') reelsQuery = reelsQuery.eq('mosque_id', body.mosque_id);
 
-        const [reelsRes, tagsRes, prefsRes, dismissedRes] = await Promise.all([
+        const [reelsRes, tagsRes, prefsRes, dismissedRes, blockedRes] = await Promise.all([
           reelsQuery,
           supabase.from('reel_islamic_interests').select('reel_id, interest_id'),
           supabase.from('user_islamic_interests').select('interest_id, interest_level').eq('user_id', body.user_id).eq('mosque_id', body.mosque_id),
           supabase.from('dismissed_reels').select('reel_id').eq('user_id', body.user_id),
+          supabase.from('blocked_reel_sources').select('mosque_id').eq('user_id', body.user_id),
         ]);
         if (reelsRes.error) return jsonError(reelsRes.error.message, 500);
         if (tagsRes.error)  return jsonError(tagsRes.error.message, 500);
         if (prefsRes.error) return jsonError(prefsRes.error.message, 500);
         if (dismissedRes.error) return jsonError(dismissedRes.error.message, 500);
+        if (blockedRes.error) return jsonError(blockedRes.error.message, 500);
 
         const weight = new Map<number, number>();
         for (const row of prefsRes.data ?? []) {
@@ -166,8 +185,14 @@ serve(async (req) => {
           (dismissedRes.data ?? []).map((row) => row.reel_id as string),
         );
 
+        // Masjids this user has blocked — drop every reel they authored.
+        const blockedMosques = new Set<string>(
+          (blockedRes.data ?? []).map((row) => row.mosque_id as string),
+        );
+
         const reels = (reelsRes.data ?? [])
           .filter((r) => !dismissed.has(r.reel_id as string))
+          .filter((r) => !blockedMosques.has(r.mosque_id as string))
           .map((r) => {
           const tags = tagsByReel.get(r.reel_id as string) ?? [];
           const score = tags.reduce((sum, tagId) => sum + (weight.get(tagId) ?? 0), 0);
@@ -321,6 +346,42 @@ serve(async (req) => {
       
         return jsonOk({ dismissed: true });
       }
+
+      case 'report_reel': {
+        // Durable report record (one per user+reel; re-reporting updates it).
+        const { error: reportError } = await supabase.from('reel_reports').upsert(
+          {
+            user_id: body.user_id,
+            mosque_id: body.mosque_id,
+            reel_id: body.reel_id,
+            reason: body.reason,
+            details: body.details ?? null,
+            status: 'pending',
+          },
+          { onConflict: 'user_id,reel_id' },
+        );
+        if (reportError) return jsonError(reportError.message, 500);
+
+        // Hide the reported reel from the reporter straight away — same row a
+        // "Not interested" writes, so it never resurfaces in their feed.
+        const { error: hideError } = await supabase.from('dismissed_reels').upsert(
+          { user_id: body.user_id, mosque_id: body.mosque_id, reel_id: body.reel_id },
+          { onConflict: 'user_id,reel_id', ignoreDuplicates: true },
+        );
+        if (hideError) return jsonError(hideError.message, 500);
+
+        return jsonOk({ reported: true });
+      }
+
+      case 'block_source': {
+        const { error } = await supabase.from('blocked_reel_sources').upsert(
+          { user_id: body.user_id, mosque_id: body.mosque_id },
+          { onConflict: 'user_id,mosque_id', ignoreDuplicates: true },
+        );
+        if (error) return jsonError(error.message, 500);
+        return jsonOk({ blocked: true });
+      }
+
       default:
         return jsonError('Unknown action', 400);
     }

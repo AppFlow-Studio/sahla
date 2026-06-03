@@ -18,12 +18,9 @@ import {
   NOTIF_OFFSET_OPTIONS,
   useSaveContentNotifSettings,
 } from '@/src/hooks/use-content-notification-settings';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
-const BUSH = '#0A261E';
-const SURFACE = '#FFFBF2';
-const MUTED = 'rgba(10,38,30,0.55)';
-const DIVIDER = 'rgba(10,38,30,0.08)';
-const SHEET_RADIUS = 28;
+const SHEET_RADIUS = 40;
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 800;
 
@@ -48,6 +45,14 @@ export function ContentNotificationSettingsSheet({
   mosqueId,
   initialOffsets,
 }: Props) {
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ',');
+  const BUSH = `rgb(${fg})`;
+  const SURFACE = `rgb(${colors.background.replace(/ /g, ',')})`;
+  const ACCENT = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const MUTED = `rgba(${fg},0.55)`;
+  const DIVIDER = `rgba(${fg},0.08)`;
+
   const [mounted, setMounted] = useState(visible);
   const translateY = useSharedValue(600);
   const backdropOpacity = useSharedValue(0);
@@ -162,7 +167,7 @@ export function ContentNotificationSettingsSheet({
                   width: 40,
                   height: 5,
                   borderRadius: 999,
-                  backgroundColor: 'rgba(10,38,30,0.18)',
+                  backgroundColor: `rgba(${fg},0.18)`,
                   marginTop: 10,
                 }}
               />
@@ -214,8 +219,8 @@ export function ContentNotificationSettingsSheet({
                           height: 22,
                           borderRadius: 6,
                           borderWidth: 1.5,
-                          borderColor: isOn ? BUSH : 'rgba(10,38,30,0.3)',
-                          backgroundColor: isOn ? BUSH : 'transparent',
+                          borderColor: isOn ? ACCENT : `rgba(${fg},0.3)`,
+                          backgroundColor: isOn ? ACCENT : 'transparent',
                           alignItems: 'center',
                           justifyContent: 'center',
                           marginRight: 12,
@@ -259,7 +264,7 @@ export function ContentNotificationSettingsSheet({
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
-                    borderColor: 'rgba(10,38,30,0.15)',
+                    borderColor: `rgba(${fg},0.15)`,
                   }}
                 >
                   <Text
@@ -282,7 +287,7 @@ export function ContentNotificationSettingsSheet({
                     borderRadius: 14,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: BUSH,
+                    backgroundColor: ACCENT,
                     opacity: save.isPending ? 0.6 : 1,
                   }}
                 >
