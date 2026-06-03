@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,6 +15,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Image } from 'expo-image';
 
 import { CardVisual } from '@/src/components/stripe-card-visual';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
@@ -103,7 +104,7 @@ export default function AdvertiseApplyScreen() {
   const update = (field: keyof FormData) => (value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  // Pick a flyer image and upload it to the public `business-ads` bucket.
+  // Pick a flyer image and upload it (via edge function) to Bunny CDN.
   const pickFlyer = useCallback(async () => {
     try {
       const mod = await import('expo-image-picker');
@@ -113,33 +114,62 @@ export default function AdvertiseApplyScreen() {
         Alert.alert('Permission needed', 'Photo library access was denied.');
         return;
       }
+      // No allowsEditing: its crop is square on iOS, which would never satisfy
+      // the 16:9 check below. We validate the image's own dimensions instead.
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
         quality: 0.8,
       });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
-      const response = await fetch(asset.uri);
-      const arrayBuffer = await response.arrayBuffer();
+
+      // Enforce 16:9 (≈0.5% drift allowed) + 5 MB cap, matching the CRM.
+      const ASPECT = 16 / 9;
+      const TOLERANCE = 0.01;
+      if (asset.width && asset.height) {
+        const ratio = asset.width / asset.height;
+        if (Math.abs(ratio - ASPECT) > TOLERANCE) {
+          Alert.alert(
+            'Wrong aspect ratio',
+            `The flyer must be 16:9 (e.g. 1920×1080). Yours is ${asset.width}×${asset.height} (≈${ratio.toFixed(2)}:1).`,
+          );
+          return;
+        }
+      }
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'The flyer must be 5 MB or smaller.');
+        return;
+      }
+
       const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
       const contentType = asset.mimeType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-      const path = `${user?.id ?? 'anon'}/${Date.now()}.${ext}`;
+
+      // Upload via the edge function → Bunny CDN (the app can't hold the Bunny
+      // storage key). Returns the public CDN URL.
+      const formData = new FormData();
+      formData.append('file', {
+        uri: asset.uri,
+        name: `flyer.${ext}`,
+        type: contentType,
+      } as any);
+      formData.append('mosque_id', mosqueUuid ?? '');
 
       setFlyerUploading(true);
-      const { error: upErr } = await supabase.storage
-        .from('business-ads')
-        .upload(path, arrayBuffer, { contentType, upsert: true });
-      if (upErr) throw new Error(upErr.message);
-      const { data } = supabase.storage.from('business-ads').getPublicUrl(path);
-      setFlyerUrl(data.publicUrl);
+      const { data, error: upErr } = await supabase.functions.invoke(
+        'business-ad-flyer-upload',
+        {
+          headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+          body: formData,
+        },
+      );
+      if (upErr || !data?.url) throw new Error(upErr?.message ?? 'Upload failed');
+      setFlyerUrl(data.url as string);
     } catch (err: any) {
       Alert.alert('Upload failed', err.message ?? 'Could not upload the flyer.');
     } finally {
       setFlyerUploading(false);
     }
-  }, [user, supabase]);
+  }, [supabase, mosqueUuid]);
 
   const isFormValid =
     form.fullName.trim() &&
@@ -312,9 +342,29 @@ export default function AdvertiseApplyScreen() {
                   We'll review your application and get back to you within 1–3
                   business days. Your subscription is active.
                 </Text>
+
+                <View className="mt-8 w-full">
+                  <ReceiptCard
+                    title="Receipt"
+                    monthly={monthlyDisplay}
+                    onboarding={onboardingDisplay}
+                    total={firstPaymentDisplay}
+                    businessName={form.businessName.trim() || undefined}
+                    paid
+                    cardBrand={cardBrand || undefined}
+                    last4={cardLast4}
+                    dateStr={new Date().toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    tint={primaryRgb}
+                  />
+                </View>
+
                 <Pressable
                   onPress={() => router.dismissAll()}
-                  className="mt-8 h-[48px] w-full items-center justify-center rounded-full bg-foreground active:opacity-90"
+                  className="mt-6 h-[48px] w-full items-center justify-center rounded-full bg-foreground active:opacity-90"
                 >
                   <Text className="text-[16px] font-semibold text-background">
                     Done
@@ -336,43 +386,13 @@ export default function AdvertiseApplyScreen() {
             {/* ─── Payment Step ─── */}
             {step === 'payment' && (
               <View className="mt-6 px-5">
-                {/* Pricing summary */}
-                <View className="rounded-2xl bg-muted/50 p-5">
-                  <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
-                    Payment Summary
-                  </Text>
-                  <View className="mt-4 gap-3">
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[14px] text-foreground/70">
-                        Monthly subscription
-                      </Text>
-                      <Text className="text-[14px] font-semibold text-foreground">
-                        {monthlyDisplay}/mo
-                      </Text>
-                    </View>
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[14px] text-foreground/70">
-                        One-time onboarding fee
-                      </Text>
-                      <Text className="text-[14px] font-semibold text-foreground">
-                        {onboardingDisplay}
-                      </Text>
-                    </View>
-                    <View className="mt-1 border-t border-foreground/10 pt-3">
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-[15px] font-bold text-foreground">
-                          Due today
-                        </Text>
-                        <Text className="text-[15px] font-bold text-foreground">
-                          {firstPaymentDisplay}
-                        </Text>
-                      </View>
-                      <Text className="mt-1 text-[12px] text-foreground/40">
-                        Then {monthlyDisplay}/month
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+                {/* Order receipt (pre-purchase) */}
+                <ReceiptCard
+                  title="Order Summary"
+                  monthly={monthlyDisplay}
+                  onboarding={onboardingDisplay}
+                  total={firstPaymentDisplay}
+                />
 
                 {/* Card entry */}
                 <View className="mt-6">
@@ -482,6 +502,51 @@ export default function AdvertiseApplyScreen() {
                       placeholder="123 Main St, City, State"
                       fgRgb={fgRgb}
                     />
+
+                    {/* Flyer upload */}
+                    <View>
+                      <Text className="mb-2 text-[13px] font-medium text-foreground/70">
+                        Business Flyer
+                      </Text>
+                      <Pressable
+                        onPress={pickFlyer}
+                        disabled={flyerUploading}
+                        className="overflow-hidden rounded-xl border border-dashed border-foreground/20 bg-muted/30"
+                      >
+                        {flyerUploading ? (
+                          <View className="h-[150px] items-center justify-center">
+                            <ActivityIndicator color={fgRgb} />
+                          </View>
+                        ) : flyerUrl ? (
+                          <View>
+                            <Image
+                              source={{ uri: flyerUrl }}
+                              contentFit="cover"
+                              style={{ width: '100%', height: 150 }}
+                            />
+                            <View className="absolute bottom-2 right-2 rounded-md bg-foreground/80 px-2.5 py-1">
+                              <Text className="text-[11px] font-semibold text-background">
+                                Change
+                              </Text>
+                            </View>
+                          </View>
+                        ) : (
+                          <View className="h-[150px] items-center justify-center">
+                            <MaterialCommunityIcons
+                              name="cloud-upload-outline"
+                              size={32}
+                              color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.4)`}
+                            />
+                            <Text className="mt-2 text-[14px] font-medium text-foreground/60">
+                              Upload your flyer
+                            </Text>
+                            <Text className="mt-0.5 text-[12px] text-foreground/35">
+                              Recommended 16:9 · PNG or JPG
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    </View>
                   </View>
                 </View>
 
@@ -523,7 +588,7 @@ export default function AdvertiseApplyScreen() {
                         <>
                           <Image
                             source={{ uri: flyerUrl }}
-                            resizeMode="cover"
+                            contentFit="cover"
                             style={{ width: '100%', height: '100%' }}
                           />
                           <View className="absolute bottom-2 right-2 rounded-md bg-foreground/80 px-2 py-1">
@@ -756,6 +821,102 @@ function FormField({
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
         className="rounded-xl border border-foreground/10 bg-muted/30 px-4 py-3 text-[15px] text-foreground"
       />
+    </View>
+  );
+}
+
+function ReceiptRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Text className="text-[14px] text-foreground/70">{label}</Text>
+      <Text className="text-[14px] font-semibold text-foreground">{value}</Text>
+    </View>
+  );
+}
+
+/**
+ * Itemized receipt. Used before purchase (paid=false → "Due today") and on the
+ * success screen (paid=true → "Total paid" + card/date footer).
+ */
+function ReceiptCard({
+  title,
+  monthly,
+  onboarding,
+  total,
+  businessName,
+  paid = false,
+  cardBrand,
+  last4,
+  dateStr,
+  tint,
+}: {
+  title: string;
+  monthly: string;
+  onboarding: string;
+  total: string;
+  businessName?: string;
+  paid?: boolean;
+  cardBrand?: string;
+  last4?: string;
+  dateStr?: string;
+  tint?: string;
+}) {
+  return (
+    <View className="w-full overflow-hidden rounded-2xl border border-foreground/10 bg-muted/40">
+      <View className="flex-row items-center justify-between border-b border-foreground/10 px-5 py-3.5">
+        <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
+          {title}
+        </Text>
+        {paid ? (
+          <View className="flex-row items-center gap-1">
+            <MaterialCommunityIcons name="check-circle" size={14} color={tint} />
+            <Text className="text-[11px] font-semibold text-foreground/50">Paid</Text>
+          </View>
+        ) : null}
+      </View>
+      <View className="gap-3 px-5 py-4">
+        <ReceiptRow label="One-time onboarding fee" value={onboarding} />
+        <ReceiptRow label="First month" value={monthly} />
+        <View className="mt-1 border-t border-foreground/10 pt-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[15px] font-bold text-foreground">
+              {paid ? 'Total paid' : 'Due today'}
+            </Text>
+            <Text className="text-[15px] font-bold text-foreground">{total}</Text>
+          </View>
+          <Text className="mt-1 text-[12px] text-foreground/40">
+            Then {monthly}/month
+          </Text>
+        </View>
+        {paid && (businessName || last4 || dateStr) ? (
+          <View className="mt-1 gap-1.5 border-t border-foreground/10 pt-3">
+            {businessName ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[12px] text-foreground/40">Business</Text>
+                <Text className="text-[12px] font-medium text-foreground/70">
+                  {businessName}
+                </Text>
+              </View>
+            ) : null}
+            {last4 ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[12px] text-foreground/40">Payment</Text>
+                <Text className="text-[12px] font-medium text-foreground/70">
+                  {cardBrand ? `${cardBrand} ` : ''}•••• {last4}
+                </Text>
+              </View>
+            ) : null}
+            {dateStr ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[12px] text-foreground/40">Date</Text>
+                <Text className="text-[12px] font-medium text-foreground/70">
+                  {dateStr}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }

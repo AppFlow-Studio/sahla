@@ -250,6 +250,17 @@ serve(async (req: Request) => {
     const invoice = subscription.latest_invoice as Stripe.Invoice;
     const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
 
+    // Tag the PaymentIntent so the payment-history screen labels this charge as
+    // a Business Ad (it reads pi.metadata.label; without this it defaults to
+    // "Donation").
+    if (paymentIntent?.id) {
+      await stripe.paymentIntents.update(
+        paymentIntent.id,
+        { metadata: { type: "business_ad", label: "Business Ad", mosque_id, user_id } },
+        stripeAccountOpts,
+      );
+    }
+
     // ── Persist the ad subscription (pending until the webhook confirms payment) ──
     // amounts are stored in dollars to match the donations table convention.
     const { error: adSubErr } = await supabase.from("ad_subscriptions").insert({
