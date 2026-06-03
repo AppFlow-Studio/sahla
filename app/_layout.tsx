@@ -50,6 +50,7 @@ import { DonationProvider } from '@/src/providers/donation-provider';
 import { StripeAccountProvider, useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
+import { UpdatesProvider } from '@/src/providers/updates-provider';
 import { useOnboardingSync } from '@/src/hooks/use-onboarding-sync';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
@@ -179,10 +180,12 @@ export default function RootLayout() {
                 <StripeAccountProvider>
                   <StripeProviderWithConnect>
                     <ThemeRoot>
-                      <DonationProvider>
-                        <RootNavigator />
-                        <StatusBar style="auto" />
-                      </DonationProvider>
+                      <UpdatesProvider>
+                        <DonationProvider>
+                          <RootNavigator />
+                          <StatusBar style="auto" />
+                        </DonationProvider>
+                      </UpdatesProvider>
                     </ThemeRoot>
                   </StripeProviderWithConnect>
                 </StripeAccountProvider>

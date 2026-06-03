@@ -1,8 +1,11 @@
 import { SendFeedback } from "@/src/components/send_feedback";
+import { useAppUpdates } from "@/src/hooks/use-app-updates";
+import { useAppVersion } from "@/src/hooks/use-app-version";
 import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useSupabase } from "@/src/hooks/use-supabase";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
+import { useUpdatesActions } from "@/src/providers/updates-provider";
 import { useAuth } from "@clerk/clerk-expo";
 import { router, type Href } from "expo-router";
 import { useCallback, useState } from "react";
@@ -117,6 +120,9 @@ export default function ProfileBody({
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const config = useMasjidConfig();
   const { isAdmin } = useIsAdmin();
+  const appVersion = useAppVersion();
+  const updates = useAppUpdates();
+  const { checkAndNotify } = useUpdatesActions();
 
   const handleInviteFriends = useCallback(async () => {
     try {
@@ -215,6 +221,45 @@ export default function ProfileBody({
               router.push("/profile/notification-center?tab=Events" as Href)
             }
           />
+        </View>
+        <SectionRule />
+      </View>
+
+      {/* APP */}
+      <View className="flex-col">
+        <SectionHeader title="APP" />
+        <View>
+          {updates.isReady ? (
+            <RowItem
+              icon={APPLICATION_ICON}
+              title="Restart to apply update"
+              onPress={() => {
+                updates.reloadNow().catch(() => {});
+              }}
+            />
+          ) : (
+            <RowItem
+              icon={CHECK_STATUS_ICON}
+              title={updates.isDownloading ? "Downloading update…" : "Check for Updates"}
+              onPress={() => {
+                if (updates.isChecking || updates.isDownloading) return;
+                checkAndNotify();
+              }}
+            />
+          )}
+        </View>
+        <View className="px-4 pb-2 pt-1">
+          <Text
+            className="text-foreground/40"
+            style={{
+              fontFamily: Platform.select({ android: 'Roboto', default: undefined }),
+              fontSize: 11,
+              lineHeight: 16,
+            }}
+          >
+            {`App version ${appVersion}`}
+            {__DEV__ && updates.channel ? ` · ${updates.channel}` : ''}
+          </Text>
         </View>
         <SectionRule />
       </View>

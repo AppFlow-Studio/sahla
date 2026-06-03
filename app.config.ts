@@ -43,6 +43,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: `sahla-${MASJID_ID}`,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  updates: {
+    url: "https://u.expo.dev/f5b5a34b-5283-4351-9e3c-b1059c5671a0",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
