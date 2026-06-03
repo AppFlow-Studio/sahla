@@ -40,18 +40,20 @@ export default function AdvertiseScreen() {
 
   const [adMonthlyPrice, setAdMonthlyPrice] = useState<number>(5000);
   const [adOnboardingFee, setAdOnboardingFee] = useState<number>(10000);
+  const [adsEnabled, setAdsEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     if (!mosqueUuid) return;
     supabase
       .from('mosques')
-      .select('ad_monthly_price_cents, ad_onboarding_fee_cents')
+      .select('ad_monthly_price_cents, ad_onboarding_fee_cents, ads_enabled')
       .eq('id', mosqueUuid)
       .single()
       .then(({ data }) => {
         if (data) {
           setAdMonthlyPrice(data.ad_monthly_price_cents ?? 5000);
           setAdOnboardingFee(data.ad_onboarding_fee_cents ?? 10000);
+          setAdsEnabled(data.ads_enabled ?? false);
         }
       });
   }, [mosqueUuid]);
@@ -296,15 +298,23 @@ export default function AdvertiseScreen() {
             elevation: 5,
           }}
         >
-          <Pressable
-            onPress={() => router.push('/advertise-apply')}
-            className="h-[52px] flex-row items-center justify-center rounded-full bg-foreground active:opacity-90"
-          >
-            <Text className="text-[16px] font-semibold text-background">
-              Start Application
-            </Text>
-            <Text className="ml-2 text-[16px] text-background">{'\u2192'}</Text>
-          </Pressable>
+          {adsEnabled ? (
+            <Pressable
+              onPress={() => router.push('/advertise-apply')}
+              className="h-[52px] flex-row items-center justify-center rounded-full bg-foreground active:opacity-90"
+            >
+              <Text className="text-[16px] font-semibold text-background">
+                Start Application
+              </Text>
+              <Text className="ml-2 text-[16px] text-background">{'\u2192'}</Text>
+            </Pressable>
+          ) : (
+            <View className="h-[52px] items-center justify-center rounded-full bg-foreground/10">
+              <Text className="text-[15px] font-semibold text-foreground/50">
+                Not currently accepting advertisers
+              </Text>
+            </View>
+          )}
         </View>
       </SafeAreaView>
     </View>

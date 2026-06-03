@@ -11,15 +11,26 @@ const CORS = {
 
 /**
  * Creates a Stripe Subscription (monthly ad fee) with a one-time onboarding
- * invoice item on the mosque's connected account.
+ * invoice item on the mosque's connected account, and persists the matching
+ * `business_ads_submissions` + `ad_subscriptions` rows up front so a payment
+ * can never succeed without a database record. The Stripe-verified webhook
+ * (`stripe-webhook`) promotes these rows to paid/active once the first invoice
+ * is paid.
  *
  * Body: {
  *   user_id: string
  *   mosque_id: string        — mosque UUID
  *   customer_email?: string
+ *   full_name?: string
+ *   phone?: string
+ *   business_name?: string
+ *   business_address?: string
  * }
  *
- * Returns: { clientSecret, ephemeralKey, customerId, publishableKey, stripeAccountId }
+ * Returns: {
+ *   clientSecret, ephemeralKey, customerId, subscriptionId, submissionId,
+ *   publishableKey, stripeAccountId
+ * }
  */
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -40,7 +51,16 @@ serve(async (req: Request) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    const { user_id, mosque_id, customer_email } = await req.json();
+    const {
+      user_id,
+      mosque_id,
+      customer_email,
+      full_name,
+      phone,
+      business_name,
+      business_address,
+      business_flyer_img,
+    } = await req.json();
 
     if (!user_id || !mosque_id) {
       return new Response(
@@ -57,7 +77,7 @@ serve(async (req: Request) => {
     // Look up mosque config
     const { data: mosque, error: mosqueError } = await supabase
       .from("mosques")
-      .select("stripe_account_id, ad_monthly_price_cents, ad_onboarding_fee_cents")
+      .select("stripe_account_id, ads_enabled, ad_monthly_price_cents, ad_onboarding_fee_cents")
       .eq("id", mosque_id)
       .single();
 
@@ -68,10 +88,46 @@ serve(async (req: Request) => {
       );
     }
 
+    if (!mosque.ads_enabled) {
+      return new Response(
+        JSON.stringify({ error: "Business ads are not enabled for this mosque" }),
+        { status: 403, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
     const connectedAccountId = mosque.stripe_account_id;
     const monthlyPriceCents = mosque.ad_monthly_price_cents ?? 5000;
     const onboardingFeeCents = mosque.ad_onboarding_fee_cents ?? 10000;
     const stripeAccountOpts = { stripeAccount: connectedAccountId };
+
+    // ── Persist the submission BEFORE touching Stripe ──
+    // Created as `pending_payment`; the webhook flips it to `submitted` once
+    // the first invoice is paid. Creating it first guarantees that no Stripe
+    // charge can exist without a corresponding DB record.
+    const { data: submissionRow, error: submissionErr } = await supabase
+      .from("business_ads_submissions")
+      .insert({
+        user_id,
+        mosque_id,
+        personal_full_name: full_name ?? null,
+        personal_email: customer_email ?? null,
+        personal_phone: phone ?? null,
+        business_name: business_name ?? null,
+        business_address: business_address ?? null,
+        business_flyer_img: business_flyer_img ?? null,
+        status: "pending_payment",
+      })
+      .select("submission_id")
+      .single();
+
+    if (submissionErr || !submissionRow) {
+      console.error("[create-ad-subscription] submission insert failed:", submissionErr);
+      return new Response(
+        JSON.stringify({ error: "Failed to record submission" }),
+        { status: 500, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+    const submissionId = submissionRow.submission_id;
 
     // ── Find or create Stripe Customer on connected account ──
     let existingStripeId: string | null = null;
@@ -185,6 +241,7 @@ serve(async (req: Request) => {
           type: "business_ad",
           mosque_id,
           user_id,
+          submission_id: submissionId,
         },
       },
       stripeAccountOpts,
@@ -192,6 +249,26 @@ serve(async (req: Request) => {
 
     const invoice = subscription.latest_invoice as Stripe.Invoice;
     const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+
+    // ── Persist the ad subscription (pending until the webhook confirms payment) ──
+    // amounts are stored in dollars to match the donations table convention.
+    const { error: adSubErr } = await supabase.from("ad_subscriptions").insert({
+      mosque_id,
+      submission_id: submissionId,
+      stripe_customer_id: customer.id,
+      stripe_subscription_id: subscription.id,
+      stripe_payment_intent_id: paymentIntent?.id ?? null,
+      pricing_model: "monthly_plus_onboarding",
+      onboarding_amount: onboardingFeeCents / 100,
+      recurring_amount: monthlyPriceCents / 100,
+      onboarding_paid: false,
+      status: "pending",
+    });
+    if (adSubErr) {
+      // Non-fatal: the subscription_id is in Stripe metadata, so the webhook
+      // can still reconcile this on invoice.paid. Log and continue.
+      console.error("[create-ad-subscription] ad_subscriptions insert failed:", adSubErr);
+    }
 
     // Ephemeral key for mobile SDK
     const ephemeralKey = await stripe.ephemeralKeys.create(
@@ -205,6 +282,7 @@ serve(async (req: Request) => {
         ephemeralKey: ephemeralKey.secret,
         customerId: customer.id,
         subscriptionId: subscription.id,
+        submissionId,
         publishableKey: Deno.env.get("STRIPE_PUBLISHABLE_KEY")!,
         stripeAccountId: connectedAccountId,
       }),

@@ -1,14 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
-import {
-  CardField,
-  useConfirmPayment,
-} from '@stripe/stripe-react-native';
+import { useConfirmPayment } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CardVisual } from '@/src/components/stripe-card-visual';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
@@ -49,6 +48,9 @@ export default function AdvertiseApplyScreen() {
   const { setStripeAccountId } = useStripeAccount();
 
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ',')})`;
+  const fg = colors.foreground.replace(/ /g, ',');
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
 
   const [form, setForm] = useState<FormData>({
@@ -63,6 +65,14 @@ export default function AdvertiseApplyScreen() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
+  const [cardBrand, setCardBrand] = useState('');
+  const [cardLast4, setCardLast4] = useState<string | undefined>(undefined);
+  const [cardExpMonth, setCardExpMonth] = useState<number | undefined>(undefined);
+  const [cardExpYear, setCardExpYear] = useState<number | undefined>(undefined);
+  const [cardFlipped, setCardFlipped] = useState(false);
+  const [cvcFilled, setCvcFilled] = useState(false);
+  const [flyerUrl, setFlyerUrl] = useState<string | null>(null);
+  const [flyerUploading, setFlyerUploading] = useState(false);
 
   // Fetch mosque ad pricing
   const [adMonthlyPrice, setAdMonthlyPrice] = useState<number | null>(null);
@@ -93,6 +103,44 @@ export default function AdvertiseApplyScreen() {
   const update = (field: keyof FormData) => (value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  // Pick a flyer image and upload it to the public `business-ads` bucket.
+  const pickFlyer = useCallback(async () => {
+    try {
+      const mod = await import('expo-image-picker');
+      const ImagePicker = ((mod as any).default ?? mod) as typeof import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('Permission needed', 'Photo library access was denied.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const response = await fetch(asset.uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
+      const contentType = asset.mimeType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+      const path = `${user?.id ?? 'anon'}/${Date.now()}.${ext}`;
+
+      setFlyerUploading(true);
+      const { error: upErr } = await supabase.storage
+        .from('business-ads')
+        .upload(path, arrayBuffer, { contentType, upsert: true });
+      if (upErr) throw new Error(upErr.message);
+      const { data } = supabase.storage.from('business-ads').getPublicUrl(path);
+      setFlyerUrl(data.publicUrl);
+    } catch (err: any) {
+      Alert.alert('Upload failed', err.message ?? 'Could not upload the flyer.');
+    } finally {
+      setFlyerUploading(false);
+    }
+  }, [user, supabase]);
+
   const isFormValid =
     form.fullName.trim() &&
     form.email.trim() &&
@@ -114,6 +162,11 @@ export default function AdvertiseApplyScreen() {
             user_id: user.id,
             mosque_id: mosqueUuid,
             customer_email: form.email.trim() || undefined,
+            full_name: form.fullName.trim() || undefined,
+            phone: form.phone.trim() || undefined,
+            business_name: form.businessName.trim() || undefined,
+            business_address: form.businessAddress.trim() || undefined,
+            business_flyer_img: flyerUrl || undefined,
           },
         },
       );
@@ -146,7 +199,7 @@ export default function AdvertiseApplyScreen() {
       setSubmitting(false);
       Alert.alert('Error', err.message ?? 'Something went wrong.');
     }
-  }, [form, isFormValid, submitting, user, supabase, mosqueUuid]);
+  }, [form, isFormValid, submitting, user, supabase, mosqueUuid, flyerUrl]);
 
   // Step 2 → Confirm payment
   const handleConfirmPayment = useCallback(async () => {
@@ -161,18 +214,10 @@ export default function AdvertiseApplyScreen() {
       if (error) throw new Error(error.message);
 
       if (paymentIntent?.status === 'Succeeded') {
-        // Save the submission to DB
-        await supabase.from('business_ads_submissions').insert({
-          user_id: user!.id,
-          mosque_id: mosqueUuid,
-          personal_full_name: form.fullName.trim(),
-          personal_email: form.email.trim(),
-          personal_phone: form.phone.trim(),
-          business_name: form.businessName.trim(),
-          business_address: form.businessAddress.trim(),
-          status: 'submitted',
-        });
-
+        // The submission + ad_subscriptions rows were already created
+        // server-side by create-ad-subscription; the stripe-webhook promotes
+        // them to paid/submitted once Stripe confirms the invoice. Nothing to
+        // write from the client here.
         setStripeAccountId(undefined);
         setStep('success');
       } else {
@@ -182,7 +227,7 @@ export default function AdvertiseApplyScreen() {
       setStep('payment');
       Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
     }
-  }, [clientSecret, cardComplete, confirmPayment, user, supabase, mosqueUuid, form]);
+  }, [clientSecret, cardComplete, confirmPayment, setStripeAccountId]);
 
   return (
     <View className="flex-1 bg-background">
@@ -334,21 +379,32 @@ export default function AdvertiseApplyScreen() {
                   <Text className="mb-3 text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
                     Card Details
                   </Text>
-                  <View className="rounded-xl border border-foreground/10 bg-muted/30 p-1">
-                    <CardField
-                      postalCodeEnabled={false}
-                      placeholders={{ number: '4242 4242 4242 4242' }}
-                      cardStyle={{
-                        backgroundColor: 'transparent',
-                        textColor: fgRgb,
-                        placeholderColor: `rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`,
-                        fontSize: 16,
-                        borderWidth: 0,
-                      }}
-                      style={{ width: '100%', height: 50 }}
-                      onCardChange={(details) => setCardComplete(details.complete)}
-                    />
-                  </View>
+                  <CardVisual
+                    brand={cardBrand}
+                    cardComplete={cardComplete}
+                    flipped={cardFlipped}
+                    last4={cardLast4}
+                    expiryMonth={cardExpMonth}
+                    expiryYear={cardExpYear}
+                    cvcFilled={cvcFilled}
+                    profileName={form.fullName.trim() || undefined}
+                    bgRgb={bgRgb}
+                    fgRgb={fgRgb}
+                    fg={fg}
+                    accentRgb={accentRgb}
+                    onCardChange={(details) => {
+                      setCardComplete(details.complete);
+                      if (details.brand) setCardBrand(details.brand);
+                      setCardLast4(details.last4 || undefined);
+                      setCardExpMonth(details.expiryMonth ?? undefined);
+                      setCardExpYear(details.expiryYear ?? undefined);
+                      setCvcFilled(details.complete);
+                      if (cardFlipped && details.expiryYear == null) {
+                        setCardFlipped(false);
+                      }
+                    }}
+                    onFocus={(field) => setCardFlipped(field === 'Cvc')}
+                  />
                 </View>
 
                 {/* Business info recap */}
@@ -455,17 +511,40 @@ export default function AdvertiseApplyScreen() {
                       </Text>
                     </View>
 
-                    {/* Flyer area */}
-                    <View className="h-[160px] items-center justify-center bg-foreground/5">
-                      <MaterialCommunityIcons
-                        name="image-outline"
-                        size={36}
-                        color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
-                      />
-                      <Text className="mt-2 text-[13px] text-foreground/30">
-                        Your flyer will appear here
-                      </Text>
-                    </View>
+                    {/* Flyer area — tap to upload */}
+                    <Pressable
+                      onPress={pickFlyer}
+                      disabled={flyerUploading}
+                      className="h-[160px] items-center justify-center bg-foreground/5"
+                    >
+                      {flyerUploading ? (
+                        <ActivityIndicator color={fgRgb} />
+                      ) : flyerUrl ? (
+                        <>
+                          <Image
+                            source={{ uri: flyerUrl }}
+                            resizeMode="cover"
+                            style={{ width: '100%', height: '100%' }}
+                          />
+                          <View className="absolute bottom-2 right-2 rounded-md bg-foreground/80 px-2 py-1">
+                            <Text className="text-[10px] font-semibold text-background">
+                              Tap to change
+                            </Text>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <MaterialCommunityIcons
+                            name="image-plus"
+                            size={36}
+                            color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
+                          />
+                          <Text className="mt-2 text-[13px] text-foreground/30">
+                            Tap to upload your flyer
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
 
                     {/* Business name - live */}
                     {form.businessName.trim() ? (
