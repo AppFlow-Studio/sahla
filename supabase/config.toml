@@ -46,3 +46,23 @@ verify_jwt = false
 
 [functions.ct02-actions]
 verify_jwt = false
+
+# App posts the flyer with the anon key; it uploads to Bunny and returns the URL.
+[functions.business-ad-flyer-upload]
+verify_jwt = false
+
+# Business-ad self-service: read status + cancel, called by the app with the
+# anon key and self-authenticated via user_id in the body + service role.
+[functions.get-ad-status]
+verify_jwt = false
+
+[functions.cancel-ad-subscription]
+verify_jwt = false
+
+# Mosque-admin approve/decline/cancel decisions (app + CRM call this).
+[functions.admin-ad-decision]
+verify_jwt = false
+
+# Public list of approved business ads for the app's Community Partners section.
+[functions.get-community-partners]
+verify_jwt = false

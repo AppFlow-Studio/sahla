@@ -83,6 +83,15 @@ export default function AdminHub() {
           borderColor={borderColor}
           onPress={() => router.push('/profile/admin/iqamah')}
         />
+        <AdminRow
+          title="Business Ads"
+          subtitle="Review and approve ad applications"
+          icon="storefront-outline"
+          fgRgb={fgRgb}
+          mutedRgb={mutedRgb}
+          borderColor={borderColor}
+          onPress={() => router.push('/profile/admin/business-ads')}
+        />
       </ScrollView>
     </View>
   );

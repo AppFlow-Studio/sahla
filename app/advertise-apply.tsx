@@ -1,14 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
-import {
-  CardField,
-  useConfirmPayment,
-} from '@stripe/stripe-react-native';
+import { useConfirmPayment } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +17,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Image } from 'expo-image';
+
+import { CardVisual } from '@/src/components/stripe-card-visual';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
@@ -43,12 +44,15 @@ export default function AdvertiseApplyScreen() {
   const { user } = useUser();
   const supabase = useSupabase();
   const { profile } = useProfile();
-  const { id: mosqueSlug, colors } = useMasjidConfig();
+  const { id: mosqueSlug, colors, displayName } = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const { confirmPayment } = useConfirmPayment();
   const { setStripeAccountId } = useStripeAccount();
 
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ',')})`;
+  const fg = colors.foreground.replace(/ /g, ',');
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
 
   const [form, setForm] = useState<FormData>({
@@ -63,6 +67,14 @@ export default function AdvertiseApplyScreen() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
+  const [cardBrand, setCardBrand] = useState('');
+  const [cardLast4, setCardLast4] = useState<string | undefined>(undefined);
+  const [cardExpMonth, setCardExpMonth] = useState<number | undefined>(undefined);
+  const [cardExpYear, setCardExpYear] = useState<number | undefined>(undefined);
+  const [cardFlipped, setCardFlipped] = useState(false);
+  const [cvcFilled, setCvcFilled] = useState(false);
+  const [flyerUrl, setFlyerUrl] = useState<string | null>(null);
+  const [flyerUploading, setFlyerUploading] = useState(false);
 
   // Fetch mosque ad pricing
   const [adMonthlyPrice, setAdMonthlyPrice] = useState<number | null>(null);
@@ -93,6 +105,73 @@ export default function AdvertiseApplyScreen() {
   const update = (field: keyof FormData) => (value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  // Pick a flyer image and upload it (via edge function) to Bunny CDN.
+  const pickFlyer = useCallback(async () => {
+    try {
+      const mod = await import('expo-image-picker');
+      const ImagePicker = ((mod as any).default ?? mod) as typeof import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('Permission needed', 'Photo library access was denied.');
+        return;
+      }
+      // No allowsEditing: its crop is square on iOS, which would never satisfy
+      // the 16:9 check below. We validate the image's own dimensions instead.
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+
+      // Enforce 16:9 (≈0.5% drift allowed) + 5 MB cap, matching the CRM.
+      const ASPECT = 16 / 9;
+      const TOLERANCE = 0.01;
+      if (asset.width && asset.height) {
+        const ratio = asset.width / asset.height;
+        if (Math.abs(ratio - ASPECT) > TOLERANCE) {
+          Alert.alert(
+            'Wrong aspect ratio',
+            `The flyer must be 16:9 (e.g. 1920×1080). Yours is ${asset.width}×${asset.height} (≈${ratio.toFixed(2)}:1).`,
+          );
+          return;
+        }
+      }
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'The flyer must be 5 MB or smaller.');
+        return;
+      }
+
+      const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
+      const contentType = asset.mimeType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+      // Upload via the edge function → Bunny CDN (the app can't hold the Bunny
+      // storage key). Returns the public CDN URL.
+      const formData = new FormData();
+      formData.append('file', {
+        uri: asset.uri,
+        name: `flyer.${ext}`,
+        type: contentType,
+      } as any);
+      formData.append('mosque_id', mosqueUuid ?? '');
+
+      setFlyerUploading(true);
+      const { data, error: upErr } = await supabase.functions.invoke(
+        'business-ad-flyer-upload',
+        {
+          headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+          body: formData,
+        },
+      );
+      if (upErr || !data?.url) throw new Error(upErr?.message ?? 'Upload failed');
+      setFlyerUrl(data.url as string);
+    } catch (err: any) {
+      Alert.alert('Upload failed', err.message ?? 'Could not upload the flyer.');
+    } finally {
+      setFlyerUploading(false);
+    }
+  }, [supabase, mosqueUuid]);
+
   const isFormValid =
     form.fullName.trim() &&
     form.email.trim() &&
@@ -114,6 +193,11 @@ export default function AdvertiseApplyScreen() {
             user_id: user.id,
             mosque_id: mosqueUuid,
             customer_email: form.email.trim() || undefined,
+            full_name: form.fullName.trim() || undefined,
+            phone: form.phone.trim() || undefined,
+            business_name: form.businessName.trim() || undefined,
+            business_address: form.businessAddress.trim() || undefined,
+            business_flyer_img: flyerUrl || undefined,
           },
         },
       );
@@ -146,7 +230,7 @@ export default function AdvertiseApplyScreen() {
       setSubmitting(false);
       Alert.alert('Error', err.message ?? 'Something went wrong.');
     }
-  }, [form, isFormValid, submitting, user, supabase, mosqueUuid]);
+  }, [form, isFormValid, submitting, user, supabase, mosqueUuid, flyerUrl]);
 
   // Step 2 → Confirm payment
   const handleConfirmPayment = useCallback(async () => {
@@ -161,18 +245,10 @@ export default function AdvertiseApplyScreen() {
       if (error) throw new Error(error.message);
 
       if (paymentIntent?.status === 'Succeeded') {
-        // Save the submission to DB
-        await supabase.from('business_ads_submissions').insert({
-          user_id: user!.id,
-          mosque_id: mosqueUuid,
-          personal_full_name: form.fullName.trim(),
-          personal_email: form.email.trim(),
-          personal_phone: form.phone.trim(),
-          business_name: form.businessName.trim(),
-          business_address: form.businessAddress.trim(),
-          status: 'submitted',
-        });
-
+        // The submission + ad_subscriptions rows were already created
+        // server-side by create-ad-subscription; the stripe-webhook promotes
+        // them to paid/submitted once Stripe confirms the invoice. Nothing to
+        // write from the client here.
         setStripeAccountId(undefined);
         setStep('success');
       } else {
@@ -182,7 +258,7 @@ export default function AdvertiseApplyScreen() {
       setStep('payment');
       Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
     }
-  }, [clientSecret, cardComplete, confirmPayment, user, supabase, mosqueUuid, form]);
+  }, [clientSecret, cardComplete, confirmPayment, setStripeAccountId]);
 
   return (
     <View className="flex-1 bg-background">
@@ -267,9 +343,32 @@ export default function AdvertiseApplyScreen() {
                   We'll review your application and get back to you within 1–3
                   business days. Your subscription is active.
                 </Text>
+
+                <View className="mt-8 w-full">
+                  <ReceiptCard
+                    title="Payment Receipt"
+                    merchant={displayName}
+                    monthly={monthlyDisplay}
+                    onboarding={onboardingDisplay}
+                    total={firstPaymentDisplay}
+                    businessName={form.businessName.trim() || undefined}
+                    paid
+                    cardBrand={cardBrand || undefined}
+                    last4={cardLast4}
+                    reference={subscriptionId ?? undefined}
+                    dateStr={new Date().toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    tint={primaryRgb}
+                    pageColor={bgRgb}
+                  />
+                </View>
+
                 <Pressable
                   onPress={() => router.dismissAll()}
-                  className="mt-8 h-[48px] w-full items-center justify-center rounded-full bg-foreground active:opacity-90"
+                  className="mt-6 h-[48px] w-full items-center justify-center rounded-full bg-foreground active:opacity-90"
                 >
                   <Text className="text-[16px] font-semibold text-background">
                     Done
@@ -291,64 +390,48 @@ export default function AdvertiseApplyScreen() {
             {/* ─── Payment Step ─── */}
             {step === 'payment' && (
               <View className="mt-6 px-5">
-                {/* Pricing summary */}
-                <View className="rounded-2xl bg-muted/50 p-5">
-                  <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
-                    Payment Summary
-                  </Text>
-                  <View className="mt-4 gap-3">
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[14px] text-foreground/70">
-                        Monthly subscription
-                      </Text>
-                      <Text className="text-[14px] font-semibold text-foreground">
-                        {monthlyDisplay}/mo
-                      </Text>
-                    </View>
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-[14px] text-foreground/70">
-                        One-time onboarding fee
-                      </Text>
-                      <Text className="text-[14px] font-semibold text-foreground">
-                        {onboardingDisplay}
-                      </Text>
-                    </View>
-                    <View className="mt-1 border-t border-foreground/10 pt-3">
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-[15px] font-bold text-foreground">
-                          Due today
-                        </Text>
-                        <Text className="text-[15px] font-bold text-foreground">
-                          {firstPaymentDisplay}
-                        </Text>
-                      </View>
-                      <Text className="mt-1 text-[12px] text-foreground/40">
-                        Then {monthlyDisplay}/month
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+                {/* Order receipt (pre-purchase) */}
+                <ReceiptCard
+                  title="Order Summary"
+                  merchant={displayName}
+                  monthly={monthlyDisplay}
+                  onboarding={onboardingDisplay}
+                  total={firstPaymentDisplay}
+                  tint={primaryRgb}
+                  pageColor={bgRgb}
+                />
 
                 {/* Card entry */}
                 <View className="mt-6">
                   <Text className="mb-3 text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
                     Card Details
                   </Text>
-                  <View className="rounded-xl border border-foreground/10 bg-muted/30 p-1">
-                    <CardField
-                      postalCodeEnabled={false}
-                      placeholders={{ number: '4242 4242 4242 4242' }}
-                      cardStyle={{
-                        backgroundColor: 'transparent',
-                        textColor: fgRgb,
-                        placeholderColor: `rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`,
-                        fontSize: 16,
-                        borderWidth: 0,
-                      }}
-                      style={{ width: '100%', height: 50 }}
-                      onCardChange={(details) => setCardComplete(details.complete)}
-                    />
-                  </View>
+                  <CardVisual
+                    brand={cardBrand}
+                    cardComplete={cardComplete}
+                    flipped={cardFlipped}
+                    last4={cardLast4}
+                    expiryMonth={cardExpMonth}
+                    expiryYear={cardExpYear}
+                    cvcFilled={cvcFilled}
+                    profileName={form.fullName.trim() || undefined}
+                    bgRgb={bgRgb}
+                    fgRgb={fgRgb}
+                    fg={fg}
+                    accentRgb={accentRgb}
+                    onCardChange={(details) => {
+                      setCardComplete(details.complete);
+                      if (details.brand) setCardBrand(details.brand);
+                      setCardLast4(details.last4 || undefined);
+                      setCardExpMonth(details.expiryMonth ?? undefined);
+                      setCardExpYear(details.expiryYear ?? undefined);
+                      setCvcFilled(details.complete);
+                      if (cardFlipped && details.expiryYear == null) {
+                        setCardFlipped(false);
+                      }
+                    }}
+                    onFocus={(field) => setCardFlipped(field === 'Cvc')}
+                  />
                 </View>
 
                 {/* Business info recap */}
@@ -426,6 +509,51 @@ export default function AdvertiseApplyScreen() {
                       placeholder="123 Main St, City, State"
                       fgRgb={fgRgb}
                     />
+
+                    {/* Flyer upload */}
+                    <View>
+                      <Text className="mb-2 text-[13px] font-medium text-foreground/70">
+                        Business Flyer
+                      </Text>
+                      <Pressable
+                        onPress={pickFlyer}
+                        disabled={flyerUploading}
+                        className="overflow-hidden rounded-xl border border-dashed border-foreground/20 bg-muted/30"
+                      >
+                        {flyerUploading ? (
+                          <View className="h-[150px] items-center justify-center">
+                            <ActivityIndicator color={fgRgb} />
+                          </View>
+                        ) : flyerUrl ? (
+                          <View>
+                            <Image
+                              source={{ uri: flyerUrl }}
+                              contentFit="cover"
+                              style={{ width: '100%', height: 150 }}
+                            />
+                            <View className="absolute bottom-2 right-2 rounded-md bg-foreground/80 px-2.5 py-1">
+                              <Text className="text-[11px] font-semibold text-background">
+                                Change
+                              </Text>
+                            </View>
+                          </View>
+                        ) : (
+                          <View className="h-[150px] items-center justify-center">
+                            <MaterialCommunityIcons
+                              name="cloud-upload-outline"
+                              size={32}
+                              color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.4)`}
+                            />
+                            <Text className="mt-2 text-[14px] font-medium text-foreground/60">
+                              Upload your flyer
+                            </Text>
+                            <Text className="mt-0.5 text-[12px] text-foreground/35">
+                              Recommended 16:9 · PNG or JPG
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    </View>
                   </View>
                 </View>
 
@@ -455,17 +583,40 @@ export default function AdvertiseApplyScreen() {
                       </Text>
                     </View>
 
-                    {/* Flyer area */}
-                    <View className="h-[160px] items-center justify-center bg-foreground/5">
-                      <MaterialCommunityIcons
-                        name="image-outline"
-                        size={36}
-                        color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
-                      />
-                      <Text className="mt-2 text-[13px] text-foreground/30">
-                        Your flyer will appear here
-                      </Text>
-                    </View>
+                    {/* Flyer area — tap to upload */}
+                    <Pressable
+                      onPress={pickFlyer}
+                      disabled={flyerUploading}
+                      className="h-[160px] items-center justify-center bg-foreground/5"
+                    >
+                      {flyerUploading ? (
+                        <ActivityIndicator color={fgRgb} />
+                      ) : flyerUrl ? (
+                        <>
+                          <Image
+                            source={{ uri: flyerUrl }}
+                            contentFit="cover"
+                            style={{ width: '100%', height: '100%' }}
+                          />
+                          <View className="absolute bottom-2 right-2 rounded-md bg-foreground/80 px-2 py-1">
+                            <Text className="text-[10px] font-semibold text-background">
+                              Tap to change
+                            </Text>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <MaterialCommunityIcons
+                            name="image-plus"
+                            size={36}
+                            color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
+                          />
+                          <Text className="mt-2 text-[13px] text-foreground/30">
+                            Tap to upload your flyer
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
 
                     {/* Business name - live */}
                     {form.businessName.trim() ? (
@@ -677,6 +828,254 @@ function FormField({
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
         className="rounded-xl border border-foreground/10 bg-muted/30 px-4 py-3 text-[15px] text-foreground"
       />
+    </View>
+  );
+}
+
+function ReceiptRow({
+  label,
+  value,
+  bold,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+}) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Text className={`text-[14px] ${bold ? 'font-bold text-foreground' : 'text-foreground/70'}`}>
+        {label}
+      </Text>
+      <Text
+        className={`text-[14px] ${bold ? 'text-[15px] font-bold' : 'font-semibold'} text-foreground`}
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+// A dashed separator with two notch "punches" at the edges — the classic
+// ticket / receipt tear line. `pageColor` fills the notches to match the page.
+function TearLine({ pageColor }: { pageColor?: string }) {
+  return (
+    <View className="my-1" style={{ position: 'relative', justifyContent: 'center', height: 16 }}>
+      <View
+        style={{
+          borderBottomWidth: 1,
+          borderColor: 'rgba(0,0,0,0.18)',
+          borderStyle: 'dashed',
+          marginHorizontal: 4,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute', left: -10, width: 16, height: 16, borderRadius: 8,
+          backgroundColor: pageColor ?? 'transparent',
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute', right: -10, width: 16, height: 16, borderRadius: 8,
+          backgroundColor: pageColor ?? 'transparent',
+        }}
+      />
+    </View>
+  );
+}
+
+// Deterministic faux barcode — sells the "official receipt" look.
+const BARCODE = [2, 1, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 1, 2, 2, 1, 3, 1, 2, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 1, 2];
+function Barcode() {
+  return (
+    <View className="flex-row items-end justify-center" style={{ height: 36 }}>
+      {BARCODE.map((w, i) => (
+        <View
+          key={i}
+          className="bg-foreground"
+          style={{ width: w, height: 36, marginRight: 2, opacity: 0.85 }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Animated rubber "PAID" stamp — slams down into the top-right of the receipt.
+function PaidStamp({ tint }: { tint?: string }) {
+  const a = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(350),
+      Animated.spring(a, { toValue: 1, friction: 5, tension: 90, useNativeDriver: true }),
+    ]).start();
+  }, [a]);
+  const scale = a.interpolate({ inputRange: [0, 1], outputRange: [2.6, 1] });
+  const opacity = a.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.9, 0.9] });
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 14,
+        right: 14,
+        zIndex: 10,
+        opacity,
+        transform: [{ rotate: '-11deg' }, { scale }],
+      }}
+    >
+      <View className="rounded-md border-2 px-2 py-0.5" style={{ borderColor: tint }}>
+        <Text className="text-[13px] font-extrabold tracking-[2px]" style={{ color: tint }}>
+          PAID
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * Itemized receipt styled like a real one. Used before purchase
+ * (paid=false → "Due today") and on the success screen (paid=true → "Total
+ * paid" + card/date + barcode).
+ */
+function ReceiptCard({
+  title,
+  monthly,
+  onboarding,
+  total,
+  businessName,
+  merchant,
+  paid = false,
+  cardBrand,
+  last4,
+  dateStr,
+  reference,
+  tint,
+  pageColor,
+}: {
+  title: string;
+  monthly: string;
+  onboarding: string;
+  total: string;
+  businessName?: string;
+  merchant?: string;
+  paid?: boolean;
+  cardBrand?: string;
+  last4?: string;
+  dateStr?: string;
+  reference?: string;
+  tint?: string;
+  pageColor?: string;
+}) {
+  const ref = reference
+    ? reference.replace(/[^a-zA-Z0-9]/g, '').slice(-10).toUpperCase()
+    : null;
+
+  return (
+    <View
+      className="w-full rounded-2xl border border-foreground/10 bg-muted"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 2,
+      }}
+    >
+      {paid ? <PaidStamp tint={tint} /> : null}
+
+      {/* Header */}
+      <View className="items-center px-5 pb-3 pt-5">
+        <View
+          className="mb-2 h-9 w-9 items-center justify-center rounded-full"
+          style={{ backgroundColor: `${tint ?? '#0A261E'}1A` }}
+        >
+          <MaterialCommunityIcons name="storefront" size={18} color={tint} />
+        </View>
+        {merchant ? (
+          <Text className="text-[13px] font-semibold text-foreground" numberOfLines={1}>
+            {merchant}
+          </Text>
+        ) : null}
+        <Text className="mt-1 text-[11px] font-semibold uppercase tracking-[3px] text-foreground/45">
+          {title}
+        </Text>
+        {(ref || dateStr) && paid ? (
+          <Text className="mt-1 text-[11px] text-foreground/40" style={{ fontVariant: ['tabular-nums'] }}>
+            {ref ? `No. ${ref}` : ''}{ref && dateStr ? '  ·  ' : ''}{dateStr ?? ''}
+          </Text>
+        ) : null}
+      </View>
+
+      <TearLine pageColor={pageColor} />
+
+      {/* Line items */}
+      <View className="gap-3 px-5 pt-3">
+        <ReceiptRow label="One-time onboarding fee" value={onboarding} />
+        <ReceiptRow label="First month" value={monthly} />
+      </View>
+
+      <View className="px-5">
+        <View
+          className="my-3"
+          style={{ borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.12)', borderStyle: 'dashed' }}
+        />
+        <ReceiptRow label={paid ? 'Total paid' : 'Due today'} value={total} bold />
+        <Text className="mt-1 text-[12px] text-foreground/40">Then {monthly}/month</Text>
+      </View>
+
+      {/* Meta */}
+      {paid && (businessName || last4) ? (
+        <View className="px-5">
+          <View
+            className="my-3"
+            style={{ borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.12)', borderStyle: 'dashed' }}
+          />
+          <View className="gap-1.5">
+            {businessName ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[12px] text-foreground/40">Business</Text>
+                <Text className="text-[12px] font-medium text-foreground/70">{businessName}</Text>
+              </View>
+            ) : null}
+            {last4 ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[12px] text-foreground/40">Payment</Text>
+                <Text
+                  className="text-[12px] font-medium text-foreground/70"
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {cardBrand ? `${cardBrand} ` : ''}•••• {last4}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      {/* Footer */}
+      <View className="items-center px-5 pb-5 pt-4">
+        {paid ? (
+          <>
+            <Text className="mb-3 text-[11px] italic text-foreground/40">
+              Thank you for advertising with us
+            </Text>
+            <Barcode />
+            {ref ? (
+              <Text
+                className="mt-1.5 text-[10px] tracking-[2px] text-foreground/45"
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {ref}
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <Text className="text-[11px] text-foreground/35">
+            You won't be charged until you confirm
+          </Text>
+        )}
+      </View>
     </View>
   );
 }

@@ -289,12 +289,12 @@ export default function ProfileBody({
           <RowItem
             icon={CHECK_STATUS_ICON}
             title="Check the Status"
-            onPress={() => {}}
+            onPress={() => router.push("/advertise-status" as Href)}
           />
           <RowItem
             icon={MANAGE_SUBS_ICON}
             title="Manage Subscriptions"
-            onPress={() => {}}
+            onPress={() => router.push("/advertise-status" as Href)}
           />
         </View>
         <SectionRule />

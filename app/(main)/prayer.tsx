@@ -5,7 +5,7 @@ import { router, Stack, useFocusEffect } from 'expo-router';
 
 import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -21,6 +21,8 @@ import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import QuranScreen from '@/src/screens/QuranScreen';
 import { PrayerNotificationSheet } from '@/src/components/prayer/prayer-notification-sheet';
+import { CommunityPartnersCarousel } from '@/src/components/community-partners-carousel';
+import { useCommunityPartners } from '@/src/hooks/use-community-partners';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { usePrayerAlerts, type PrayerName } from '@/src/hooks/use-prayer-alerts';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
@@ -676,15 +678,11 @@ function RemembranceItem({
 }
 
 function CommunityPartnersSection({ c }: { c: Palette }) {
-  const iconBtn = {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: c.border20,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  };
+  const { data } = useCommunityPartners();
+  const partners = data ?? [];
+
+  // Nothing approved yet → hide the section entirely.
+  if (partners.length === 0) return null;
 
   return (
     <View style={{ marginTop: 32 }}>
@@ -698,94 +696,20 @@ function CommunityPartnersSection({ c }: { c: Palette }) {
           marginBottom: 16,
         }}
       >
-        <Text
-          style={{
-            color: c.text,
-            fontSize: 12,
-            fontWeight: '700',
-            letterSpacing: 2,
-          }}
-        >
+        <Text style={{ color: c.text, fontSize: 12, fontWeight: '700', letterSpacing: 2 }}>
           COMMUNITY PARTNERS
         </Text>
       </View>
 
-      <View
-        style={{
-          borderRadius: 20,
-          overflow: 'hidden',
-          backgroundColor: c.depth35,
+      <CommunityPartnersCarousel
+        partners={partners}
+        colors={{
+          text: c.text,
+          cardBg: c.depth35,
+          fallbackBg: c.iconBg,
+          border: c.border20,
         }}
-      >
-        <Image
-          source={{
-            uri: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=60',
-          }}
-          style={{ width: '100%', aspectRatio: 16 / 10 }}
-          resizeMode="cover"
-        />
-
-        <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
-          <Text style={{ color: c.text, fontSize: 13, lineHeight: 18 }}>
-            1805 Forest Ave @ Richmond AVe.,{'\n'}Staten Island, NY 10303
-          </Text>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: 14,
-            }}
-          >
-            <Pressable
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: c.border25,
-              }}
-            >
-              <MaterialCommunityIcons name="map-marker-outline" size={14} color={c.text} />
-              <Text style={{ color: c.text, fontSize: 13, fontWeight: '500', marginLeft: 6 }}>
-                Directions
-              </Text>
-            </Pressable>
-
-            <View style={{ flexDirection: 'row' }}>
-              <Pressable style={[iconBtn, { marginRight: 8 }]}>
-                <MaterialCommunityIcons name="phone-outline" size={16} color={c.text} />
-              </Pressable>
-              <Pressable style={[iconBtn, { marginRight: 8 }]}>
-                <MaterialCommunityIcons name="message-text-outline" size={16} color={c.text} />
-              </Pressable>
-              <Pressable style={iconBtn}>
-                <MaterialCommunityIcons name="email-outline" size={16} color={c.text} />
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <Pressable
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 10,
-          marginTop: 16,
-          borderRadius: 20,
-          backgroundColor: c.depth35,
-        }}
-      >
-        <Text style={{ color: c.text, fontSize: 14, fontWeight: '500', marginRight: 6 }}>
-          Become a Community Partner
-        </Text>
-        <MaterialCommunityIcons name="arrow-right" size={16} color={c.text} />
-      </Pressable>
+      />
     </View>
   );
 }
