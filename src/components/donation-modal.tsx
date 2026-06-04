@@ -1,0 +1,1110 @@
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Easing,
+  Keyboard,
+  LayoutAnimation,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
+} from 'react-native';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+import ReAnimated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+import { BlurView } from 'expo-blur';
+import {
+  CardField,
+  useConfirmPayment,
+  usePlatformPay,
+  PlatformPayButton,
+  PlatformPay,
+} from '@stripe/stripe-react-native';
+import { useStripeAccount } from '@/src/providers/stripe-account-provider';
+// CardField onCardChange details type
+type CardDetails = { complete: boolean; brand?: string; last4?: string };
+// A reusable card returned by the get-payment-methods edge function.
+type SavedCard = { id: string; brand: string; last4: string; expMonth: number; expYear: number };
+const formatBrand = (b: string) => (b ? b.charAt(0).toUpperCase() + b.slice(1) : 'Card');
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { CardVisual } from './stripe-card-visual';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useSupabase } from '@/src/hooks/use-supabase';
+import { useProfile } from '@/src/hooks/use-profile';
+import { useConfigStore } from '@/src/stores/config-store';
+import { env } from '@/src/lib/env';
+import ThankYouOrnament from '@/assets/thank-you-ornament.svg';
+
+
+const PRESETS = [25, 50, 100];
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const KEYPAD_HEIGHT = 200;
+
+
+const KEYS: (string | 'back')[] = [
+  '1', '2', '3',
+  '4', '5', '6',
+  '7', '8', '9',
+  '.', '0', 'back',
+];
+
+type Step = 'amount' | 'card' | 'newcard' | 'processing' | 'thanks';
+
+export function DonationModal({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const { colors, displayName } = useMasjidConfig();
+  const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const supabase = useSupabase();
+  const { profile } = useProfile();
+  const { confirmPayment } = useConfirmPayment();
+  const { isPlatformPaySupported, confirmPlatformPayPayment } = usePlatformPay();
+  const { setStripeAccountId } = useStripeAccount();
+
+  const fg = colors.foreground.replace(/ /g, ',');
+  const bg = colors.background.replace(/ /g, ',');
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const fgRgb = `rgb(${fg})`;
+  const bgRgb = `rgb(${bg})`;
+
+  const [amount, setAmount] = useState(50);
+  const [customMode, setCustomMode] = useState(false);
+  const [customValue, setCustomValue] = useState('');
+  const [saveCard, setSaveCard] = useState(false);
+  const [mounted, setMounted] = useState(visible);
+  const [step, setStep] = useState<Step>('amount');
+  const [cardComplete, setCardComplete] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [cardBrand, setCardBrand] = useState<string>('Unknown');
+  const [cardLast4, setCardLast4] = useState<string | undefined>();
+  const [cardExpMonth, setCardExpMonth] = useState<number | undefined>();
+  const [cardExpYear, setCardExpYear] = useState<number | undefined>();
+  const [cvcFilled, setCvcFilled] = useState(false);
+  const [cardFlipped, setCardFlipped] = useState(false);
+  // True while the system keyboard is up for the card field — collapses the
+  // sheet chrome so only the card is shown above the keyboard.
+  const [inputFocused, setInputFocused] = useState(false);
+  // Donor's reusable cards + which one is selected (null = enter a new card).
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  // The step that is currently rendered inside the sheet.
+  // `step` is the *target*; `visibleStep` is what's on screen until the swap animation completes.
+  const [visibleStep, setVisibleStep] = useState<Step>('amount');
+
+  // -- Animations --
+  const sheetY = useRef(new Animated.Value(SCREEN_H)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
+  const backdrop = useRef(new Animated.Value(0)).current;
+  const keypadH = useRef(new Animated.Value(0)).current;
+  const keypadOpacity = useRef(new Animated.Value(0)).current;
+
+  // Content fade for step transitions
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+
+  // Thanks step sequenced entrance
+  const thanksOpacity = useRef(new Animated.Value(0)).current;
+  const checkScale = useRef(new Animated.Value(0)).current;
+  const thanksTextY = useRef(new Animated.Value(20)).current;
+  const thanksTextOpacity = useRef(new Animated.Value(0)).current;
+  const thanksDuaOpacity = useRef(new Animated.Value(0)).current;
+
+  const displayAmount =
+    customMode && customValue ? Number(customValue) || 0 : amount;
+
+  // Swipe-down-to-dismiss via react-native-gesture-handler (PanResponder is
+  // starved of touches under the app's GestureHandlerRootView). A reanimated
+  // value drives an outer wrapper; the inner sheet keeps its RN-Animated
+  // open/close + keyboard transforms, so the two stack cleanly.
+  const dragY = useSharedValue(0);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const triggerClose = () => onCloseRef.current();
+
+  const dragGesture = Gesture.Pan()
+    .activeOffsetY(12)
+    .failOffsetX([-20, 20])
+    .onUpdate((e) => {
+      dragY.value = Math.max(0, e.translationY);
+    })
+    .onEnd((e) => {
+      if (e.translationY > 110 || e.velocityY > 600) {
+        // Let the existing RN close animation finish the slide-out; keep the
+        // drag offset so it continues downward without a jump.
+        runOnJS(triggerClose)();
+      } else {
+        dragY.value = withSpring(0, { damping: 30, stiffness: 220 });
+      }
+    });
+
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: dragY.value }],
+  }));
+
+  // Fade-out → swap → animate height → fade-in step transitions
+  const prevStep = useRef<Step>('amount');
+  const transitioning = useRef(false);
+
+  // LayoutAnimation config for smooth height changes
+  const heightAnim: LayoutAnimation.Config = {
+    duration: 550,
+    update: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+  };
+
+  // Collapse/expand the sheet chrome when the keyboard shows/hides.
+  const focusAnim: LayoutAnimation.Config = {
+    duration: 280,
+    create: { type: LayoutAnimation.Types.easeOut, property: LayoutAnimation.Properties.opacity },
+    update: { type: LayoutAnimation.Types.easeInEaseOut },
+    delete: { type: LayoutAnimation.Types.easeIn, property: LayoutAnimation.Properties.opacity },
+  };
+
+  useEffect(() => {
+    const prev = prevStep.current;
+    prevStep.current = step;
+
+    if (prev === step) return;
+
+    // Thanks: fade out then sequenced entrance
+    if (step === 'thanks') {
+      Animated.timing(contentOpacity, { toValue: 0, duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
+        LayoutAnimation.configureNext(heightAnim);
+        setVisibleStep('thanks');
+        contentOpacity.setValue(1);
+
+        // Reset & run thanks sequence
+        thanksOpacity.setValue(0);
+        checkScale.setValue(0);
+        thanksTextY.setValue(20);
+        thanksTextOpacity.setValue(0);
+        thanksDuaOpacity.setValue(0);
+
+        Animated.sequence([
+          Animated.timing(thanksOpacity, { toValue: 1, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.spring(checkScale, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }),
+          Animated.parallel([
+            Animated.timing(thanksTextOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+            Animated.timing(thanksTextY, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          ]),
+          Animated.timing(thanksDuaOpacity, { toValue: 1, duration: 550, useNativeDriver: true }),
+        ]).start();
+
+        const id = setTimeout(() => {
+          Animated.parallel([
+            Animated.timing(sheetY, { toValue: SCREEN_H, duration: 900, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
+            Animated.timing(backdrop, { toValue: 0, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          ]).start(() => resetState());
+        }, 3200);
+        return () => clearTimeout(id);
+      });
+      return;
+    }
+
+    // Processing: fade out → swap → fade in
+    if (step === 'processing') {
+      Animated.timing(contentOpacity, { toValue: 0, duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
+        LayoutAnimation.configureNext(heightAnim);
+        setVisibleStep('processing');
+        Animated.timing(contentOpacity, { toValue: 1, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      });
+      return;
+    }
+
+    // Amount ↔ Card: fade out content → swap & animate height → fade in
+    if (transitioning.current) return;
+    transitioning.current = true;
+
+    Animated.timing(contentOpacity, {
+      toValue: 0,
+      duration: 380,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
+      LayoutAnimation.configureNext(heightAnim);
+      setVisibleStep(step);
+      Animated.timing(contentOpacity, {
+        toValue: 1,
+        duration: 450,
+        delay: 150,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(() => {
+        transitioning.current = false;
+      });
+    });
+  }, [step]);
+
+  const resetState = () => {
+    setStripeAccountId(undefined);
+    setMounted(false);
+    setCustomMode(false);
+    setCustomValue('');
+    setStep('amount');
+    setVisibleStep('amount');
+    setCardComplete(false);
+    setClientSecret(null);
+    setCardBrand('Unknown');
+    setCardLast4(undefined);
+    setCardExpMonth(undefined);
+    setCardExpYear(undefined);
+    setCvcFilled(false);
+    setCardFlipped(false);
+    setInputFocused(false);
+    setSavedCards([]);
+    setSelectedCardId(null);
+    setSaveCard(false);
+    keypadH.setValue(0);
+    keypadOpacity.setValue(0);
+    keyboardOffset.setValue(0);
+    contentOpacity.setValue(1);
+    thanksOpacity.setValue(0);
+    checkScale.setValue(0);
+    thanksTextY.setValue(20);
+    thanksTextOpacity.setValue(0);
+    thanksDuaOpacity.setValue(0);
+    sheetY.setValue(SCREEN_H);
+    dragY.value = 0;
+  };
+
+  // Cancel an abandoned PaymentIntent (fire-and-forget) so it doesn't linger
+  // in the donor's history as an incomplete charge.
+  const cancelPendingIntent = (secret: string | null) => {
+    if (!secret || !mosqueUuid) return;
+    const piId = secret.split('_secret_')[0];
+    if (!piId) return;
+    supabase.functions
+      .invoke('cancel-donation-intent', {
+        headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+        body: { payment_intent_id: piId, mosque_id: mosqueUuid },
+      })
+      .catch(() => {});
+  };
+
+  // Sheet open / close
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      dragY.value = 0;
+      // Sheet slides up, backdrop blur fades in shortly after
+      Animated.spring(sheetY, { toValue: 0, damping: 34, stiffness: 150, mass: 1.1, useNativeDriver: false }).start();
+      Animated.timing(backdrop, { toValue: 1, duration: 500, delay: 150, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    } else if (mounted) {
+      // Dismissed without completing → release the in-flight intent.
+      if (step !== 'thanks') cancelPendingIntent(clientSecret);
+      Keyboard.dismiss();
+      Animated.timing(backdrop, { toValue: 0, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      Animated.timing(sheetY, { toValue: SCREEN_H, duration: 550, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }).start(() => {
+        resetState();
+      });
+    }
+  }, [visible]);
+
+  // Keyboard-aware sheet offset
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      // Collapse the sheet chrome (header, summary, express pay, button) so
+      // only the card remains, then float it just above the keyboard.
+      LayoutAnimation.configureNext(focusAnim);
+      setInputFocused(true);
+      Animated.spring(keyboardOffset, {
+        toValue: -e.endCoordinates.height + 20,
+        damping: 34,
+        stiffness: 150,
+        mass: 1.1,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      LayoutAnimation.configureNext(focusAnim);
+      setInputFocused(false);
+      Animated.spring(keyboardOffset, {
+        toValue: 0,
+        damping: 34,
+        stiffness: 150,
+        mass: 1.1,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
+  // Keypad expand / collapse
+  useEffect(() => {
+    if (customMode) {
+      Animated.parallel([
+        Animated.timing(keypadH, { toValue: KEYPAD_HEIGHT, duration: 340, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+        Animated.timing(keypadOpacity, { toValue: 1, duration: 260, delay: 100, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(keypadOpacity, { toValue: 0, duration: 120, useNativeDriver: true }),
+        Animated.timing(keypadH, { toValue: 0, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: false }),
+      ]).start();
+    }
+  }, [customMode]);
+
+  const onKeyPress = (key: string | 'back') => {
+    if (key === 'back') {
+      setCustomValue((v) => v.slice(0, -1));
+      return;
+    }
+    if (key === '.') {
+      setCustomValue((v) => (v.includes('.') || v.length === 0 ? v : v + '.'));
+      return;
+    }
+    setCustomValue((v) => {
+      if (v.length >= 7) return v;
+      if (v === '0' && key !== '.') return key;
+      return v + key;
+    });
+  };
+
+  const handleContinueToCard = async () => {
+    if (displayAmount < 1) {
+      Alert.alert('Invalid amount', 'Please enter at least $1.');
+      return;
+    }
+
+    // Releasing any prior intent before minting a new one avoids orphans when
+    // the donor re-enters the card flow.
+    if (clientSecret) cancelPendingIntent(clientSecret);
+
+    setStep('processing');
+    setCustomMode(false);
+
+    try {
+      const authHeaders = { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` };
+      const [{ data, error: fnError }, methodsRes] = await Promise.all([
+        supabase.functions.invoke('create-donation-intent', {
+          headers: authHeaders,
+          body: {
+            amount: displayAmount,
+            mosque_id: mosqueUuid,
+            customer_email: profile?.profile_email ?? undefined,
+            // The customer is always attached; whether the card is saved is
+            // decided at confirm time via setupFutureUsage on the new-card page.
+            user_id: profile?.id ?? undefined,
+          },
+        }),
+        // Load the donor's reusable cards alongside the intent (best-effort).
+        profile?.id
+          ? supabase.functions.invoke('get-payment-methods', {
+              headers: authHeaders,
+              body: { user_id: profile.id, mosque_id: mosqueUuid },
+            })
+          : Promise.resolve({ data: { methods: [] }, error: null }),
+      ]);
+
+      const methods: SavedCard[] = methodsRes?.data?.methods ?? [];
+      setSavedCards(methods);
+      // Default to the most recent saved card so returning donors pay in one tap.
+      setSelectedCardId(methods.length > 0 ? methods[0].id : null);
+
+      if (fnError || !data?.clientSecret) {
+        let detail = 'Failed to create payment intent';
+        try {
+          if (fnError?.context?.text) {
+            const raw = await fnError.context.text();
+            console.error('[donation] Edge fn error body:', raw);
+            try {
+              const body = JSON.parse(raw);
+              detail = body?.error ?? body?.detail ?? raw;
+            } catch { detail = raw || fnError.message; }
+          } else {
+            console.error('[donation] fnError:', fnError, 'data:', data);
+            detail = data?.error ?? fnError?.message ?? detail;
+          }
+        } catch (e) {
+          console.error('[donation] Error reading context:', e);
+          detail = fnError?.message ?? 'Unknown error';
+        }
+        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+      }
+
+      setStripeAccountId(data.stripeAccountId);
+      setClientSecret(data.clientSecret);
+      setCardFlipped(false);
+      // Show the saved-card picker when the donor has cards on file; otherwise
+      // jump straight to the new-card entry page. Delay one frame so
+      // StripeProvider re-renders with the new stripeAccountId first.
+      requestAnimationFrame(() => setStep(methods.length > 0 ? 'card' : 'newcard'));
+    } catch (err: any) {
+      setStripeAccountId(undefined);
+      setStep('amount');
+      Alert.alert('Error', err.message ?? 'Something went wrong.');
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!clientSecret) return;
+    const fromStep = step; // 'newcard' (CardField) or 'card' (saved card picker)
+    const useNewCard = fromStep === 'newcard';
+    if (!useNewCard && !selectedCardId) return;
+    setStep('processing');
+
+    try {
+      const { paymentIntent, error } = await confirmPayment(
+        clientSecret,
+        useNewCard
+          ? { paymentMethodType: 'Card' }
+          : { paymentMethodType: 'Card', paymentMethodData: { paymentMethodId: selectedCardId! } },
+        // Save a brand-new card for future donations when the donor opted in.
+        useNewCard && saveCard ? { setupFutureUsage: 'OffSession' } : undefined,
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (paymentIntent?.status === 'Succeeded') {
+        setStripeAccountId(undefined);
+        setStep('thanks');
+      } else {
+        throw new Error('Payment was not completed.');
+      }
+    } catch (err: any) {
+      setStep(fromStep);
+      Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
+    }
+  };
+
+  const handlePlatformPay = async () => {
+    if (!clientSecret) return;
+    const fromStep = step;
+    setStep('processing');
+
+    try {
+      const { error } = await confirmPlatformPayPayment(clientSecret, {
+        applePay: {
+          cartItems: [
+            {
+              label: displayName,
+              amount: String(displayAmount),
+              paymentType: PlatformPay.PaymentType.Immediate,
+            },
+          ],
+          merchantCountryCode: 'US',
+          currencyCode: 'USD',
+        },
+        googlePay: {
+          testEnv: __DEV__,
+          merchantName: displayName,
+          merchantCountryCode: 'US',
+          currencyCode: 'USD',
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setStep('thanks');
+    } catch (err: any) {
+      setStep(fromStep);
+      Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
+    }
+  };
+
+  if (!mounted) return null;
+
+  return (
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+      <View className="flex-1 justify-end px-2 pb-3">
+        {/* Backdrop blur */}
+        <Animated.View
+          pointerEvents={visible ? 'auto' : 'none'}
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            opacity: backdrop,
+          }}
+        >
+          <BlurView intensity={40} tint="dark" style={{ flex: 1 }}>
+            <Pressable
+              style={{ flex: 1, backgroundColor: `rgba(${fg},0.15)` }}
+              onPress={() => {
+                // While typing, a tap outside dismisses the keyboard first.
+                if (inputFocused) Keyboard.dismiss();
+                else onClose();
+              }}
+            />
+          </BlurView>
+        </Animated.View>
+
+        {/* Sheet */}
+        <GestureDetector gesture={dragGesture}>
+        <ReAnimated.View style={dragStyle}>
+        <Animated.View
+          className="bg-background overflow-hidden"
+          style={{
+            borderRadius: 44,
+            transform: [{ translateY: sheetY }, { translateY: keyboardOffset }],
+            shadowColor: fgRgb,
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 20,
+            elevation: 16,
+          }}
+        >
+          {/* Handle — drag down to dismiss */}
+          <View className="items-center pt-3 pb-2">
+            <View className="h-[4px] w-9 rounded-full bg-foreground/15" />
+          </View>
+
+          {/* Step content — fades between steps, height animates via LayoutAnimation */}
+          <Animated.View style={{ opacity: contentOpacity }}>
+
+          {/* ─── Amount Step ─── */}
+          {visibleStep === 'amount' && (
+          <View>
+            <View className="px-6 pt-5">
+              <Text className="text-center text-[11px] font-semibold uppercase tracking-[2px] text-foreground/35">
+                Donate
+              </Text>
+
+              <Text
+                className="mt-5 text-center text-foreground"
+                style={{ fontSize: 48, fontFamily: 'PlayfairDisplay_400Regular' }}
+              >
+                ${displayAmount}
+              </Text>
+
+              <View className="mt-7 flex-row justify-center gap-3">
+                {PRESETS.map((p) => {
+                  const selected = !customMode && amount === p;
+                  return (
+                    <TouchableOpacity
+                      key={p}
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        setAmount(p);
+                        setCustomMode(false);
+                        setCustomValue('');
+                      }}
+                      style={{
+                        width: 88,
+                        height: 36,
+                        borderRadius: 18,
+                        borderWidth: 1.5,
+                        borderColor: selected ? accentRgb : `rgba(${fg},0.12)`,
+                        backgroundColor: selected ? accentRgb : 'transparent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: selected ? bgRgb : fgRgb,
+                        }}
+                      >
+                        ${p}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.6}
+                onPress={() => {
+                  setCustomMode(!customMode);
+                  if (customMode) setCustomValue('');
+                }}
+                className="mt-4 items-center py-2"
+              >
+                <Text style={{ fontSize: 12, color: accentRgb, fontWeight: '500' }}>
+                  {customMode ? 'Use preset' : 'Custom amount'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Keypad */}
+            <Animated.View
+              style={{ height: keypadH, overflow: 'hidden' }}
+              pointerEvents={customMode ? 'auto' : 'none'}
+            >
+              <Animated.View
+                className="px-8 pt-3"
+                style={{ height: KEYPAD_HEIGHT, opacity: keypadOpacity }}
+              >
+                <View className="flex-row flex-wrap">
+                  {KEYS.map((k) => (
+                    <TouchableOpacity
+                      key={k}
+                      activeOpacity={0.4}
+                      onPress={() => onKeyPress(k)}
+                      className="items-center justify-center"
+                      style={{ width: '33.333%', height: 52 }}
+                    >
+                      {k === 'back' ? (
+                        <MaterialCommunityIcons name="backspace-outline" size={22} color={`rgba(${fg},0.5)`} />
+                      ) : (
+                        <Text style={{ fontSize: 24, fontWeight: '300', color: fgRgb }}>{k}</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Animated.View>
+            </Animated.View>
+
+            {/* Bottom actions */}
+            <View className="px-6 pb-8 pt-3">
+              <View style={{ height: 1, backgroundColor: `rgba(${fg},0.06)`, marginBottom: 16 }} />
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleContinueToCard}
+                style={{
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: accentRgb,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 15, fontWeight: '600', color: bgRgb }}>
+                  Continue
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={{ marginTop: 14, textAlign: 'center', fontSize: 10, color: `rgba(${fg},0.3)` }}>
+                Secured by Stripe
+              </Text>
+            </View>
+          </View>
+          )}
+
+          {/* ─── Card Step: saved-card picker ('card') OR new-card entry ('newcard') ─── */}
+          {(visibleStep === 'card' || visibleStep === 'newcard') && (() => {
+            const onCardEntry = visibleStep === 'newcard';
+            const canSubmit = onCardEntry ? cardComplete : !!selectedCardId;
+            return (
+          <View>
+            <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: inputFocused ? 16 : 32 }}>
+              {/* Header row — always visible so back stays reachable */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+                <TouchableOpacity
+                  activeOpacity={0.6}
+                  onPress={() => {
+                    // While typing, back collapses the keyboard view first.
+                    if (inputFocused) {
+                      Keyboard.dismiss();
+                      return;
+                    }
+                    // From new-card entry, step back to the saved-card picker
+                    // when the donor has cards; otherwise back to the amount step.
+                    if (onCardEntry && savedCards.length > 0) {
+                      setStep('card');
+                      return;
+                    }
+                    setStep('amount');
+                    // Leaving the card flow entirely → release the intent.
+                    cancelPendingIntent(clientSecret);
+                    setClientSecret(null);
+                    setCardComplete(false);
+                  }}
+                  hitSlop={16}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: `rgba(${fg},0.06)`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <Ionicons name="chevron-back" size={18} color={`rgba(${fg},0.45)`} />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: fgRgb }}>
+                    {onCardEntry ? 'Card details' : 'Payment details'}
+                  </Text>
+                </View>
+                <Ionicons name="lock-closed" size={13} color={`rgba(${fg},0.25)`} />
+              </View>
+
+              {!inputFocused && (
+              <>
+              {/* Amount summary */}
+              <View
+                style={{
+                  backgroundColor: `rgba(${fg},0.035)`,
+                  borderRadius: 20,
+                  paddingHorizontal: 20,
+                  paddingVertical: 18,
+                  marginBottom: 20,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View>
+                    <Text style={{ fontSize: 11, color: `rgba(${fg},0.4)`, fontWeight: '500', letterSpacing: 0.5 }}>
+                      DONATING TO
+                    </Text>
+                    <Text style={{ fontSize: 14, color: fgRgb, fontWeight: '500', marginTop: 3 }}>
+                      {displayName}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 11, color: `rgba(${fg},0.4)`, fontWeight: '500', letterSpacing: 0.5 }}>
+                      AMOUNT
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 26,
+                        fontFamily: 'PlayfairDisplay_400Regular',
+                        color: fgRgb,
+                        marginTop: 1,
+                      }}
+                    >
+                      ${displayAmount}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Express pay */}
+              {isPlatformPaySupported && (
+                <>
+                  <PlatformPayButton
+                    type={
+                      Platform.OS === 'ios'
+                        ? PlatformPay.ButtonType.Donate
+                        : PlatformPay.ButtonType.Donate
+                    }
+                    appearance={PlatformPay.ButtonStyle.Black}
+                    borderRadius={26}
+                    onPress={handlePlatformPay}
+                    style={{ width: '100%', height: 52 }}
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16 }}>
+                    <View style={{ flex: 1, height: 1, backgroundColor: `rgba(${fg},0.08)` }} />
+                    <Text style={{ marginHorizontal: 14, fontSize: 11, color: `rgba(${fg},0.3)`, fontWeight: '500' }}>
+                      or pay with card
+                    </Text>
+                    <View style={{ flex: 1, height: 1, backgroundColor: `rgba(${fg},0.08)` }} />
+                  </View>
+                </>
+              )}
+              </>
+              )}
+
+              {/* Body: saved-card picker OR the new-card entry form */}
+              {!onCardEntry ? (
+                <View style={{ gap: 10, marginBottom: 4 }}>
+                  {savedCards.map((card) => {
+                    const selected = selectedCardId === card.id;
+                    return (
+                      <TouchableOpacity
+                        key={card.id}
+                        activeOpacity={0.7}
+                        onPress={() => setSelectedCardId(card.id)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          borderRadius: 16,
+                          borderWidth: 1.5,
+                          borderColor: selected ? accentRgb : `rgba(${fg},0.1)`,
+                          backgroundColor: selected ? `rgba(${fg},0.03)` : 'transparent',
+                          paddingHorizontal: 16,
+                          paddingVertical: 14,
+                          gap: 12,
+                        }}
+                      >
+                        <Ionicons name="card" size={20} color={`rgba(${fg},0.5)`} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: fgRgb }}>
+                            {formatBrand(card.brand)} •••• {card.last4}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: `rgba(${fg},0.4)`, marginTop: 2 }}>
+                            Expires {String(card.expMonth).padStart(2, '0')}/{String(card.expYear).slice(-2)}
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 10,
+                            borderWidth: 2,
+                            borderColor: selected ? accentRgb : `rgba(${fg},0.2)`,
+                            backgroundColor: selected ? accentRgb : 'transparent',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {selected && <Ionicons name="checkmark" size={12} color={bgRgb} />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  {/* Use a new card → opens the dedicated entry page */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setStep('newcard')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderStyle: 'dashed',
+                      borderColor: `rgba(${fg},0.15)`,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      gap: 12,
+                    }}
+                  >
+                    <Ionicons name="add-circle-outline" size={20} color={`rgba(${fg},0.5)`} />
+                    <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: fgRgb }}>
+                      Use a new card
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={`rgba(${fg},0.3)`} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  {/* Interactive card with embedded input */}
+                  <CardVisual
+                    brand={cardBrand}
+                    cardComplete={cardComplete}
+                    flipped={cardFlipped}
+                    last4={cardLast4}
+                    expiryMonth={cardExpMonth}
+                    expiryYear={cardExpYear}
+                    cvcFilled={cvcFilled}
+                    profileName={
+                      profile?.first_name && profile?.last_name
+                        ? `${profile.first_name} ${profile.last_name}`
+                        : undefined
+                    }
+                    bgRgb={bgRgb}
+                    fgRgb={fgRgb}
+                    fg={fg}
+                    onCardChange={(details) => {
+                      setCardComplete(details.complete);
+                      if (details.brand) setCardBrand(details.brand);
+                      setCardLast4(details.last4 || undefined);
+                      setCardExpMonth(details.expiryMonth ?? undefined);
+                      setCardExpYear(details.expiryYear ?? undefined);
+                      setCvcFilled(details.complete);
+                      // If we were on CVC (flipped) but expiry got cleared, user backspaced past CVC — flip back
+                      if (cardFlipped && details.expiryYear == null) {
+                        setCardFlipped(false);
+                      }
+                    }}
+                    onFocus={(field) => {
+                      setCardFlipped(field === 'Cvc');
+                    }}
+                    accentRgb={accentRgb}
+                  />
+
+                  {/* Save card toggle */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setSaveCard((v) => !v)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}
+                  >
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 5,
+                        borderWidth: 1.5,
+                        borderColor: saveCard ? accentRgb : `rgba(${fg},0.25)`,
+                        backgroundColor: saveCard ? accentRgb : 'transparent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {saveCard && <Ionicons name="checkmark" size={11} color={bgRgb} />}
+                    </View>
+                    <Text style={{ fontSize: 13, color: `rgba(${fg},0.6)` }}>
+                      Save card for future donations
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* Pay button — always visible so submit stays reachable */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleConfirmPayment}
+                disabled={!canSubmit}
+                style={{
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: accentRgb,
+                  opacity: canSubmit ? 1 : 0.5,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Ionicons name="shield-checkmark" size={16} color={bgRgb} />
+                <Text style={{ fontSize: 16, fontWeight: '700', color: bgRgb }}>
+                  Donate ${displayAmount}
+                </Text>
+              </TouchableOpacity>
+
+              {!inputFocused && (
+              <>
+              {/* Security footer */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, gap: 5 }}>
+                <Ionicons name="lock-closed-outline" size={10} color={`rgba(${fg},0.25)`} />
+                <Text style={{ fontSize: 10, color: `rgba(${fg},0.25)`, fontWeight: '500' }}>
+                  Encrypted & secured by Stripe
+                </Text>
+              </View>
+              </>
+              )}
+            </View>
+          </View>
+            );
+          })()}
+
+          {/* ─── Processing ─── */}
+          {visibleStep === 'processing' && (
+          <View
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 60,
+              minHeight: 240,
+            }}
+          >
+            <ActivityIndicator size="large" color={accentRgb} />
+            <Text style={{ marginTop: 16, fontSize: 13, color: `rgba(${fg},0.4)`, fontWeight: '500' }}>
+              Processing payment...
+            </Text>
+          </View>
+          )}
+
+          {/* ─── Thank You ─── */}
+          {visibleStep === 'thanks' && (
+            <Animated.View
+              style={{
+                opacity: thanksOpacity,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 24,
+                paddingTop: 40,
+                paddingBottom: 48,
+              }}
+            >
+              {/* Ornament behind check */}
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    width: 220,
+                    height: 220,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: thanksDuaOpacity,
+                  }}
+                >
+                  <ThankYouOrnament width={220} height={220} color={accentRgb} />
+                </Animated.View>
+
+                {/* Checkmark circle — pops in */}
+                <Animated.View
+                  style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 50,
+                    backgroundColor: accentRgb,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: [{ scale: checkScale }],
+                    shadowColor: accentRgb,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 20,
+                    elevation: 6,
+                  }}
+                >
+                  <Ionicons name="checkmark" size={48} color={bgRgb} />
+                </Animated.View>
+              </View>
+
+              {/* Thank you text — slides up */}
+              <Animated.View
+                style={{
+                  marginTop: 28,
+                  alignItems: 'center',
+                  opacity: thanksTextOpacity,
+                  transform: [{ translateY: thanksTextY }],
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 22,
+                    fontFamily: 'PlayfairDisplay_400Regular',
+                    color: fgRgb,
+                    textAlign: 'center',
+                  }}
+                >
+                  Thank you{profile?.first_name ? `, ${profile.first_name}` : ''}
+                </Text>
+                <Text style={{ marginTop: 10, fontSize: 13, color: `rgba(${fg},0.5)`, textAlign: 'center', lineHeight: 20 }}>
+                  Your ${displayAmount} donation to{'\n'}{displayName} has been received
+                </Text>
+              </Animated.View>
+
+              {/* Dua — fades in last */}
+              <Animated.View style={{ marginTop: 20, opacity: thanksDuaOpacity }}>
+                <Text style={{ fontSize: 12, color: accentRgb, textAlign: 'center', fontWeight: '500', fontStyle: 'italic' }}>
+                  May Allah reward you abundantly
+                </Text>
+              </Animated.View>
+            </Animated.View>
+          )}
+
+          </Animated.View>
+        </Animated.View>
+        </ReAnimated.View>
+        </GestureDetector>
+      </View>
+      </GestureHandlerRootView>
+    </Modal>
+  );
+}
+
+// Inline to avoid import for one use
+const StyleSheet = { absoluteFillObject: { position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 } };

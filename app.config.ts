@@ -1,4 +1,4 @@
-import type { ConfigContext, ExpoConfig } from 'expo/config';
+import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /**
  * Dynamic app config.
@@ -23,56 +23,91 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 type BuildTimeMasjid = { displayName: string };
 
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
-  sahla: { displayName: 'Sahla Demo Masjid' },
+  sahla: { displayName: "Sahla Demo Masjid" },
+  "mas-cnj": { displayName: "MAS Central New Jersey" },
 };
 
-const MASJID_ID = process.env.MASJID_ID ?? 'sahla';
-const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: 'Sahla' };
+const MASJID_ID = process.env.MASJID_ID ?? "sahla";
+const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: "Sahla" };
 
-const IOS_BUNDLE_ID = `com.appflowstudios.sahla.${MASJID_ID}`;
-const ANDROID_PACKAGE = `com.appflowstudios.sahla.${MASJID_ID.replace(/-/g, '_')}`;
+const IOS_BUNDLE_ID = `com.sahla.${MASJID_ID}`;
+const ANDROID_PACKAGE = `com.sahla.${MASJID_ID.replace(/-/g, "_")}`;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: masjid.displayName,
-  slug: 'sahla',
-  version: '1.0.0',
-  orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  slug: "sahla",
+  version: "1.0.2",
+  orientation: "portrait",
+  icon: "./assets/images/sahla-logo-arabic.png",
   scheme: `sahla-${MASJID_ID}`,
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
+    usesAppleSignIn: true,
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
-      foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundImage: './assets/images/android-icon-background.png',
-      monochromeImage: './assets/images/android-icon-monochrome.png',
+      backgroundColor: "#E6F4FE",
+      foregroundImage: "./assets/images/sahla-logo-arabic.png",
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: ANDROID_PACKAGE,
   },
   web: {
-    output: 'static',
-    favicon: './assets/images/favicon.png',
+    output: "static",
+    favicon: "./assets/images/favicon.png",
   },
   plugins: [
-    'expo-router',
-    'expo-secure-store',
     [
-      'expo-splash-screen',
+      "expo-build-properties",
       {
-        image: './assets/images/splash-icon.png',
+        ios: {
+          deploymentTarget: "16.0",
+        },
+      },
+    ],
+    "expo-router",
+    "expo-sqlite",
+    "expo-asset",
+    "expo-apple-authentication",
+    "@react-native-community/datetimepicker",
+    [
+      "expo-image-picker",
+      {
+        photosPermission:
+          "Allow $(PRODUCT_NAME) to access your photos to set your profile picture.",
+        cameraPermission:
+          "Allow $(PRODUCT_NAME) to access your camera to take a profile picture.",
+      },
+    ],
+    "expo-video",
+    [
+      "@stripe/stripe-react-native",
+      {
+        merchantIdentifier: `merchant.${IOS_BUNDLE_ID}`,
+        enableGooglePay: true,
+      },
+    ],
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/sahla-logo-arabic.png",
+        color: "#0A261E",
+      },
+    ],
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/images/splash-icon.png",
         imageWidth: 200,
-        resizeMode: 'contain',
-        backgroundColor: '#ffffff',
+        resizeMode: "contain",
+        backgroundColor: "#ffffff",
         dark: {
-          backgroundColor: '#000000',
+          backgroundColor: "#000000",
         },
       },
     ],
@@ -82,6 +117,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true,
   },
   extra: {
+    eas: {
+      projectId: "f5b5a34b-5283-4351-9e3c-b1059c5671a0",
+    },
     masjidId: MASJID_ID,
+    /** Read from `.env` when Metro / prebuild evaluates this file — reliable for dev bypass. */
+    devBypassAuth: process.env.EXPO_PUBLIC_DEV_BYPASS_AUTH === "true",
   },
 });

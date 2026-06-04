@@ -1,0 +1,138 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import Pattern from '@/assets/onboarding/pattern.svg';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+
+const SERIF = 'PlayfairDisplay_500Medium';
+
+type OnboardingScaffoldProps = {
+  step: number;
+  totalSteps?: number;
+  title: React.ReactNode;
+  body?: string;
+  children?: React.ReactNode;
+  primaryLabel: string;
+  onPrimary: () => void;
+  primaryDisabled?: boolean;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  footerNote?: string;
+  scrollable?: boolean;
+};
+
+export function OnboardingScaffold({
+  step,
+  totalSteps = 4,
+  title,
+  body,
+  children,
+  primaryLabel,
+  onPrimary,
+  primaryDisabled = false,
+  secondaryLabel,
+  onSecondary,
+  footerNote = 'By continuing you agree to our Terms of Service',
+  scrollable = false,
+}: OnboardingScaffoldProps) {
+  const router = useRouter();
+  const config = useMasjidConfig();
+  const surfaceRgb = `rgba(${config.colors.onboardingSurface.replace(/ /g, ',')}, 0.6)`;
+
+  const content = (
+    <>
+      <View style={{ marginTop: 48 }}>
+        <Text
+          className="text-onboarding-surface"
+          style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', lineHeight: 36 }}
+        >
+          {title}
+        </Text>
+        {body && (
+          <Text
+            className="text-onboarding-surface/80 mt-6"
+            style={{ fontSize: 11, lineHeight: 15 }}
+          >
+            {body}
+          </Text>
+        )}
+      </View>
+      {children}
+    </>
+  );
+
+  return (
+    <View className="flex-1 bg-onboarding-bg z-100">
+      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
+        <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin slice" />
+      </View>
+
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <View className="flex-row items-center px-5 pt-2">
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={12}
+            className="mr-3 h-6 w-6 items-center justify-center"
+          >
+            <Ionicons name="arrow-back" size={20} color={surfaceRgb} />
+          </Pressable>
+          <View className="flex-1 flex-row" style={{ gap: 6 }}>
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <View
+                key={i}
+                className={i < step ? 'bg-onboarding-accent' : 'bg-onboarding-surface/20'}
+                style={{ flex: 1, height: 2, borderRadius: 1 }}
+              />
+            ))}
+          </View>
+          <Text className="text-onboarding-surface/40 ml-3" style={{ fontSize: 8 }}>
+            STEP {step} OF {totalSteps}
+          </Text>
+        </View>
+
+        {scrollable ? (
+          <ScrollView
+            className="flex-1 px-5"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 24 }}
+          >
+            {content}
+          </ScrollView>
+        ) : (
+          <View className="flex-1 px-5">
+            {content}
+            <View className="flex-1" />
+          </View>
+        )}
+
+        <View className="px-5 pb-6" style={{ paddingHorizontal: 36 }}>
+          <Pressable
+            onPress={onPrimary}
+            disabled={primaryDisabled}
+            className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90"
+            style={{ opacity: primaryDisabled ? 0.4 : 1 }}
+          >
+            <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
+              {primaryLabel}
+            </Text>
+          </Pressable>
+          {secondaryLabel && onSecondary && (
+            <Pressable onPress={onSecondary} className="mt-4 items-center active:opacity-70">
+              <Text className="text-onboarding-surface" style={{ fontSize: 14 }}>
+                {secondaryLabel}
+              </Text>
+            </Pressable>
+          )}
+          <Text
+            className="text-onboarding-surface/20 mt-6 text-center"
+            style={{ fontSize: 10 }}
+          >
+            {footerNote}
+          </Text>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}

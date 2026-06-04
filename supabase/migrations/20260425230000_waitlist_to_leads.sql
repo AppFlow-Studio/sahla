@@ -1,0 +1,4 @@
+-- backfilled placeholder: schema already applied on staging.
+-- Remote schema_migrations row is a repaired/history-only entry — the DDL
+-- was applied separately and then marked as a history entry. This file
+-- exists purely to align local CLI history with remote.

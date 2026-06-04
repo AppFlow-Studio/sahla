@@ -42,3 +42,13 @@ app-example
 # generated native folders
 /ios
 /android
+
+# supabase cli local state
+supabase/.temp/
+supabase/.branches/
+
+# python venv
+.venv/
+
+# editor
+.cursor/

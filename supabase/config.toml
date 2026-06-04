@@ -1,0 +1,68 @@
+project_id = "sahla"
+
+# Edge functions that should not require a JWT to be invoked.
+# These are either called by pg_cron (no user context) or are intentional
+# service-role bypasses for the app (see comments at the top of each file).
+
+[functions.sync-prayer-times]
+verify_jwt = false
+
+[functions.get-todays-prayers]
+verify_jwt = false
+
+[functions.recommend]
+verify_jwt = false
+
+[functions.join-org]
+verify_jwt = false
+
+[functions.sync-onboarding]
+verify_jwt = false
+
+[functions.get-content-items]
+verify_jwt = false
+
+[functions.send-prayer-notifications]
+verify_jwt = false
+
+# Payment/management functions: the mobile app authenticates with Clerk and
+# these self-authenticate via user_id in the body + service role, so the edge
+# gateway must NOT enforce a native JWT. Without these entries the CLI defaults
+# verify_jwt to true on every deploy and silently 401s the app.
+[functions.get-payment-methods]
+verify_jwt = false
+
+[functions.get-payment-history]
+verify_jwt = false
+
+[functions.delete-payment-method]
+verify_jwt = false
+
+[functions.reels-actions]
+verify_jwt = false
+
+[functions.reels-upload]
+verify_jwt = false
+
+[functions.ct02-actions]
+verify_jwt = false
+
+# App posts the flyer with the anon key; it uploads to Bunny and returns the URL.
+[functions.business-ad-flyer-upload]
+verify_jwt = false
+
+# Business-ad self-service: read status + cancel, called by the app with the
+# anon key and self-authenticated via user_id in the body + service role.
+[functions.get-ad-status]
+verify_jwt = false
+
+[functions.cancel-ad-subscription]
+verify_jwt = false
+
+# Mosque-admin approve/decline/cancel decisions (app + CRM call this).
+[functions.admin-ad-decision]
+verify_jwt = false
+
+# Public list of approved business ads for the app's Community Partners section.
+[functions.get-community-partners]
+verify_jwt = false
