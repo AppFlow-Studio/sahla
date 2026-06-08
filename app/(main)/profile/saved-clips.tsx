@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   Text,
   useWindowDimensions,
@@ -12,8 +14,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { Reel } from '@/src/hooks/use-reels';
-import { useSavedReels } from '@/src/hooks/use-saved-reels';
+import {
+  filterSavedReels,
+  useSavedReels,
+  type SavedClipsFilter,
+  type SavedReel,
+} from '@/src/hooks/use-saved-reels';
 
 const COLUMNS = 3;
 const GAP = 2; // YouTube Shorts has thin gaps between cells
@@ -21,6 +27,13 @@ const GAP = 2; // YouTube Shorts has thin gaps between cells
 // Reuses the app's text-on-cream palette (dark green primary).
 const INK = '#0a261e';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
+
+// Same UI font Discover uses for its tab labels — keep the two screens aligned.
+const platformUiFont = Platform.select({
+  ios: 'SF Pro Text',
+  android: 'Roboto',
+  default: 'system-ui',
+});
 
 /**
  * Cell preview — when there's a real `thumbnail_url` we use that; otherwise we
@@ -45,18 +58,32 @@ function ReelThumb({ url }: { url: string }) {
   );
 }
 
+const FILTERS: { value: SavedClipsFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This week' },
+  { value: 'month', label: 'This month' },
+];
+
 export default function SavedClipsScreen() {
   const { data, isPending, isError, refetch } = useSavedReels();
   const { width } = useWindowDimensions();
-  const reels = data ?? [];
+  const [filter, setFilter] = useState<SavedClipsFilter>('all');
+  const allReels = data ?? [];
+  // Bucket client-side — rolling windows (last 24h / 7d / 30d). Cheap, instant
+  // switching, no extra round-trip. The player route receives the same filter
+  // so the swipe-through list matches what was visible in the grid.
+  const reels = useMemo(() => filterSavedReels(allReels, filter), [allReels, filter]);
 
   const cellWidth = (width - GAP * (COLUMNS - 1)) / COLUMNS;
   const cellHeight = cellWidth * (16 / 9); // portrait 9:16
 
-  const renderItem = ({ item, index }: { item: Reel; index: number }) => (
+  const renderItem = ({ item, index }: { item: SavedReel; index: number }) => (
     <Pressable
       onPress={() =>
-        router.push(`/profile/saved-clips-player?index=${index}` as Href)
+        router.push(
+          `/profile/saved-clips-player?index=${index}&filter=${filter}` as Href,
+        )
       }
       style={{
         width: cellWidth,
@@ -110,6 +137,35 @@ export default function SavedClipsScreen() {
         </Text>
       </View>
 
+      {/* Filter tabs — rolling Today / Week / Month buckets, or All.
+          Visual style mirrors `components/Discover/DiscoverHeader.tsx`
+          (plain label + 16px underline on the active tab). */}
+      <View className="flex-row items-center gap-4 px-6 pb-3">
+        {FILTERS.map((f) => {
+          const active = filter === f.value;
+          return (
+            <Pressable key={f.value} onPress={() => setFilter(f.value)} hitSlop={6}>
+              <Text
+                style={{
+                  fontFamily: platformUiFont,
+                  fontSize: 12,
+                  fontWeight: active ? '600' : '500',
+                  color: active ? INK : INK_MUTED,
+                }}
+              >
+                {f.label}
+              </Text>
+              {active ? (
+                <View
+                  className="mt-1 h-px w-4"
+                  style={{ backgroundColor: INK }}
+                />
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* Body — loading / error / empty / grid */}
       {isPending ? (
         <View className="flex-1 items-center justify-center">
@@ -158,7 +214,7 @@ export default function SavedClipsScreen() {
               marginTop: 12,
             }}
           >
-            No saved clips yet
+            {allReels.length === 0 ? 'No saved clips yet' : 'Nothing in this window'}
           </Text>
           <Text
             style={{
@@ -169,7 +225,9 @@ export default function SavedClipsScreen() {
               lineHeight: 18,
             }}
           >
-            Tap the bookmark on any reel in{'\n'}Watch to save it here.
+            {allReels.length === 0
+              ? `Tap the bookmark on any reel in\nWatch to save it here.`
+              : `No clips saved in the selected\nwindow — try "All".`}
           </Text>
         </View>
       ) : (
