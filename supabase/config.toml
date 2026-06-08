@@ -51,6 +51,11 @@ verify_jwt = false
 [functions.business-ad-flyer-upload]
 verify_jwt = false
 
+# App posts the avatar with the anon key + Clerk Bearer token; the function
+# verifies the Clerk JWT itself and uploads to Bunny under `{user_id}/avatar.ext`.
+[functions.upload-profile-pic]
+verify_jwt = false
+
 # Business-ad self-service: read status + cancel, called by the app with the
 # anon key and self-authenticated via user_id in the body + service role.
 [functions.get-ad-status]
