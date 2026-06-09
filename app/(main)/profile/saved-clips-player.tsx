@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,8 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReelItem } from '@/app/(main)/watch';
-import type { Reel } from '@/src/hooks/use-reels';
-import { useSavedReels } from '@/src/hooks/use-saved-reels';
+import {
+  filterSavedReels,
+  useSavedReels,
+  type SavedClipsFilter,
+  type SavedReel,
+} from '@/src/hooks/use-saved-reels';
 
 /**
  * Full-screen player for the user's Saved Clips list — opened by tapping a
@@ -23,36 +27,41 @@ import { useSavedReels } from '@/src/hooks/use-saved-reels';
  * instead of the full feed. The tapped cell's index is passed as a route
  * param so we open at that exact reel.
  */
+const VALID_FILTERS: SavedClipsFilter[] = ['all', 'today', 'week', 'month'];
+
 export default function SavedClipsPlayerScreen() {
-  const { index } = useLocalSearchParams<{ index?: string }>();
+  const { index, filter } = useLocalSearchParams<{ index?: string; filter?: string }>();
   // Floor + clamp the param so a malformed value can't break initialScrollIndex.
   const initialIndex = Math.max(0, Math.floor(Number(index ?? 0)) || 0);
+  const activeFilter: SavedClipsFilter = VALID_FILTERS.includes(filter as SavedClipsFilter)
+    ? (filter as SavedClipsFilter)
+    : 'all';
 
   const { data, isPending } = useSavedReels();
-  const reels = data ?? [];
+  // Mirror the grid's filter so the swipe-through list matches what the user
+  // just saw. If the grid was on "Today", the player only swipes through today.
+  const reels = useMemo(
+    () => filterSavedReels(data ?? [], activeFilter),
+    [data, activeFilter],
+  );
 
   const isFocused = useIsFocused();
   const { height } = useWindowDimensions();
-  const listRef = useRef<FlatList<Reel>>(null);
+  const listRef = useRef<FlatList<SavedReel>>(null);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
-  // Same feed-level mute pattern as Watch — tap a reel to unmute, sticks.
-  const [muted, setMuted] = useState(true);
-  const toggleMuted = useCallback(() => setMuted((m) => !m), []);
 
   const renderItem = useCallback(
-    ({ item, index: i }: { item: Reel; index: number }) => (
+    ({ item, index: i }: { item: SavedReel; index: number }) => (
       <ReelItem
         reel={item}
         height={height}
         isActive={i === activeIndex && isFocused}
-        muted={muted}
-        onToggleMuted={toggleMuted}
       />
     ),
-    [height, activeIndex, isFocused, muted, toggleMuted],
+    [height, activeIndex, isFocused],
   );
 
-  const keyExtractor = useCallback((item: Reel) => item.reel_id, []);
+  const keyExtractor = useCallback((item: SavedReel) => item.reel_id, []);
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
   const onViewableItemsChanged = useRef(

@@ -37,16 +37,25 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: masjid.displayName,
   slug: "sahla",
-  version: "1.0.2",
+  version: "1.0.3",
   orientation: "portrait",
   icon: "./assets/images/sahla-logo-arabic.png",
   scheme: `sahla-${MASJID_ID}`,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  updates: {
+    url: "https://u.expo.dev/f5b5a34b-5283-4351-9e3c-b1059c5671a0",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
     usesAppleSignIn: true,
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     adaptiveIcon: {

@@ -242,7 +242,11 @@ serve(async (req) => {
         if (error) {
           return jsonError(error.message, 500);
         }
-        return jsonOk({ reels: (data ?? []).map((row) => row.reels) });
+        // Flatten `saved_reels.created_at` onto the reel as `saved_at` — the UI
+        // buckets the list by when the user saved it (Today / Week / Month).
+        return jsonOk({
+          reels: (data ?? []).map((row) => ({ ...row.reels, saved_at: row.created_at })),
+        });
       }
 
       case 'is_reel_liked': {
