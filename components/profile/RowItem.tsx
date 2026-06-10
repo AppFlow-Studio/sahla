@@ -20,11 +20,11 @@ export default function RowItem({ title, icon, onPress }: Props) {
       onPress={onPress}
       className="flex-row items-center justify-between px-4 py-3"
     >
-      <View className="flex-row items-center gap-2">
+      <View className="flex-row items-center gap-3">
         {/* Tint the (monochrome) icon glyph so it follows the masjid theme. */}
         <Image
           source={icon}
-          style={{ width: 19, height: 19 }}
+          style={{ width: 18, height: 18 }}
           contentFit="contain"
           tintColor={fgRgb}
         />

@@ -18,20 +18,21 @@ import SectionHeader from "./SectionHeader";
 
 const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: replace with real App Store URL
 
-const COMMUNITY_ICON = require("@/assets/images/add_friends3.png");
-const SAVED_PROGRAMS_AND_EVENTS_ICON = require("@/assets/images/Saved_Programs_and_Events.png");
-const SAVED_CLIPS_ICON = require("@/assets/images/saved_clips.png");
-const PAYMENT_HISTORY_ICON = require("@/assets/images/Payment_history.png");
-const PAYMENT_METHODS_ICON = require("@/assets/images/Payment_Methods.png");
-const PRAYER_ALERTS_ICON = require("@/assets/images/Bell_Ring.png");
-const PROGRAMS_ICON = require("@/assets/images/Programs.png");
-const EVENTS_ICON = require("@/assets/images/Events.png");
-const MAS_BAG_ICON = require("@/assets/images/Mas_bag.png");
+const COMMUNITY_ICON = require("@/assets/images/invitefriends.png");
+const SAVED_PROGRAMS_AND_EVENTS_ICON = require("@/assets/images/saved.png");
+const SAVED_CLIPS_ICON = require("@/assets/images/saved-clips.png");
+const PAYMENT_HISTORY_ICON = require("@/assets/images/payment-history.png");
+const PAYMENT_METHODS_ICON = require("@/assets/images/payment-methods.png");
+const PRAYER_ALERTS_ICON = require("@/assets/images/prayer-alerts.png");
+const PROGRAMS_ICON = require("@/assets/images/programs.png");
+const EVENTS_ICON = require("@/assets/images/calendar.png");
+const MAS_BAG_ICON = require("@/assets/images/Shopping-Bag.png");
 const APPLICATION_ICON = require("@/assets/images/Start_Application.png");
-const CHECK_STATUS_ICON = require("@/assets/images/check_status2.png");
-const MANAGE_SUBS_ICON = require("@/assets/images/Manage_subs.png");
-const FEEDBACK_ICON = require("@/assets/images/feedback.png");
-const ADMIN_ICON = require("@/assets/images/Admin_Portal.png");
+const START_APPLICATION_ICON = require("@/assets/images/start-an-application.png");
+const CHECK_STATUS_ICON = require("@/assets/images/check-status.png");
+const MANAGE_SUBS_ICON = require("@/assets/images/Credit-Card.png");
+const FEEDBACK_ICON = require("@/assets/images/Chat_Dots.png");
+const ADMIN_ICON = require("@/assets/images/admin.png");
 
 type Props = {
   onPressPersonalized: () => void;
@@ -282,7 +283,7 @@ export default function ProfileBody({
         <SectionHeader title="BUSINESS ADS" />
         <View>
           <RowItem
-            icon={APPLICATION_ICON}
+            icon={START_APPLICATION_ICON}
             title="Start an Application"
             onPress={() => router.push("/advertise" as Href)}
           />
