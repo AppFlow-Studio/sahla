@@ -140,7 +140,7 @@ function MonthHeader({
         hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel="Previous month"
-        style={{ marginRight: 16 }}
+        style={{ marginRight: 22 }}
       >
         <AntDesign name="left" size={12} color={fgRgb} />
       </Pressable>
@@ -201,11 +201,12 @@ function DayCell({
           style={{
             fontFamily: platformUiFont,
             fontSize: 12,
+            textAlign: "center",
             color: selected ? bgRgb : fgRgb,
             opacity: inMonth ? 1 : 0.3,
           }}
         >
-          {String(date.getDate()).padStart(2, "0")}
+          {date.getDate()}
         </Text>
       </View>
       <View

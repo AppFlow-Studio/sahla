@@ -14,6 +14,7 @@ type Props = {
 export default function RowItem({ title, icon, onPress }: Props) {
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const fgRgb40 = `rgba(${colors.foreground.replace(/ /g, ",")}, 0.4)`;
   return (
     <Pressable
       onPress={onPress}
@@ -23,7 +24,7 @@ export default function RowItem({ title, icon, onPress }: Props) {
         {/* Tint the (monochrome) icon glyph so it follows the masjid theme. */}
         <Image
           source={icon}
-          style={{ width: 16, height: 16 }}
+          style={{ width: 19, height: 19 }}
           contentFit="contain"
           tintColor={fgRgb}
         />
@@ -32,7 +33,7 @@ export default function RowItem({ title, icon, onPress }: Props) {
           style={{
             fontFamily: Platform.select({ android: "Roboto", default: undefined }),
             fontWeight: "500",
-            fontSize: 11,
+            fontSize: 13,
             lineHeight: 18,
             letterSpacing: 0,
           }}
@@ -40,7 +41,7 @@ export default function RowItem({ title, icon, onPress }: Props) {
           {title}
         </Text>
       </View>
-      <IconSymbol name="chevron.right" size={8} className="text-foreground/40" />
+      <IconSymbol name="chevron.right" size={8} color={fgRgb40} />
     </Pressable>
   );
 }

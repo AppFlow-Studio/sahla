@@ -18,8 +18,8 @@ import SectionHeader from "./SectionHeader";
 
 const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: replace with real App Store URL
 
-const COMMUNITY_ICON = require("@/assets/images/Vector_addfriends.png");
-const SAVED_PROGRAMS_AND_EVENTS_ICON = require("@/assets/images/Saved_Programgs_and_events.png");
+const COMMUNITY_ICON = require("@/assets/images/add_friends3.png");
+const SAVED_PROGRAMS_AND_EVENTS_ICON = require("@/assets/images/Saved_Programs_and_Events.png");
 const SAVED_CLIPS_ICON = require("@/assets/images/saved_clips.png");
 const PAYMENT_HISTORY_ICON = require("@/assets/images/Payment_history.png");
 const PAYMENT_METHODS_ICON = require("@/assets/images/Payment_Methods.png");

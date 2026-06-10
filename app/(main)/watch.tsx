@@ -929,13 +929,13 @@ export function ReelItem({
                 numberOfLines={2}
                 onPress={() => setDescriptionOpen(true)}
                 onTextLayout={(e) => setCaptionTruncated(e.nativeEvent.lines.length > 1)}
-                style={{ fontSize: 10, color: '#ffffff', flex: 1 }}
+                style={{ fontSize: 12, color: '#ffffff', flex: 1 }}
               >
                 {reel.caption}
               </Text>
               {captionTruncated && (
                 <Pressable onPress={() => setDescriptionOpen(true)} hitSlop={8}>
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: '#ffffff', marginLeft: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#ffffff', marginLeft: 4 }}>
                     more
                   </Text>
                 </Pressable>
