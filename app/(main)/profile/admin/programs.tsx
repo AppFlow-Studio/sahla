@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -46,8 +47,53 @@ import {
 
 const SCREEN_H = Dimensions.get('window').height;
 
+// Mirrors the DiscoverHeader tab font so the underline tabs look native to
+// the rest of the project.
+const platformUiFont = Platform.select({
+  ios: 'SF Pro Text',
+  android: 'Roboto',
+  default: 'system-ui',
+});
+
+type Filter = 'all' | 'program' | 'event';
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'program', label: 'Programs' },
+  { value: 'event', label: 'Events' },
+];
+
+type DateFilter = 'all' | 'upcoming' | 'past';
+const DATE_FILTER_VALUES: DateFilter[] = ['all', 'upcoming', 'past'];
+
+// Labels follow the active type tab so the wording matches what the user is
+// actually filtering: "All events" on Events, "All programs" on Programs,
+// "All events and programs" on All.
+function dateFilterLabel(value: DateFilter, filter: Filter): string {
+  const noun =
+    filter === 'event'
+      ? 'events'
+      : filter === 'program'
+        ? 'programs'
+        : 'events and programs';
+  const prefix = value === 'all' ? 'All' : value === 'upcoming' ? 'Upcoming' : 'Past';
+  return `${prefix} ${noun}`;
+}
+
 function typeLabel(type: string) {
   return CONTENT_TYPES.find((t) => t.value === type)?.label ?? type;
+}
+
+// content_items.start_time is stored as 24-hour `HH:MM` or `HH:MM:SS`. The
+// list cell shows it to admins in 12-hour format, dropping the seconds.
+function formatTime12(time: string | null | undefined): string {
+  if (!time) return '';
+  const m = /^(\d{1,2}):(\d{2})/.exec(time);
+  if (!m) return time;
+  const hour = Number(m[1]);
+  const minute = m[2];
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}:${minute} ${period}`;
 }
 
 export default function ProgramsScreen() {
@@ -64,6 +110,27 @@ export default function ProgramsScreen() {
 
   const [editing, setEditing] = useState<AdminContentItem | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+
+  const filteredItems = useMemo(() => {
+    // Type filter (All / Programs / Events tabs)
+    const typeFiltered =
+      filter === 'all' ? items : items.filter((i) => i.type === filter);
+
+    // Date filter (popover next to +).
+    // YYYY-MM-DD string compare so "today" boundary lines up with how
+    // start_date is stored. Items without a start_date are excluded from
+    // upcoming/past (they're typically open-ended recurring programs).
+    if (dateFilter === 'all') return typeFiltered;
+    const today = new Date().toISOString().slice(0, 10);
+    return typeFiltered.filter((i) => {
+      if (!i.start_date) return false;
+      return dateFilter === 'upcoming' ? i.start_date >= today : i.start_date < today;
+    });
+  }, [items, filter, dateFilter]);
+
 
   const handleAdd = () => {
     setEditing(null);
@@ -102,25 +169,73 @@ export default function ProgramsScreen() {
             Programs & Events
           </Text>
         </View>
-        <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
-          <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
-        </TouchableOpacity>
+        <View className="flex-row items-center" style={{ gap: 14 }}>
+          <TouchableOpacity
+            onPress={() => setDateFilterOpen(true)}
+            activeOpacity={0.7}
+            hitSlop={8}
+            accessibilityLabel="Filter events by date"
+          >
+            <Ionicons
+              name={dateFilter === 'all' ? 'funnel-outline' : 'funnel'}
+              size={22}
+              color={dateFilter === 'all' ? fgRgb : accentRgb}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
+            <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Filter tabs — visual style mirrors DiscoverHeader / saved-clips:
+          plain label with a thin 16px underline under the active tab. */}
+      <View className="flex-row items-center gap-4 px-5 pb-3">
+        {FILTERS.map((f) => {
+          const active = filter === f.value;
+          return (
+            <Pressable key={f.value} onPress={() => setFilter(f.value)} hitSlop={6}>
+              <Text
+                style={{
+                  fontFamily: platformUiFont,
+                  fontSize: 12,
+                  fontWeight: active ? '600' : '500',
+                  color: active ? fgRgb : mutedRgb,
+                }}
+              >
+                {f.label}
+              </Text>
+              {active ? (
+                <View
+                  className="mt-1 h-px w-4"
+                  style={{ backgroundColor: fgRgb }}
+                />
+              ) : null}
+            </Pressable>
+          );
+        })}
       </View>
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={fgRgb} />
         </View>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
           <Ionicons name="megaphone-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
-            No programs or events yet. Tap + to create one.
+            {items.length === 0
+              ? 'No programs or events yet. Tap + to create one.'
+              : dateFilter !== 'all'
+                ? `No ${dateFilterLabel(dateFilter, filter).toLowerCase()}.`
+                : filter === 'program'
+                  ? 'No programs yet. Tap + to create one.'
+                  : 'No events yet. Tap + to create one.'}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={filteredItems}
           keyExtractor={(i) => i.content_id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40 }}
           renderItem={({ item }) => (
@@ -137,6 +252,74 @@ export default function ProgramsScreen() {
       )}
 
       <ContentFormModal visible={showForm} item={editing} onClose={() => setShowForm(false)} />
+
+      {/* Date filter — liquid-glass backdrop with a small picker card.
+          Same BlurView pattern as the donation modal. */}
+      <Modal
+        visible={dateFilterOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDateFilterOpen(false)}
+      >
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() => setDateFilterOpen(false)}
+          accessibilityLabel="Close filter"
+        >
+          <BlurView
+            intensity={40}
+            tint="dark"
+            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+          >
+            {/* Stop the outer Pressable from swallowing taps inside the card. */}
+            <Pressable
+              onPress={() => {}}
+              style={{
+                width: 260,
+                borderRadius: 18,
+                overflow: 'hidden',
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                paddingVertical: 8,
+              }}
+            >
+              {DATE_FILTER_VALUES.map((value, idx) => {
+                const active = value === dateFilter;
+                return (
+                  <Pressable
+                    key={value}
+                    onPress={() => {
+                      setDateFilter(value);
+                      setDateFilterOpen(false);
+                    }}
+                    style={{
+                      paddingHorizontal: 18,
+                      paddingVertical: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderBottomWidth: idx < DATE_FILTER_VALUES.length - 1 ? 0.5 : 0,
+                      borderBottomColor: 'rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: active ? '600' : '500',
+                        color: '#0a261e',
+                      }}
+                    >
+                      {dateFilterLabel(value, filter)}
+                    </Text>
+                    {active ? (
+                      <Ionicons name="checkmark" size={18} color={accentRgb} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </Pressable>
+          </BlurView>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -172,7 +355,7 @@ function ContentCard({
       : item.is_weekly_program
         ? (item.days ?? []).map((d) => d.slice(0, 3)).join(', ')
         : (item.start_date ?? '');
-  const sub = [typeLabel(item.type), schedule, item.start_time].filter(Boolean).join(' · ');
+  const sub = [typeLabel(item.type), schedule, formatTime12(item.start_time)].filter(Boolean).join(' · ');
 
   return (
     <View

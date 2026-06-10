@@ -1,4 +1,5 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { Image } from "expo-image";
 import { Platform, Pressable, Text, View } from "react-native";
 
@@ -7,6 +8,8 @@ type Props = {
 }
 
 export default function PersonalizedCard({ onPress }: Props) {
+  const { colors } = useMasjidConfig();
+  const fgRgb40 = `rgba(${colors.foreground.replace(/ /g, ",")}, 0.4)`;
   return (
     <Pressable className="w-full flex-row justify-between items-center bg-accent/20 rounded-[30px] px-5"
     style={{ minHeight: 53, paddingVertical: 12 }}
@@ -49,7 +52,7 @@ export default function PersonalizedCard({ onPress }: Props) {
             </View>
         </View>
 
-        <IconSymbol name="chevron.right" size={8} className="text-foreground/40" />
+        <IconSymbol name="chevron.right" size={8} color={fgRgb40} />
     </Pressable>
   )
 }

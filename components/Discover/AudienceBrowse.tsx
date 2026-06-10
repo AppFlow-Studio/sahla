@@ -147,10 +147,10 @@ function Card({
         style={{
           marginTop: 10,
           fontFamily: platformUiFont,
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: "600",
           color: fgRgb,
-          lineHeight: 16,
+          lineHeight: 18,
         }}
       >
         {item.title}
@@ -160,9 +160,9 @@ function Card({
         style={{
           marginTop: 2,
           fontFamily: platformUiFont,
-          fontSize: 10,
+          fontSize: 12,
           color: mutedFgRgb,
-          lineHeight: 14,
+          lineHeight: 16,
         }}
       >
         {item.dateLabel}
@@ -223,7 +223,7 @@ function ListRow({
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
-              lineHeight: 16,
+              lineHeight: 18,
             }}
           >
             {item.title}
@@ -233,9 +233,9 @@ function ListRow({
               numberOfLines={1}
               style={{
                 fontFamily: platformUiFont,
-                fontSize: 11,
+                fontSize: 12,
                 color: mutedFgRgb,
-                lineHeight: 14,
+                lineHeight: 16,
                 marginTop: 2,
               }}
             >
@@ -247,7 +247,7 @@ function ListRow({
               numberOfLines={1}
               style={{
                 fontFamily: platformUiFont,
-                fontSize: 11,
+                fontSize: 12,
                 color: accentRgb,
                 fontWeight: "500",
                 lineHeight: 16,

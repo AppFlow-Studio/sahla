@@ -39,18 +39,20 @@ export function NotificationTabs<T extends string>({
               style={{
                 fontFamily: SF_MEDIUM,
                 fontWeight: '500',
-                fontSize: 12,
+                fontSize: 13,
                 color: isActive ? INK : INK_MUTED,
               }}
             >
               {tab}
             </Text>
             {isActive ? (
+              // Stretch to the Pressable's content width — which equals the
+              // label width because the Pressable sizes to its child Text.
               <View
                 style={{
                   marginTop: 4,
                   height: 1,
-                  width: 15,
+                  alignSelf: 'stretch',
                   backgroundColor: INK,
                 }}
               />

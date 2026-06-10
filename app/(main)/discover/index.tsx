@@ -232,18 +232,27 @@ export default function DiscoverScreen() {
     return labels.slice(0, 2).join(" & ");
   };
 
-  const upcomingItems: EventItem[] = useMemo(
-    () =>
-      filteredItems.slice(0, 3).map((r) => ({
-        id: r.content_id,
-        title: toTitleCase(r.name ?? "Untitled"),
-        dateLabel: formatCardDate(r),
-        category: deriveCategory(r),
-        thumbnail: r.image ? { uri: r.image } : undefined,
-      })),
+  const upcomingItems: EventItem[] = useMemo(() => {
+    // Drop items whose last day is in the past — they shouldn't render in
+    // an "Upcoming events" list even if the DB still has them. The admin
+    // portal still surfaces them under All / Past so they aren't lost.
+    // YYYY-MM-DD string compare aligns with how content_items.start_date is
+    // stored; items with no date are treated as ongoing and kept.
+    const today = new Date().toISOString().slice(0, 10);
+    const future = filteredItems.filter((r) => {
+      if (!r.start_date) return true;
+      const lastDay = r.end_date ?? r.start_date;
+      return lastDay >= today;
+    });
+    return future.slice(0, 3).map((r) => ({
+      id: r.content_id,
+      title: toTitleCase(r.name ?? "Untitled"),
+      dateLabel: formatCardDate(r),
+      category: deriveCategory(r),
+      thumbnail: r.image ? { uri: r.image } : undefined,
+    }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filteredItems],
-  );
+  }, [filteredItems]);
 
   const buildRow = useCallback(
     (r: (typeof recommendations)[number]): ForYouRowItem => {
