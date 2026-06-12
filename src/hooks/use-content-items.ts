@@ -153,6 +153,7 @@ export function useContentItems() {
       items: MOCK_CONTENT_ITEMS,
       status: 'success' as const,
       error: null,
+      refetch: async () => {},
     };
   }
 
@@ -166,5 +167,6 @@ export function useContentItems() {
         ? ('error' as const)
         : ('success' as const),
     error: query.error?.message ?? null,
+    refetch: query.refetch,
   };
 }

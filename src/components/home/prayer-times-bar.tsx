@@ -7,12 +7,19 @@ import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 
 // Prayers with a custom image glyph (keyed by lowercase name); any prayer not
 // listed here falls back to its MaterialCommunityIcons glyph.
-const CUSTOM_PRAYER_ICONS: Record<string, ReturnType<typeof require>> = {
-  fajr: require('@/assets/images/fajr_2.png'),
-  dhuhr: require('@/assets/images/dhuhr.png'),
-  asr: require('@/assets/images/asr-icon-1.png'),
-  maghrib: require('@/assets/images/maghrib.png'),
-  isha: require('@/assets/images/isha.png'),
+const CUSTOM_PRAYER_ICONS: Record<string, number> = {
+  fajr: require('@/assets/images/fajr-new.png'),
+  dhuhr: require('@/assets/images/dhuhr-new.png'),
+  asr: require('@/assets/images/asr-new.png'),
+  maghrib: require('@/assets/images/maghrib_2.png'),
+  isha: require('@/assets/images/isha-new.png'),
+};
+
+// Per-prayer icon size overrides — most glyphs read well at 18, but a few
+// assets carry extra transparent padding and need a slightly larger box to
+// look the same visual weight as the rest.
+const CUSTOM_ICON_SIZES: Record<string, number> = {
+  maghrib: 21,
 };
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -62,7 +69,10 @@ export function PrayerTimesBar() {
               {CUSTOM_PRAYER_ICONS[prayer.name.toLowerCase()] ? (
                 <Image
                   source={CUSTOM_PRAYER_ICONS[prayer.name.toLowerCase()]}
-                  style={{ width: 18, height: 18 }}
+                  style={(() => {
+                    const s = CUSTOM_ICON_SIZES[prayer.name.toLowerCase()] ?? 18;
+                    return { width: s, height: s };
+                  })()}
                   contentFit="contain"
                   tintColor={isActive ? accentRgb : fgFull}
                 />
