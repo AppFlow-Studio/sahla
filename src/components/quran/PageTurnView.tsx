@@ -20,13 +20,11 @@ import {
   Vertices,
   type SkPoint,
 } from '@shopify/react-native-skia';
-import Animated, {
+import {
   runOnJS,
-  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 
 import {
@@ -55,7 +53,7 @@ export type PageTurnViewProps = {
 const COLS = 18;
 const ROWS = 24;
 const FOCAL_LENGTH = 1100;
-const SHADOW_BLUR = 24;
+const SHADOW_BLUR = 28;
 
 export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
   function PageTurnView(
@@ -90,9 +88,18 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
 
     // Gesture state — all UI thread
     const turnDir = useSharedValue<0 | 1 | -1>(0);
+    const startX = useSharedValue(0);
     const startY = useSharedValue(0);
     const touchX = useSharedValue(0);
     const touchY = useSharedValue(0);
+    // Set to true while a commit/cancel spring is animating. Read by
+    // onFinalize so it doesn't tear down state out from under the spring.
+    const springInFlight = useSharedValue(false);
+    // True once a fast-flick has handed off finger-tracking to the commit
+    // spring mid-gesture. onUpdate and onEnd short-circuit while this is
+    // set so neither the per-frame mesh update nor onEnd's commit/cancel
+    // branch fight the in-flight auto-finish.
+    const earlyCommitFired = useSharedValue(false);
     // Mirror layout dimensions to shared values so worklets see updated sizes
     // when the screen rotates or resizes.
     const pageWSV = useSharedValue(0);
@@ -107,82 +114,78 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       'idle',
     );
     const [activeDir, setActiveDir] = useState<0 | 1 | -1>(0);
+    // Set true the moment a CANCEL spring starts. Tells the bgImage path
+    // to render null even though activeDir is still 1, so the next-page
+    // snapshot can't show through the collapsing mesh during the spring's
+    // final approach (when R shrinks below the "still rendered as a
+    // partial curl" threshold and the mesh briefly stops covering the
+    // canvas).
+    const [cancelInFlight, setCancelInFlight] = useState(false);
 
-    // Drives the canvas wrapper's opacity. We can't smoothly mount/unmount
-    // the Skia Canvas, so instead we keep it mounted through the commit and
-    // fade an Animated.View wrapper around it.
-    const canvasFadeOpacity = useSharedValue(0);
-    const animatedCanvasStyle = useAnimatedStyle(() => ({
-      opacity: canvasFadeOpacity.value,
-    }));
+    const onGestureStart = useCallback((dir: 1 | -1) => {
+      setActiveDir(dir);
+      setPhase('dragging');
+      setCancelInFlight(false);
+    }, []);
 
-    // Drives only the curl decoration's opacity (mesh + back + highlight +
-    // shadow). bgImage stays at full opacity. On commit the curl fades out
-    // first, revealing the next-page bgImage cleanly — without that, the
-    // half-wrapped curl is still showing the OLD page's texture on the
-    // right side of the screen when the spring lands, which reads as "the
-    // page we're already on" right before the canvas hands off.
-    const curlOpacity = useSharedValue(1);
-
-    const onGestureStart = useCallback(
-      (dir: 1 | -1) => {
-        setActiveDir(dir);
-        setPhase('dragging');
-        // Snap both canvas + curl decoration to full opacity; also cancels
-        // any in-flight commit fade if a new gesture starts during one.
-        canvasFadeOpacity.value = 1;
-        curlOpacity.value = 1;
+    // Spring-back finished. No page change.
+    //
+    // For BACKWARD cancel we don't clear `turnDir`: the spring overshoots
+    // off-screen, the mesh is rendered there until the canvas unmounts,
+    // and clearing turnDir mid-flight would snap-flatten the mesh into
+    // its (now-stale) backward texture on-screen for one frame.
+    //
+    // For FORWARD cancel we DO clear `turnDir`. As the spring approaches
+    // the origin, R shrinks toward zero and the mesh collapses into a
+    // tiny back-facing wad near the touch — bgImage (= next.image) then
+    // shows through everywhere else, which reads as "the next page
+    // flashes for a split second" right before doCancel unmounts the
+    // canvas. Clearing turnDir flattens the mesh (R=0 → all vertices
+    // back at z=0, covering the bgImage with the CURRENT page texture)
+    // for the brief window between this worklet update and React
+    // unmounting the canvas. The mesh's texture is `curr.image` so the
+    // flat mesh is the same content the live view will show one frame
+    // later — no visible texture change.
+    const doCancel = useCallback(
+      (wasForward: boolean) => {
+        if (wasForward) {
+          turnDir.value = 0;
+        }
+        setActiveDir(0);
+        setPhase('idle');
+        setCancelInFlight(false);
       },
-      [canvasFadeOpacity, curlOpacity],
+      [turnDir],
     );
 
-    // Spring-back complete (released early, no page change). Reset both
-    // opacities so the next gesture starts fresh.
-    const endGestureNoCommit = useCallback(() => {
-      setActiveDir(0);
-      setPhase('idle');
-      canvasFadeOpacity.value = 0;
-      curlOpacity.value = 1;
-    }, [canvasFadeOpacity, curlOpacity]);
-
-    // Final cleanup once the commit's canvas fade has finished — restore
-    // curlOpacity to 1 so the next gesture starts with the curl visible.
-    const finishCommit = useCallback(() => {
-      setActiveDir(0);
-      setPhase('idle');
-      curlOpacity.value = 1;
-    }, [curlOpacity]);
-
-    const beginCommit = useCallback(
+    // Commit spring finished — the page has actually visibly completed
+    // its turn (mesh is off-screen for forward, fully flat for backward).
+    // Now and only now do we swap pageNumber + tear down the canvas, so
+    // the live view re-renders to the destination page seamlessly.
+    // Same `turnDir` reasoning as doCancel above.
+    const doCommit = useCallback(
       (delta: 1 | -1) => {
         const newPage = pageNumber + delta;
         if (newPage >= 1 && newPage <= totalPages) onPageChange(newPage);
-        setPhase('committing');
-        // One quick parallel fade — curl + canvas both dissolve over the
-        // same 120ms onto the live RN view (which has had the full spring
-        // duration to start loading its new MushafPage). Total commit
-        // phase post-spring ≈ 120ms, so a release feels like one
-        // continuous turning motion rather than multiple sequential
-        // phases.
-        curlOpacity.value = withTiming(0, { duration: 120 });
-        canvasFadeOpacity.value = withTiming(
-          0,
-          { duration: 120 },
-          (finished) => {
-            if (finished) {
-              runOnJS(finishCommit)();
-            }
-          },
-        );
+        // For BACKWARD commit, clear turnDir so the fold derived value
+        // immediately returns no-curl and the mesh snaps strictly flat at
+        // z=0 with `curlImage` (= prev page = the destination) covering
+        // the whole canvas. Without this, residual wrap vertices project
+        // onto the left edge of screen and paint partial letters from the
+        // top-left of the prev page's snapshot for one frame before the
+        // canvas unmounts. Safe because curlImage is the same page the
+        // live view will re-render to a moment later.
+        //
+        // For FORWARD commit we DON'T clear — there curlImage = curr.image
+        // is the OLD current page, and snapping the mesh flat would flash
+        // the old page for one frame before the canvas unmounts.
+        if (delta === -1) {
+          turnDir.value = 0;
+        }
+        setActiveDir(0);
+        setPhase('idle');
       },
-      [
-        pageNumber,
-        totalPages,
-        onPageChange,
-        canvasFadeOpacity,
-        curlOpacity,
-        finishCommit,
-      ],
+      [pageNumber, totalPages, onPageChange, turnDir],
     );
 
     const pageW = stage.w;
@@ -219,63 +222,174 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
           }
           const dir = goingForward ? 1 : -1;
           turnDir.value = dir;
+          startX.value = e.x;
           startY.value = e.y;
           touchX.value = e.x;
           touchY.value = e.y;
+          earlyCommitFired.value = false;
           runOnJS(onGestureStart)(dir);
         })
         .onUpdate((e) => {
           'worklet';
           if (turnDir.value === 0) return;
+          if (earlyCommitFired.value) return;
+
+          // Above ~2200 px/s the finger moves so fast per frame that the
+          // mesh visibly steps and shadow/highlight/paper-edge derived
+          // paths can't keep up — reads as buggy/glitchy. Hand off to the
+          // same commit spring onEnd would have run so the page finishes
+          // the turn smoothly while still respecting the flick's momentum.
+          const FAST_FLICK_THRESHOLD = 2200;
+          const goingForward = turnDir.value === 1;
+          const commitSignPositive = goingForward
+            ? direction === 'rtl'
+            : direction === 'ltr';
+          const isFastFlick = commitSignPositive
+            ? e.velocityX > FAST_FLICK_THRESHOLD
+            : e.velocityX < -FAST_FLICK_THRESHOLD;
+          if (isFastFlick) {
+            earlyCommitFired.value = true;
+            // Anchor spring origin at the current finger position so the
+            // hand-off is continuous (no visible jump backward).
+            touchX.value = e.x;
+            touchY.value = startY.value;
+            const targetX = goingForward
+              ? direction === 'rtl' ? pageW * 1.5 : -pageW * 0.5
+              : direction === 'rtl' ? 0 : pageW;
+            // Past ~2500 px/s the spring lands so fast we're back in the
+            // per-frame-jump zone we're trying to avoid — defeats it.
+            const SPRING_V_CAP = 2500;
+            const cappedV = e.velocityX > SPRING_V_CAP
+              ? SPRING_V_CAP
+              : e.velocityX < -SPRING_V_CAP
+                ? -SPRING_V_CAP
+                : e.velocityX;
+            springInFlight.value = true;
+            touchX.value = withSpring(
+              targetX,
+              { damping: 25, stiffness: 220, mass: 0.7, velocity: cappedV },
+              (finished) => {
+                springInFlight.value = false;
+                if (finished) {
+                  runOnJS(doCommit)(goingForward ? 1 : -1);
+                }
+              },
+            );
+            return;
+          }
+
           touchX.value = e.x;
-          touchY.value = e.y;
+          // Lock touchY to the gesture's start Y so the fold axis stays
+          // perpendicular and the curl is a strict side-curl. Without this
+          // the perpendicular-bisector tilts diagonally as the finger drifts
+          // up or down, which sends the wrap off-axis and looks broken.
+          // Backward already does this via the fold derivation (which
+          // ignores touchY); doing it here covers forward too.
+          touchY.value = startY.value;
         })
         .onEnd((e) => {
           'worklet';
           if (turnDir.value === 0) return;
+          // Fast-flick already handed off to the commit spring; let it land.
+          if (earlyCommitFired.value) return;
           const goingForward = turnDir.value === 1;
           const progress = progressFromTouch(e.x, pageW, direction);
           const effective = goingForward ? progress : 1 - progress;
           const commit = shouldCommit(effective, e.velocityX, direction);
           if (commit) {
-            // Past threshold → spring touchX to the natural half-wrap
-            // position at the spine. The curl decoration is then faded
-            // out separately in beginCommit, so the page doesn't need to
-            // be thrown off-screen to read as "turned".
+            // Forward (corner-peel): overshoot the spine by half a page
+            // width so the curl mesh keeps translating after the natural
+            // half-wrap position and visibly EXITS the screen — that's
+            // the "page completes the turn" animation. Without overshoot
+            // the spring just lands at the half-wrap and the dissolve
+            // does all the work, which reads as a snap.
+            //
+            // Backward (vertical-seam sweep): target is the origin (0 in
+            // RTL, pageW in LTR) so R → 0 and the mesh lands flat with
+            // the incoming page fully covering the screen.
             const targetX = goingForward
-              ? direction === 'rtl' ? pageW : 0
+              ? direction === 'rtl' ? pageW * 1.5 : -pageW * 0.5
               : direction === 'rtl' ? 0 : pageW;
+            // Sequential commit: the spring drives the mesh from where the
+            // finger let go to the fully-turned position, with the release
+            // velocity carried into the spring so it feels continuous and
+            // not like a canned animation. The page state swap (and the
+            // canvas teardown) only fire from onAnimationEnd, so the mesh
+            // visibly completes its turn BEFORE the page swap — that's
+            // the missing completion animation.
+            springInFlight.value = true;
             touchX.value = withSpring(
               targetX,
-              { damping: 30, stiffness: 400, mass: 0.6 },
-              () => {
-                turnDir.value = 0;
-                runOnJS(beginCommit)(goingForward ? 1 : -1);
+              {
+                damping: 25,
+                stiffness: 220,
+                mass: 0.7,
+                velocity: e.velocityX,
+              },
+              (finished) => {
+                springInFlight.value = false;
+                if (finished) {
+                  runOnJS(doCommit)(goingForward ? 1 : -1);
+                }
               },
             );
           } else {
-            // Released early → spring back to the leading edge, no page change.
+            // Released before threshold — spring touch back so the fold
+            // unwinds and the canvas can tear down on a fully-flat mesh.
+            //
+            // Forward: spring touchX AND touchY back to the gesture's
+            // start point. Origin is at (0, startY), so when touch ==
+            // (0, startY) we have R=0 and the mesh is genuinely flat
+            // before doCancel unmounts the canvas. Without springing
+            // touchY too, a residual fold of |touchY - startY|/π would
+            // be left and you'd see a snap when the canvas disappears.
+            //
+            // Backward: overshoot past the entry edge so the wrap rolls
+            // off-screen. touchY is locked to startY by the fold math
+            // anyway, so no Y spring is needed.
             const restX = goingForward
               ? direction === 'rtl' ? 0 : pageW
-              : direction === 'rtl' ? pageW : 0;
+              : direction === 'rtl' ? pageW * 1.5 : -pageW * 0.5;
+            springInFlight.value = true;
+            // Tell React to drop bgImage for the duration of the cancel
+            // so the next-page snapshot can't peek through the collapsing
+            // mesh near the end of the spring.
+            runOnJS(setCancelInFlight)(true);
             touchX.value = withSpring(
               restX,
-              { damping: 22, stiffness: 200, mass: 0.7 },
-              () => {
-                turnDir.value = 0;
-                runOnJS(endGestureNoCommit)();
+              {
+                damping: 22,
+                stiffness: 200,
+                mass: 0.7,
+                velocity: e.velocityX,
+              },
+              (finished) => {
+                springInFlight.value = false;
+                if (finished) {
+                  runOnJS(doCancel)(goingForward);
+                }
               },
             );
+            if (goingForward) {
+              touchY.value = withSpring(startY.value, {
+                damping: 22,
+                stiffness: 200,
+                mass: 0.7,
+                velocity: e.velocityY,
+              });
+            }
           }
         })
         .onFinalize(() => {
           'worklet';
-          // Cancellation safety net — if the gesture aborts mid-flight (no
-          // onEnd path taken) we still clear active state so the live RN
-          // view becomes visible again.
-          if (turnDir.value !== 0) {
+          // Safety net for handler cancellation (e.g. another gesture
+          // interrupts before onEnd). DON'T clear state if a spring is
+          // mid-flight — the spring's callback owns the teardown and will
+          // run doCommit / doCancel when the animation lands.
+          if (turnDir.value !== 0 && !springInFlight.value) {
+            const wasForward = turnDir.value === 1;
             turnDir.value = 0;
-            runOnJS(endGestureNoCommit)();
+            runOnJS(doCancel)(wasForward);
           }
         });
     }, [
@@ -284,12 +398,14 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       prevNum,
       nextNum,
       onGestureStart,
-      beginCommit,
-      endGestureNoCommit,
+      doCommit,
+      doCancel,
       turnDir,
       startY,
       touchX,
       touchY,
+      springInFlight,
+      earlyCommitFired,
     ]);
 
     // Origin corner: locked in y per gesture, x depends on direction
@@ -301,11 +417,27 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
         return computeFold(0, 0, 0, 0);
       }
       const goingForward = dir === 1;
-      const origin = originCorner(startY.value, w, h, direction);
-      const ox = goingForward
-        ? origin.x
-        : direction === 'rtl' ? w : 0;
-      return computeFold(ox, origin.y, touchX.value, touchY.value);
+      if (goingForward) {
+        // Forward (going to next page) — corner peel: origin snaps to the
+        // actual leading-edge page corner (TL/BL for RTL, TR/BR for LTR)
+        // so the lifted pivot is a real paper corner and the perpendicular
+        // edge stroke can read it as a sharp triangular tip. Touch follows
+        // the finger freely; no Y clamp.
+        const origin = originCorner(startY.value, w, h, direction);
+        return computeFold(
+          origin.x,
+          origin.y,
+          touchX.value,
+          touchY.value,
+        );
+      }
+      // Backward (going to previous page) — vertical-seam sweep: origin
+      // sits at the commit-target edge so the curl radius shrinks to zero
+      // as touch reaches it, and origin.y == touch.y forces the seam to
+      // stay strictly vertical regardless of vertical finger drift.
+      const ox = direction === 'rtl' ? 0 : w;
+      const oy = startY.value;
+      return computeFold(ox, oy, touchX.value, oy);
     });
 
     // Front-side mesh: bent positions projected to 2D
@@ -393,12 +525,47 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       return t;
     }, [pageW, pageH]);
 
-    // Back-of-page index buffer: subset of indices where ALL THREE corners
-    // of the triangle wrap past 90°. We use index filtering instead of per-
-    // vertex alpha because Skia's <Vertices> with `colors` doesn't honor
-    // vertex alpha in this configuration — alpha-0 vertices render as
-    // opaque white with the ColorShader base. Index filtering sidesteps
-    // the issue: a triangle is either drawn (back side) or skipped (front).
+    // Index buffers partition the mesh into a STRICT front set and a
+    // catch-all back set. A triangle goes into the front set only if all
+    // three corners are strictly front-facing (theta < π/2); the back set
+    // takes everything else, including apex-straddler triangles where
+    // just one corner has crossed the half-cylinder.
+    //
+    // Why the partition matters: the front mesh paints the page texture
+    // (current page for forward, previous for backward) and the back
+    // overlay paints the darker cream tint + mirrored bleed. If a
+    // straddler triangle ended up in BOTH (the old logic: front used the
+    // full buffer, back used "all 3 corners > π/2"), the front's light
+    // texture would leak into the cream back surface near the apex, which
+    // is exactly what was showing up as "the lighter color interferes
+    // with the darker color" on the curl.
+    const frontFacingIndices = useDerivedValue<number[]>(() => {
+      const a = angles.value;
+      const HALF = Math.PI / 2;
+      const result: number[] = [];
+      for (let i = 0; i < indices.length; i += 3) {
+        const i0 = indices[i];
+        const i1 = indices[i + 1];
+        const i2 = indices[i + 2];
+        if (a[i0] < HALF && a[i1] < HALF && a[i2] < HALF) {
+          result.push(i0, i1, i2);
+        }
+      }
+      return result;
+    });
+
+    // Fade the back-of-page layer out as the cylinder collapses toward R=0.
+    // For tiny R, vertices at vx=0 still clamp to theta=π (across/R explodes)
+    // and project to the very-left strip of screen — the back-mesh's solid
+    // cream then paints a thin yellow strip there. Easing back-opacity to 0
+    // over the last ~15px of touchX (the spring's final approach for the
+    // backward commit) eliminates that strip without affecting the curl
+    // visual during the meaningful range of the gesture.
+    const backOpacity = useDerivedValue(() => {
+      const r = fold.value.R;
+      return Math.max(0, Math.min(1, (r - 2) / 6));
+    });
+
     const backIndices = useDerivedValue<number[]>(() => {
       const a = angles.value;
       const HALF = Math.PI / 2;
@@ -407,7 +574,9 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
         const i0 = indices[i];
         const i1 = indices[i + 1];
         const i2 = indices[i + 2];
-        if (a[i0] > HALF && a[i1] > HALF && a[i2] > HALF) {
+        // ANY corner past π/2 → back set. Catches apex straddlers so the
+        // cream tint covers them completely, not just fully back-facing.
+        if (a[i0] > HALF || a[i1] > HALF || a[i2] > HALF) {
           result.push(i0, i1, i2);
         }
       }
@@ -422,12 +591,23 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
     const shadowPath = useDerivedValue(() => {
       const f = fold.value;
       const h = pageHSV.value;
+      const w = pageWSV.value;
       const path = Skia.Path.Make();
       if (h === 0 || f.R < 1e-2) return path;
       // Apex (ground-projected): one R away from the fold midpoint in the
       // curl-normal direction.
       const apexX = f.midX + f.R * f.normalX;
       const apexY = f.midY + f.R * f.normalY;
+      // Hide when the apex is within blur+stroke distance of either edge.
+      // The shadow's 34px stroke + 28px blur extends ~45px on each side,
+      // so we need to gate well before the apex actually reaches the
+      // edge — otherwise the blur leaks onto the page as a dark vertical
+      // band on the right (forward commit overshoot) or on the left
+      // (backward commit, as touchX shrinks toward 0 and apex with it).
+      const APEX_EDGE_MARGIN = 45;
+      if (apexX > w - APEX_EDGE_MARGIN || apexX < APEX_EDGE_MARGIN) {
+        return path;
+      }
       // Extend the line generously along the fold direction so it spans
       // the page even when the fold is angled (corner curl).
       const halfLen = h * 1.5;
@@ -449,6 +629,13 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       const cy = h / 2;
       const apexX = f.midX + f.R * f.normalX;
       const apexY = f.midY + f.R * f.normalY;
+      // Same edge-margin gate as the shadow — the cream highlight + the
+      // paper-edge band (both use this path) would otherwise leak onto
+      // the far edge during commit overshoot / approach.
+      const APEX_EDGE_MARGIN = 45;
+      if (apexX > w - APEX_EDGE_MARGIN || apexX < APEX_EDGE_MARGIN) {
+        return path;
+      }
       // z = R at the apex (theta = π/2)
       const proj = project(apexX, apexY, f.R, FOCAL_LENGTH, cx, cy);
       const len = Math.max(w, h) * 1.5;
@@ -461,13 +648,21 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       return path;
     });
 
-    // The curling page is ALWAYS the current page being peeled off; what's
-    // revealed beneath depends on direction (next page on forward turn, prev
-    // page on backward turn).
-    const bgImage = activeDir === -1 ? prev.image : next.image;
-    const curlImage = curr.image;
+    // Two distinct rendering modes per direction:
+    //   forward  — classic corner-peel. Curl mesh shows the CURRENT page
+    //              peeling off; the NEXT page is painted into the canvas
+    //              as a bgImage so it's revealed beneath the curl.
+    //   backward — vertical-seam sweep. Curl mesh shows the PREVIOUS
+    //              (incoming) page sliding over; no bgImage needed.
+    // Live current view stays visible underneath the canvas in both modes
+    // — the canvas content sits on top via Skia, so where the mesh and
+    // bgImage cover the screen the live view is hidden, and where the
+    // canvas is transparent (e.g. snapshots not captured yet on a fresh
+    // forward swipe) the live view still shows so we never go blank.
+    const curlImage = activeDir === 1 ? curr.image : prev.image;
+    const bgImage =
+      activeDir === 1 && !cancelInFlight ? next.image : null;
     const showCanvas = phase !== 'idle' && pageW > 0 && curlImage != null;
-    const isDragging = phase === 'dragging';
 
     return (
       <View style={styles.root} onLayout={onLayout}>
@@ -516,31 +711,38 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
           ) : null}
         </View>
 
-        {/* Live current page. Doubles as the snapshot source via curr.viewRef.
-            Only hidden during 'dragging' — during 'committing' it stays at
-            full opacity behind the fading canvas so the new page is fully
-            in place by the time the fade completes. */}
+        {/* Live current page — always visible. The canvas overlay on top
+            covers it wherever the curl mesh or bgImage is opaque. When
+            canvas content is null (e.g. fresh forward swipe before
+            snapshots have been captured), the live view shows through so
+            we never present a blank page. */}
         <View
           ref={curr.viewRef}
           collapsable={false}
           style={[
             StyleSheet.absoluteFill,
             { backgroundColor: pageBackgroundColor },
-            isDragging ? styles.invisible : null,
           ]}
-          pointerEvents={isDragging ? 'none' : 'auto'}
         >
           {renderPage(pageNumber)}
         </View>
 
-        {/* Skia overlay during gesture + commit fade */}
+        {/* Skia overlay — mounted while the gesture is active or the
+            commit spring is animating, unmounted immediately on idle.
+            The spring drives the mesh through the full completion motion
+            BEFORE doCommit fires, so the canvas can just disappear at
+            phase=idle without a cross-fade. */}
         {showCanvas ? (
-          <Animated.View
-            style={[StyleSheet.absoluteFill, animatedCanvasStyle]}
+          <View
+            style={StyleSheet.absoluteFill}
             pointerEvents="none"
           >
             <Canvas style={StyleSheet.absoluteFill}>
-            {/* Background page (revealed under the curl) */}
+            {/* Background page — only painted during a forward gesture, where
+                the curl mesh shows the current page peeling off and the next
+                page needs to be revealed beneath it. On a backward gesture
+                the live current view (visible underneath the canvas) is the
+                background instead. */}
             {bgImage ? (
               <SkiaImage
                 image={bgImage}
@@ -552,28 +754,32 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
               />
             ) : null}
 
-            {/* Curl decoration group — fades out on commit so the page
-                doesn't get left as a half-wrapped tube on the right side
-                of the screen. bgImage above stays at full opacity so the
-                next-page snapshot remains during the dissolve. */}
-            <Group opacity={curlOpacity}>
+            <Group>
               {/* Soft cast shadow under the curl — a thick stroked line at
-                  the apex, heavily blurred into a soft band. */}
+                  the apex, heavily blurred into a soft band. Deeper +
+                  wider than a pure half-cylinder needs, so the lifted
+                  page reads as further off the surface and the curl
+                  looks like real paper with weight. */}
               <Path
                 path={shadowPath}
                 style="stroke"
-                strokeWidth={28}
-                color="rgba(0,0,0,0.45)"
+                strokeWidth={34}
+                color="rgba(0,0,0,0.55)"
               >
                 <BlurMask blur={SHADOW_BLUR} style="normal" />
               </Path>
 
-              {/* Front side of the curling page (texture from current snapshot) */}
+              {/* Front side of the curling page (incoming-page texture).
+                  Uses the strict front index buffer so apex straddlers
+                  fall through to the back overlay below and the front
+                  texture can't leak into the cream back surface. The
+                  flat half of the fold (theta=0 everywhere) is naturally
+                  included because 0 < π/2. */}
               {curlImage ? (
                 <Vertices
                   vertices={frontVertices}
                   textures={textures}
-                  indices={indices}
+                  indices={frontFacingIndices}
                   mode="triangles"
                 >
                   <ImageShader
@@ -586,47 +792,64 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
                 </Vertices>
               ) : null}
 
-              {/* Back-of-page overlay: solid fill on the subset of triangles
-                  where all 3 corners are past 90°. */}
-              <Vertices
-                vertices={frontVertices}
-                indices={backIndices}
-                mode="triangles"
-                color="#e8dec5"
-              />
+              {/* Back-of-page overlay (cream fill + mirrored bleed). Wrapped
+                  in a single group whose opacity fades to zero as the
+                  cylinder collapses, so the back layer can't paint the
+                  thin yellow strip on the screen edge during the spring's
+                  final approach. */}
+              <Group opacity={backOpacity}>
+                <Vertices
+                  vertices={frontVertices}
+                  indices={backIndices}
+                  mode="triangles"
+                  color="#e8dec5"
+                />
+                {curlImage ? (
+                  <Group opacity={0.22}>
+                    <Vertices
+                      vertices={frontVertices}
+                      textures={mirroredTextures}
+                      indices={backIndices}
+                      mode="triangles"
+                    >
+                      <ImageShader
+                        image={curlImage}
+                        tx="clamp"
+                        ty="clamp"
+                        fit="fill"
+                        rect={{ x: 0, y: 0, width: pageW, height: pageH }}
+                      />
+                    </Vertices>
+                  </Group>
+                ) : null}
+              </Group>
 
-              {/* Mirrored print bleeding through from the front */}
-              {curlImage ? (
-                <Group opacity={0.22}>
-                  <Vertices
-                    vertices={frontVertices}
-                    textures={mirroredTextures}
-                    indices={backIndices}
-                    mode="triangles"
-                  >
-                    <ImageShader
-                      image={curlImage}
-                      tx="clamp"
-                      ty="clamp"
-                      fit="fill"
-                      rect={{ x: 0, y: 0, width: pageW, height: pageH }}
-                    />
-                  </Vertices>
-                </Group>
-              ) : null}
+              {/* Paper-edge thickness band — a soft cream stroke along
+                  the cylinder apex so the curl reads as paper with a
+                  real cut edge rather than a zero-thickness mesh. The
+                  specular highlight below sits on top of it for a
+                  bright glint along the visible page edge. */}
+              <Path
+                path={highlightPath}
+                style="stroke"
+                strokeWidth={5}
+                color="rgba(245,238,218,0.85)"
+              >
+                <BlurMask blur={1.5} style="solid" />
+              </Path>
 
               {/* Specular highlight along the cylinder apex */}
               <Path
                 path={highlightPath}
                 style="stroke"
                 strokeWidth={2}
-                color="rgba(255,255,255,0.4)"
+                color="rgba(255,255,255,0.5)"
               >
                 <BlurMask blur={3} style="solid" />
               </Path>
             </Group>
             </Canvas>
-          </Animated.View>
+          </View>
         ) : null}
 
         {/* Gesture detector covers entire page */}
@@ -652,5 +875,4 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
   },
-  invisible: { opacity: 0 },
 });

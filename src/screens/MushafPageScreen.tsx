@@ -12,12 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from 'expo-glass-effect';
+import { SvgXml } from 'react-native-svg';
 import {
   PageTurnView,
   type PageTurnViewRef,
 } from '../components/quran/PageTurnView';
-import SurahOrnamentTop from '../../assets/surah-ornament-top.svg';
-import SurahOrnamentBottom from '../../assets/surah-ornament-bottom.svg';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -27,14 +26,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import {
-  BISMILLAH_TEXT,
   getMushafPage,
   getPageForAyah,
   TOTAL_MUSHAF_PAGES,
-  type MushafLine,
   type Surah,
 } from '../db/quranDb';
 import { useTrackPage } from '../hooks/use-track-page';
+import { useMushafPageSvg } from '../hooks/use-mushaf-page-svg';
+import { MUSHAF_PAGE_CONTENT_CENTER } from '../db/mushafSvgBBoxes';
 import { useQuranPalette, type QuranPalette } from '../hooks/use-quran-palette';
 
 type Props = {
@@ -92,7 +91,7 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
           direction="rtl"
           onPageChange={setCurrentPage}
           pageBackgroundColor={palette.cream}
-          renderPage={(p) => <MushafPage pageNumber={p} surahs={surahs} />}
+          renderPage={(p) => <MushafPage pageNumber={p} />}
         />
       </View>
 
@@ -392,32 +391,35 @@ function useSurahForPage(page: number, surahs: Surah[]) {
   return surah;
 }
 
+const MUSHAF_ZOOM = 1.5;
+const SVG_VIEWBOX_W = 382.68;
+const SVG_VIEWBOX_H = 547.09;
+const SVG_VIEWBOX_CX = SVG_VIEWBOX_W / 2;
+const SVG_VIEWBOX_CY = SVG_VIEWBOX_H / 2;
+
+const AYA_MARK_GROUP_RE = /(<g id="md-aya-mark-[^"]+"[^>]*?)>/g;
+
 const MushafPage = React.memo(function MushafPage({
   pageNumber,
-  surahs,
 }: {
   pageNumber: number;
-  surahs: Surah[];
 }) {
   const palette = useQuranPalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
-  const [lines, setLines] = useState<MushafLine[] | null>(null);
+  const svgXml = useMushafPageSvg(pageNumber);
+  const { width: screenW } = useWindowDimensions();
 
-  useEffect(() => {
-    let cancelled = false;
-    getMushafPage(pageNumber)
-      .then((rows) => {
-        if (!cancelled) setLines(rows);
-      })
-      .catch(() => {
-        if (!cancelled) setLines([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [pageNumber]);
+  // Tint each aya-mark group (the rosette + number inside) with the masjid
+  // accent so it adopts the tenant theme color. The source SVGs leave fill
+  // unset on these groups, so an injected `fill` cascades cleanly to every
+  // path inside (ornament + digit).
+  const ayaMarkColor = palette.gold;
+  const tintedXml = useMemo(() => {
+    if (!svgXml) return null;
+    return svgXml.replace(AYA_MARK_GROUP_RE, `$1 fill="${ayaMarkColor}">`);
+  }, [svgXml, ayaMarkColor]);
 
-  if (!lines) {
+  if (!tintedXml) {
     return (
       <View style={[styles.pageBody, styles.center]}>
         <ActivityIndicator color={palette.gold} />
@@ -425,65 +427,33 @@ const MushafPage = React.memo(function MushafPage({
     );
   }
 
-  return (
-    <ScrollView
-      style={styles.pageScroll}
-      contentContainerStyle={styles.pageBody}
-      showsVerticalScrollIndicator={false}
-    >
-      {lines.map((line, i) => (
-        <MushafLineRow
-          key={`${pageNumber}-${line.line_number}-${i}`}
-          line={line}
-          surahs={surahs}
-          styles={styles}
-        />
-      ))}
-    </ScrollView>
-  );
-});
+  // Render at screenW * MUSHAF_ZOOM and clip the overflow — preserveAspectRatio
+  // inside the SVG means we can't zoom by shrinking the viewBox.
+  const renderW = screenW * MUSHAF_ZOOM;
+  const renderH = renderW * (SVG_VIEWBOX_H / SVG_VIEWBOX_W);
+  const pxPerUnit = renderW / SVG_VIEWBOX_W;
 
-function MushafLineRow({
-  line,
-  surahs,
-  styles,
-}: {
-  line: MushafLine;
-  surahs: Surah[];
-  styles: MushafStyles;
-}) {
-  if (line.line_type === 'surah_name') {
-    const surah =
-      line.surah_number != null ? surahs[line.surah_number - 1] : null;
-    return (
-      <View style={styles.ornamentBlock}>
-        <SurahOrnamentTop width={240} height={48} />
-        <Text style={styles.surahOrnamentText}>
-          {surah ? `سُورَةُ ${surah.name_arabic}` : ''}
-        </Text>
-        <View style={{ transform: [{ scaleY: -1 }] }}>
-          <SurahOrnamentBottom width={240} height={48} />
-        </View>
-      </View>
-    );
-  }
-
-  if (line.line_type === 'basmallah') {
-    return (
-      <View style={styles.basmallahBlock}>
-        <Text style={styles.basmallahText}>{BISMILLAH_TEXT}</Text>
-      </View>
-    );
-  }
+  // Source SVGs were authored for two-page spreads, so odd pages drift left
+  // and even pages drift right relative to their viewBox center. Shift each
+  // SVG so its content bbox center lands on the screen center.
+  const [contentCx, contentCy] =
+    MUSHAF_PAGE_CONTENT_CENTER[pageNumber] ?? [SVG_VIEWBOX_CX, SVG_VIEWBOX_CY];
+  const offsetX = (SVG_VIEWBOX_CX - contentCx) * pxPerUnit;
+  const offsetY = (SVG_VIEWBOX_CY - contentCy) * pxPerUnit;
 
   return (
-    <View style={[styles.ayahLine, line.is_centered ? styles.centered : null]}>
-      <Text style={styles.ayahText}>{line.text}</Text>
+    <View style={styles.pageBody}>
+      <SvgXml
+        xml={tintedXml}
+        width={renderW}
+        height={renderH}
+        style={{
+          transform: [{ translateX: offsetX }, { translateY: offsetY }],
+        }}
+      />
     </View>
   );
-}
-
-type MushafStyles = ReturnType<typeof makeStyles>;
+});
 
 function makeStyles(p: QuranPalette) {
   return StyleSheet.create({
@@ -541,14 +511,17 @@ function makeStyles(p: QuranPalette) {
       backgroundColor: p.cream,
     },
     pageBody: {
-      flexGrow: 1,
-      paddingHorizontal: 18,
-      // Top padding leaves room for the floating toolbar; bottom keeps clear
-      // of the morphing footer pill.
-      paddingTop: 64,
-      paddingBottom: 110,
+      flex: 1,
+      paddingHorizontal: 0,
+      paddingTop: 36,
+      paddingBottom: 56,
       backgroundColor: p.cream,
-      justifyContent: 'space-between',
+      alignItems: 'center',
+      justifyContent: 'center',
+      // SVG is rendered at MUSHAF_ZOOM × container width to actually
+      // enlarge the text; the overflow is clipped here so the
+      // off-screen margin doesn't leak into the floating toolbar.
+      overflow: 'hidden',
     },
 
     ornamentBlock: {
