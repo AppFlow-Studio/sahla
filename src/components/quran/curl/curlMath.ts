@@ -117,16 +117,18 @@ export function project(
 
 /**
  * The point on the leading edge that the curl emanates from. X is fixed to
- * the leading edge of the page; Y matches where the user first touched, so
- * a touch in the middle of the side gives a horizontal-axis "side curl" and
- * a touch near a corner gives the original diagonal corner curl. Smooth
- * interpolation between the two.
+ * the leading edge of the page; Y tracks the finger's start Y so the fold
+ * stays small at gesture-start and grows as the finger drags toward the
+ * spine.
+ *
+ * Note: the corner-edge stroke uses a separate, corner-snapped pivot
+ * computed inline in PageTurnView — this function intentionally does NOT
+ * snap, because that would change how the mesh swipe feels.
  */
 export function originCorner(
   startY: number,
   pageW: number,
-  // pageH retained for signature stability but no longer used now that
-  // the origin tracks startY directly instead of snapping to a corner.
+  // pageH retained for signature stability but unused now.
   _pageH: number,
   direction: 'rtl' | 'ltr',
 ): { x: number; y: number } {
