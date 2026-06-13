@@ -1,10 +1,11 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import Pattern from '@/assets/onboarding/pattern.svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
+import { Icon } from '@/src/components/ui/icon';
 import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile } from '@/src/hooks/use-profile';
@@ -25,11 +26,10 @@ export default function ProfileHeader() {
   const insets = useSafeAreaInsets();
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
-  const depthRgb = `rgb(${colors.depth.replace(/ /g, ',')})`;
+  const primaryRgba0 = `rgba(${colors.primary.replace(/ /g, ',')}, 0)`;
   const fgRgb = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
 
-  const [headerHeight, setHeaderHeight] = useState(0);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const { takePhoto, chooseFromGallery, isUploading } = useUploadProfilePhoto();
   const [editVisible, setEditVisible] = useState(false);
@@ -100,31 +100,30 @@ export default function ProfileHeader() {
 
   const initial = firstName?.charAt(0) ?? '?';
 
-  const vectorHeight =
-    headerHeight > 0 ? Math.round(headerHeight * 0.60) : undefined;
-
   return (
     <View className="relative w-full overflow-hidden bg-primary">
-      <LinearGradient
-        colors={[depthRgb, primaryRgb]}
+      <View
         className="w-full"
-        style={{ paddingTop: insets.top + 20, paddingBottom: 48 }}
-        onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          if (h > 0) setHeaderHeight(h);
-        }}
+        style={{ backgroundColor: primaryRgb, paddingTop: insets.top + 20, paddingBottom: 48 }}
       >
-        <ImageBackground
-          source={require('@/assets/images/Vector.png')}
-          resizeMode="cover"
-          className="absolute left-0 right-0 top-0 w-full"
-          style={{
-            height: vectorHeight ?? 200,
-            opacity: 0.78,
-            zIndex: 1,
-            pointerEvents: 'none',
-          }}
-        />
+        {/* Golden geometric pattern (same SVG as the create-account screen),
+            flush to the top edge. Rendered once at the SVG's natural aspect so
+            the full motif shows (zoomed out, not a tight crop), then faded so it
+            dissolves into the header with no seam. */}
+        <View
+          pointerEvents="none"
+          className="absolute left-0 right-0 top-0"
+          style={{ zIndex: 1, aspectRatio: 424 / 262 }}
+        >
+          <View style={{ ...StyleSheet.absoluteFillObject, opacity: 0.55 }}>
+            <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin meet" />
+          </View>
+          <LinearGradient
+            colors={[primaryRgba0, primaryRgb]}
+            locations={[0, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
 
         <View className="relative z-10 w-full items-center px-4">
         {/* Avatar */}
@@ -153,7 +152,7 @@ export default function ProfileHeader() {
             hitSlop={10}
             className="absolute -bottom-2 -right-2 rounded-full bg-accent p-1 active:opacity-80"
           >
-            <EvilIcons name="pencil" size={14} color={fgRgb} />
+            <Icon name="pencil" size={14} color={fgRgb} />
           </Pressable>
         </View>
 
@@ -220,7 +219,7 @@ export default function ProfileHeader() {
             </Pressable>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <ProfilePhotoModal
         visible={photoModalOpen}

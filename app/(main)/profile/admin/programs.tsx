@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,8 +21,8 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSpeakers } from '@/src/hooks/use-speakers';
 import {
@@ -38,6 +38,7 @@ import {
 } from '@/src/hooks/use-content-admin';
 import { TimePicker } from '@/src/components/admin/time-picker';
 import { DatePicker } from '@/src/components/admin/date-picker';
+import { FilterButton } from '@/src/components/admin/filter-button';
 import {
   WEEK_OF_MONTH_OPTIONS,
   describeRecurrence,
@@ -46,24 +47,91 @@ import {
 
 const SCREEN_H = Dimensions.get('window').height;
 
+// Mirrors the DiscoverHeader tab font so the underline tabs look native to
+// the rest of the project.
+const platformUiFont = Platform.select({
+  ios: 'SF Pro Text',
+  android: 'Roboto',
+  default: 'system-ui',
+});
+
+type Filter = 'all' | 'program' | 'event';
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'program', label: 'Programs' },
+  { value: 'event', label: 'Events' },
+];
+
+type DateFilter = 'all' | 'upcoming' | 'past';
+const DATE_FILTER_VALUES: DateFilter[] = ['all', 'upcoming', 'past'];
+
+// Labels follow the active type tab so the wording matches what the user is
+// actually filtering: "All events" on Events, "All programs" on Programs,
+// "All events and programs" on All.
+function dateFilterLabel(value: DateFilter, filter: Filter): string {
+  const noun =
+    filter === 'event'
+      ? 'events'
+      : filter === 'program'
+        ? 'programs'
+        : 'events and programs';
+  const prefix = value === 'all' ? 'All' : value === 'upcoming' ? 'Upcoming' : 'Past';
+  return `${prefix} ${noun}`;
+}
+
 function typeLabel(type: string) {
   return CONTENT_TYPES.find((t) => t.value === type)?.label ?? type;
+}
+
+// content_items.start_time is stored as 24-hour `HH:MM` or `HH:MM:SS`. The
+// list cell shows it to admins in 12-hour format, dropping the seconds.
+function formatTime12(time: string | null | undefined): string {
+  if (!time) return '';
+  const m = /^(\d{1,2}):(\d{2})/.exec(time);
+  if (!m) return time;
+  const hour = Number(m[1]);
+  const minute = m[2];
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}:${minute} ${period}`;
 }
 
 export default function ProgramsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useMasjidConfig();
-  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
-  const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
+  const fg = colors.foreground.replace(/ /g, ',');
+  const fgRgb = `rgb(${fg})`;
+  const mutedRgb = `rgba(${fg}, 0.5)`;
   const borderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.1)`;
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const cardRgb = `rgb(${colors.card.replace(/ /g, ',')})`;
 
   const { items, isLoading } = useAdminContentItems();
   const deleteItem = useDeleteContentItem();
 
   const [editing, setEditing] = useState<AdminContentItem | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+
+  const filteredItems = useMemo(() => {
+    // Type filter (All / Programs / Events tabs)
+    const typeFiltered =
+      filter === 'all' ? items : items.filter((i) => i.type === filter);
+
+    // Date filter (popover next to +).
+    // YYYY-MM-DD string compare so "today" boundary lines up with how
+    // start_date is stored. Items without a start_date are excluded from
+    // upcoming/past (they're typically open-ended recurring programs).
+    if (dateFilter === 'all') return typeFiltered;
+    const today = new Date().toISOString().slice(0, 10);
+    return typeFiltered.filter((i) => {
+      if (!i.start_date) return false;
+      return dateFilter === 'upcoming' ? i.start_date >= today : i.start_date < today;
+    });
+  }, [items, filter, dateFilter]);
+
 
   const handleAdd = () => {
     setEditing(null);
@@ -91,36 +159,76 @@ export default function ProgramsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-card" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-card">
+      <View style={{ flex: 1, paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={fgRgb} />
+            <Icon name="chevron-back" size={22} color={fgRgb} />
           </Pressable>
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
             Programs & Events
           </Text>
         </View>
-        <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
-          <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
-        </TouchableOpacity>
+        {/* The date-filter button is rendered as a screen-root overlay (see
+            <FilterButton/> below) so it can morph open over the page — it
+            floats one gap to the left of the "+". */}
+        <View className="flex-row items-center" style={{ gap: 14 }}>
+          <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
+            <Icon name="add-circle-outline" size={26} color={accentRgb} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Filter tabs — visual style mirrors DiscoverHeader / saved-clips:
+          plain label with a thin 16px underline under the active tab. */}
+      <View className="flex-row items-center gap-4 px-5 pb-3">
+        {FILTERS.map((f) => {
+          const active = filter === f.value;
+          return (
+            <Pressable key={f.value} onPress={() => setFilter(f.value)} hitSlop={6}>
+              <Text
+                style={{
+                  fontFamily: platformUiFont,
+                  fontSize: 12,
+                  fontWeight: active ? '600' : '500',
+                  color: active ? fgRgb : mutedRgb,
+                }}
+              >
+                {f.label}
+              </Text>
+              {active ? (
+                <View
+                  className="mt-1 h-px w-4"
+                  style={{ backgroundColor: fgRgb }}
+                />
+              ) : null}
+            </Pressable>
+          );
+        })}
       </View>
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={fgRgb} />
         </View>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="megaphone-outline" size={48} color={mutedRgb} />
+          <Icon name="megaphone-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
-            No programs or events yet. Tap + to create one.
+            {items.length === 0
+              ? 'No programs or events yet. Tap + to create one.'
+              : dateFilter !== 'all'
+                ? `No ${dateFilterLabel(dateFilter, filter).toLowerCase()}.`
+                : filter === 'program'
+                  ? 'No programs yet. Tap + to create one.'
+                  : 'No events yet. Tap + to create one.'}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={filteredItems}
           keyExtractor={(i) => i.content_id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40 }}
           renderItem={({ item }) => (
@@ -136,7 +244,25 @@ export default function ProgramsScreen() {
         />
       )}
 
-      <ContentFormModal visible={showForm} item={editing} onClose={() => setShowForm(false)} />
+        <ContentFormModal visible={showForm} item={editing} onClose={() => setShowForm(false)} />
+      </View>
+
+      {/* Date-filter button — a glass disc that morphs into its options
+          popover, anchored at the header's top-right. */}
+      <FilterButton
+        value={dateFilter}
+        options={DATE_FILTER_VALUES.map((v) => ({
+          id: v,
+          title: dateFilterLabel(v, filter),
+        }))}
+        onChange={(id) => setDateFilter(id as DateFilter)}
+        fgRgb={fgRgb}
+        accentRgb={accentRgb}
+        cardRgb={cardRgb}
+        borderColor={borderColor}
+        insetsTop={insets.top}
+        active={dateFilter !== 'all'}
+      />
     </View>
   );
 }
@@ -172,7 +298,7 @@ function ContentCard({
       : item.is_weekly_program
         ? (item.days ?? []).map((d) => d.slice(0, 3)).join(', ')
         : (item.start_date ?? '');
-  const sub = [typeLabel(item.type), schedule, item.start_time].filter(Boolean).join(' · ');
+  const sub = [typeLabel(item.type), schedule, formatTime12(item.start_time)].filter(Boolean).join(' · ');
 
   return (
     <View
@@ -198,7 +324,7 @@ function ContentCard({
           <Image source={{ uri: item.image }} style={{ width: 56, height: 44 }} />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <Ionicons name="image-outline" size={18} color={mutedRgb} />
+            <Icon name="image-outline" size={18} color={mutedRgb} />
           </View>
         )}
       </View>
@@ -213,10 +339,10 @@ function ContentCard({
       </View>
 
       <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 12 }}>
-        <Ionicons name="pencil-outline" size={18} color={mutedRgb} />
+        <Icon name="pencil-outline" size={18} color={mutedRgb} />
       </TouchableOpacity>
       <TouchableOpacity onPress={onDelete} hitSlop={8}>
-        <Ionicons name="trash-outline" size={18} color="rgb(239,68,68)" />
+        <Icon name="trash-outline" size={18} color="rgb(239,68,68)" />
       </TouchableOpacity>
     </View>
   );
@@ -369,8 +495,10 @@ function ContentFormModal({
     try {
       const url = await pickAndUpload(key, 'gallery');
       if (url) setImage(url);
-    } catch {
-      // Permission denied or picker cancelled
+    } catch (e) {
+      // Surface real failures (permission denied, upload errors) instead of
+      // silently doing nothing.
+      Alert.alert('Couldn’t add image', e instanceof Error ? e.message : 'Please try again.');
     }
   }, [item, pickAndUpload]);
 
@@ -562,7 +690,7 @@ function ContentFormModal({
                 <Image source={{ uri: image }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
               ) : (
                 <>
-                  <Ionicons name="image-outline" size={26} color={mutedRgb} />
+                  <Icon name="image-outline" size={26} color={mutedRgb} />
                   <Text style={{ color: labelColor, fontSize: 11, marginTop: 6 }}>Add cover image</Text>
                 </>
               )}

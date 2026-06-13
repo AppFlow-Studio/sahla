@@ -58,6 +58,30 @@
         "MASJID_ID": "mas-cnj"
       },
       "channel": "mas-cnj-prod"
+    },
+    "mas-brooklyn-mqb18esx-dev": {
+      "extends": "base",
+      "env": {
+        "MASJID_ID": "mas-brooklyn-mqb18esx"
+      },
+      "channel": "mas-brooklyn-mqb18esx-dev"
+    },
+    "mas-brooklyn-mqb18esx-preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "env": {
+        "MASJID_ID": "mas-brooklyn-mqb18esx"
+      },
+      "channel": "mas-brooklyn-mqb18esx-preview"
+    },
+    "mas-brooklyn-mqb18esx-prod": {
+      "extends": "base",
+      "developmentClient": false,
+      "distribution": "store",
+      "env": {
+        "MASJID_ID": "mas-brooklyn-mqb18esx"
+      },
+      "channel": "mas-brooklyn-mqb18esx-prod"
     }
   },
   "submit": {

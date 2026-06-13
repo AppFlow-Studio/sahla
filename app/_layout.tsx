@@ -87,6 +87,8 @@ function RootNavigator() {
   // Sync onboarding state from Clerk metadata (handles new-device scenario)
   useOnboardingSync();
 
+  console.log('[boot] RootNavigator', { isLoaded, isSignedIn, onboardingComplete, devBypass });
+
   if (!isLoaded) {
     // Returning null keeps the native splash visible until Clerk is ready.
     return null;
@@ -167,6 +169,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  console.log('[boot] RootLayout', { fontsLoaded, clerkKey: env.CLERK_PUBLISHABLE_KEY?.slice(0, 11) });
 
   if (!fontsLoaded) return null;
 

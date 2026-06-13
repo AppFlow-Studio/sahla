@@ -20,8 +20,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import type { JummahSlot } from '@/src/hooks/use-jummah-schedule';
 
@@ -150,7 +149,7 @@ export function JummahDetailSheet({
                     zIndex: 10,
                   }}
                 >
-                  <MaterialCommunityIcons name="close" size={16} color={textRgb} />
+                  <Icon name="close" size={16} color={textRgb} />
                 </TouchableOpacity>
 
                 {activeSlot ? (
@@ -201,7 +200,7 @@ export function JummahDetailSheet({
                             style={{ width: 44, height: 44 }}
                           />
                         ) : (
-                          <MaterialCommunityIcons name="account" size={22} color={mutedRgb} />
+                          <Icon name="account" size={22} color={mutedRgb} />
                         )}
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>

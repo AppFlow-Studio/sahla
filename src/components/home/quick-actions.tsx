@@ -1,7 +1,8 @@
 import { View, Text, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { Icon } from '@/src/components/ui/icon';
+import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useDonation } from '@/src/providers/donation-provider';
 
@@ -11,8 +12,6 @@ const QUICK_ACTIONS = [
   { id: 'advertise', icon: 'bullhorn', label: 'ADVERTISE' },
   { id: 'prayers', icon: 'clock', label: 'PRAYERS' },
 ] as const;
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export function QuickActions() {
   const { colors } = useMasjidConfig();
@@ -48,7 +47,7 @@ export function QuickActions() {
               elevation: 1,
             }}
           >
-            <MaterialCommunityIcons
+            <Icon
               name={action.icon as IconName}
               size={24}
               color={primaryRgb}

@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect } from 'expo-router';
@@ -19,6 +18,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
+import { Icon, type IconName } from '@/src/components/ui/icon';
 import QuranScreen from '@/src/screens/QuranScreen';
 import { PrayerNotificationSheet } from '@/src/components/prayer/prayer-notification-sheet';
 import { CommunityPartnersCarousel } from '@/src/components/community-partners-carousel';
@@ -302,7 +302,7 @@ function PrayerDots({
                 width: dotSize,
                 height: dotSize,
                 backgroundColor: isPassed
-                  ? c.text
+                  ? c.muted
                   : isNext
                     ? c.goldGlass
                     : 'transparent',
@@ -473,7 +473,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
             overflow: 'hidden',
           }}
         >
-          <MaterialCommunityIcons name="book-open-page-variant" size={16} color={c.gold} />
+          <Icon name="book-open-page-variant" size={16} color={c.gold} />
         </GlassView>
         <Text style={{ color: c.text, fontSize: 24, fontFamily: 'PlayfairDisplay_400Regular', fontWeight: '400' }}>
           Quran Goal
@@ -662,13 +662,13 @@ function RemembranceItem({
   meta,
 }: {
   c: Palette;
-  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  icon: IconName;
   title: string;
   meta: string;
 }) {
   return (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-      <MaterialCommunityIcons name={icon} size={18} color={c.gold} style={{ marginRight: 10 }} />
+      <Icon name={icon} size={18} color={c.gold} style={{ marginRight: 10 }} />
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.text, fontSize: 13, fontWeight: '600' }}>{title}</Text>
         <Text style={{ color: c.muted, fontSize: 11, marginTop: 2 }}>{meta}</Text>
@@ -773,7 +773,7 @@ function SupportMasjidCard({ c }: { c: Palette }) {
 // Icon per prayer, matching the time of day it falls in.
 function prayerIcon(
   name: string,
-): React.ComponentProps<typeof MaterialCommunityIcons>['name'] {
+): IconName {
   const n = name.toLowerCase();
   if (n.includes('fajr')) return 'weather-sunset-up'; // dawn
   if (n.includes('sunrise') || n.includes('shuru') || n.includes('shorooq'))
@@ -818,7 +818,7 @@ function PrayerRowItem({
       }}
     >
       <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
-        <MaterialCommunityIcons
+        <Icon
           name={prayerIcon(row.name)}
           size={22}
           color={isNext ? c.gold : isPassed ? c.muted : c.text}
@@ -870,7 +870,7 @@ function PrayerRowItem({
         hitSlop={12}
         style={{ width: 24, alignItems: 'center' }}
       >
-        <MaterialCommunityIcons
+        <Icon
           name={bellActive ? 'bell' : 'bell-outline'}
           size={16}
           color={bellActive ? c.gold : c.muted}
@@ -1211,7 +1211,7 @@ export default function PrayerScreen() {
                 }}
               >
                 <Pressable hitSlop={12} onPress={goBack} style={{ opacity: dayOffset > 0 ? 1 : 0.3 }}>
-                  <MaterialCommunityIcons name="chevron-left" size={22} color={c.muted} />
+                  <Icon name="chevron-left" size={22} color={c.muted} />
                 </Pressable>
                 <Pressable onPress={() => setDayOffset(0)} hitSlop={8}>
                   <View style={{ alignItems: 'center' }}>
@@ -1226,7 +1226,7 @@ export default function PrayerScreen() {
                   </View>
                 </Pressable>
                 <Pressable hitSlop={12} onPress={goForward} style={{ opacity: dayOffset < 7 ? 1 : 0.3 }}>
-                  <MaterialCommunityIcons name="chevron-right" size={22} color={c.muted} />
+                  <Icon name="chevron-right" size={22} color={c.muted} />
                 </Pressable>
               </View>
             )}

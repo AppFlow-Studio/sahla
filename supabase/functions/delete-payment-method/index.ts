@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@17.7.0?target=deno";
+import { findConnectedCustomerId } from "../_shared/stripe-customer.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -36,19 +37,6 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("stripe_id")
-      .eq("id", user_id)
-      .single();
-
-    if (!profile?.stripe_id) {
-      return new Response(
-        JSON.stringify({ error: "No Stripe customer found" }),
-        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
-      );
-    }
-
     // Look up mosque's connected Stripe account
     const { data: mosque, error: mosqueError } = await supabase
       .from("mosques")
@@ -63,6 +51,12 @@ serve(async (req: Request) => {
       );
     }
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("profile_email")
+      .eq("id", user_id)
+      .single();
+
     const stripe = new Stripe(stripeSecret, {
       apiVersion: "2025-03-31.basil",
       httpClient: Stripe.createFetchHttpClient(),
@@ -70,9 +64,26 @@ serve(async (req: Request) => {
 
     const stripeAccountOpts = { stripeAccount: mosque.stripe_account_id };
 
+    // Resolve the customer on THIS connected account to verify ownership
+    // (saved cards are per-account, not per global profiles.stripe_id).
+    const customerId = await findConnectedCustomerId({
+      stripe,
+      supabase,
+      connectedAccountId: mosque.stripe_account_id,
+      userId: user_id,
+      email: profile?.profile_email,
+    });
+
+    if (!customerId) {
+      return new Response(
+        JSON.stringify({ error: "No Stripe customer found" }),
+        { status: 400, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
     // Verify ownership before detaching
     const pm = await stripe.paymentMethods.retrieve(paymentMethodId, stripeAccountOpts);
-    if (pm.customer !== profile.stripe_id) {
+    if (pm.customer !== customerId) {
       return new Response(
         JSON.stringify({ error: "Payment method does not belong to this user" }),
         { status: 403, headers: { ...CORS, "Content-Type": "application/json" } },

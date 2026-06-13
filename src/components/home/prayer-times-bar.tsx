@@ -1,10 +1,9 @@
 import { View, Text } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { Icon } from '@/src/components/ui/icon';
+import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export function PrayerTimesBar() {
   const { colors } = useMasjidConfig();
@@ -41,14 +40,14 @@ export function PrayerTimesBar() {
                 style={{
                   fontSize: 8,
                   fontWeight: '600',
-                  color: nameMuted,
+                  color: isActive ? accentRgb : nameMuted,
                   letterSpacing: 0.4,
                   textTransform: 'uppercase',
                 }}
               >
                 {prayer.name}
               </Text>
-              <MaterialCommunityIcons
+              <Icon
                 name={prayer.icon as IconName}
                 size={18}
                 color={isActive ? accentRgb : fgFull}

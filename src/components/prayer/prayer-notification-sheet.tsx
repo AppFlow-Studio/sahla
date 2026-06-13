@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -11,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { Icon } from '@/src/components/ui/icon';
 import {
   type PrayerName,
   NOTIF_TOKENS,
@@ -270,7 +270,7 @@ export function PrayerNotificationSheet({
                   backgroundColor: 'rgba(0,0,0,0.06)',
                 }}
               >
-                <MaterialCommunityIcons name="close" size={16} color={primaryRgb} />
+                <Icon name="close" size={16} color={primaryRgb} />
               </Pressable>
             </View>
 
@@ -304,7 +304,7 @@ export function PrayerNotificationSheet({
                     }}
                   >
                     {checked && (
-                      <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
+                      <Icon name="check" size={16} color="#FFFFFF" />
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
@@ -369,7 +369,7 @@ export function PrayerNotificationSheet({
                 flexDirection: 'row',
               }}
             >
-              <MaterialCommunityIcons
+              <Icon
                 name="check"
                 size={18}
                 color="#FFFFFF"

@@ -1,8 +1,8 @@
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
+import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
 export default function AdminHub() {
@@ -18,7 +18,7 @@ export default function AdminHub() {
       {/* Header */}
       <View className="flex-row items-center px-5" style={{ height: 52 }}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color={fgRgb} />
+          <Icon name="chevron-back" size={22} color={fgRgb} />
         </Pressable>
         <Text
           style={{
@@ -108,7 +108,7 @@ function AdminRow({
 }: {
   title: string;
   subtitle: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: IconName;
   fgRgb: string;
   mutedRgb: string;
   borderColor: string;
@@ -136,13 +136,13 @@ function AdminRow({
           marginRight: 12,
         }}
       >
-        <Ionicons name={icon} size={18} color={fgRgb} />
+        <Icon name={icon} size={18} color={fgRgb} />
       </View>
       <View className="flex-1">
         <Text style={{ color: fgRgb, fontSize: 14, fontWeight: '600' }}>{title}</Text>
         <Text style={{ color: mutedRgb, fontSize: 11, marginTop: 2 }}>{subtitle}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={mutedRgb} />
+      <Icon name="chevron-forward" size={16} color={mutedRgb} />
     </Pressable>
   );
 }

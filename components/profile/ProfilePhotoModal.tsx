@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '@/src/components/ui/icon';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -115,7 +115,7 @@ export function ProfilePhotoModal({
               hitSlop={12}
               style={styles.closeButton}
             >
-              <Ionicons name="close" size={18} color={`rgba(${fg},0.55)`} />
+              <Icon name="close" size={18} color={`rgba(${fg},0.55)`} />
             </Pressable>
             <Text style={styles.title}>Profile Photo</Text>
             <View style={styles.closeButtonSpacer} />
@@ -133,7 +133,7 @@ export function ProfilePhotoModal({
               <ActivityIndicator size="small" color={accentRgb} />
             ) : (
               <>
-                <Ionicons name="camera-outline" size={32} color={accentRgb} />
+                <Icon name="camera-outline" size={32} color={accentRgb} />
                 <Text style={styles.tapToAddLabel}>Tap to add</Text>
               </>
             )}
@@ -144,7 +144,7 @@ export function ProfilePhotoModal({
             disabled={isUploading}
             style={[styles.actionButton, isUploading && styles.actionDisabled]}
           >
-            <Ionicons name="camera-outline" size={18} color={fgRgb} style={styles.actionIcon} />
+            <Icon name="camera-outline" size={18} color={fgRgb} style={styles.actionIcon} />
             <Text style={styles.actionLabel}>Take Photo</Text>
           </Pressable>
 
@@ -153,7 +153,7 @@ export function ProfilePhotoModal({
             disabled={isUploading}
             style={[styles.actionButton, isUploading && styles.actionDisabled]}
           >
-            <Ionicons name="images-outline" size={18} color={fgRgb} style={styles.actionIcon} />
+            <Icon name="images-outline" size={18} color={fgRgb} style={styles.actionIcon} />
             <Text style={styles.actionLabel}>Choose from Gallery</Text>
           </Pressable>
         </Animated.View>

@@ -1,9 +1,9 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import {
   useAdSubmissions,
@@ -63,17 +63,20 @@ export default function AdminBusinessAds() {
       ],
     );
 
+  // Canceled ads are removed from the list for now.
   // Surface review-needed first, then the rest.
-  const ordered = [...(submissions ?? [])].sort((a, b) => {
-    const rank = (s: string | null) => (s === 'submitted' ? 0 : s === 'approved' ? 1 : 2);
-    return rank(a.status) - rank(b.status);
-  });
+  const ordered = [...(submissions ?? [])]
+    .filter((s) => s.status !== 'canceled')
+    .sort((a, b) => {
+      const rank = (s: string | null) => (s === 'submitted' ? 0 : s === 'approved' ? 1 : 2);
+      return rank(a.status) - rank(b.status);
+    });
 
   return (
     <View className="flex-1 bg-card" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center px-5" style={{ height: 52 }}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color={fgRgb} />
+          <Icon name="chevron-back" size={22} color={fgRgb} />
         </Pressable>
         <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
           Business Ads
@@ -86,7 +89,7 @@ export default function AdminBusinessAds() {
         </View>
       ) : ordered.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <MaterialCommunityIcons name="storefront-outline" size={40} color={mutedRgb} />
+          <Icon name="storefront-outline" size={40} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
             No ad applications yet.
           </Text>
@@ -94,7 +97,8 @@ export default function AdminBusinessAds() {
       ) : (
         <ScrollView
           className="flex-1 px-5"
-          contentContainerStyle={{ paddingTop: 12, paddingBottom: 40, gap: 14 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: 12, paddingBottom: insets.bottom + 120, gap: 14 }}
         >
           {ordered.map((s) => {
             const meta = STATUS_META[s.status ?? ''] ?? null;
@@ -111,7 +115,7 @@ export default function AdminBusinessAds() {
                   />
                 ) : (
                   <View className="h-[120px] items-center justify-center bg-foreground/5">
-                    <MaterialCommunityIcons name="image-outline" size={28} color={mutedRgb} />
+                    <Icon name="image-outline" size={28} color={mutedRgb} />
                   </View>
                 )}
 
@@ -163,7 +167,7 @@ export default function AdminBusinessAds() {
                         disabled={decide.isPending}
                         className="h-[42px] flex-1 flex-row items-center justify-center rounded-full bg-foreground active:opacity-90"
                       >
-                        <MaterialCommunityIcons name="check" size={18} color={`rgb(${colors.background.replace(/ /g, ',')})`} />
+                        <Icon name="check" size={18} color={`rgb(${colors.background.replace(/ /g, ',')})`} />
                         <Text className="ml-1.5 text-[14px] font-semibold text-background">Approve</Text>
                       </Pressable>
                     </View>

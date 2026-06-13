@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/src/components/ui/icon';
 import { ReelItem } from '@/app/(main)/watch';
 import {
   filterSavedReels,
@@ -128,7 +128,7 @@ export default function SavedClipsPlayerScreen() {
             justifyContent: 'center',
           }}
         >
-          <Ionicons name="chevron-back" size={22} color="#ffffff" />
+          <Icon name="chevron-back" size={22} color="#ffffff" />
         </Pressable>
       </SafeAreaView>
     </View>

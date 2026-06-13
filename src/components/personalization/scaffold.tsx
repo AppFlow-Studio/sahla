@@ -1,7 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Icon } from '@/src/components/ui/icon';
 
 const SERIF = 'PlayfairDisplay_500Medium';
 
@@ -47,7 +48,7 @@ export function PersonalizationScaffold({
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color="rgba(10,38,30,0.6)" />
+            <Icon name="arrow-back" size={20} color="rgba(10,38,30,0.6)" />
           </Pressable>
           {onSkip ? (
             <Pressable onPress={onSkip} hitSlop={12} className="active:opacity-60">

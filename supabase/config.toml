@@ -1,3 +1,4 @@
+
 project_id = "sahla"
 
 # Edge functions that should not require a JWT to be invoked.
@@ -5,6 +6,11 @@ project_id = "sahla"
 # service-role bypasses for the app (see comments at the top of each file).
 
 [functions.sync-prayer-times]
+verify_jwt = false
+
+# Called by the mosques-table Database Webhook (no user JWT), guarded by the
+# webhook's own secret header. Fires GitHub repository_dispatch on go-live.
+[functions.notify-mosque-live]
 verify_jwt = false
 
 [functions.get-todays-prayers]
@@ -54,6 +60,16 @@ verify_jwt = false
 # App posts the avatar with the anon key + Clerk Bearer token; the function
 # verifies the Clerk JWT itself and uploads to Bunny under `{user_id}/avatar.ext`.
 [functions.upload-profile-pic]
+verify_jwt = false
+
+# Mosque admins post a program/event cover with the anon key; the function
+# uploads to Bunny under `content/{mosque_id}/{content_key}/cover.ext`.
+[functions.upload-content-image]
+verify_jwt = false
+
+# Mosque admins post a speaker (Sheikh) photo with the anon key; the function
+# uploads to Bunny under `speakers/{mosque_id}/{speaker_id}/avatar.ext`.
+[functions.upload-speaker-photo]
 verify_jwt = false
 
 # Business-ad self-service: read status + cancel, called by the app with the

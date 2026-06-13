@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/src/components/ui/icon';
 import {
   filterSavedReels,
   useSavedReels,
@@ -124,7 +124,7 @@ export default function SavedClipsScreen() {
           className="active:opacity-60"
           style={{ position: 'absolute', left: 12, padding: 4 }}
         >
-          <Ionicons name="chevron-back" size={26} color={INK} />
+          <Icon name="chevron-back" size={26} color={INK} />
         </Pressable>
         <Text
           style={{
@@ -201,7 +201,7 @@ export default function SavedClipsScreen() {
         </View>
       ) : reels.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Ionicons
+          <Icon
             name="bookmark-outline"
             size={36}
             color="rgba(10,38,30,0.4)"

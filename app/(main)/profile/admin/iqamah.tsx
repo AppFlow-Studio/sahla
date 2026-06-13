@@ -9,17 +9,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { TimePicker, formatTimePreview } from '@/src/components/admin/time-picker';
 import {
   IQAMAH_PRAYERS,
+  isFixedIqamahBeforeAthan,
   useIqamahConfig,
   useSaveIqamahConfig,
   type IqamahMode,
   type IqamahRuleInput,
 } from '@/src/hooks/use-iqamah';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 
 type PrayerForm = { mode: IqamahMode; fixedTime: string; offsetMinutes: number };
 
@@ -48,6 +50,14 @@ export default function IqamahScreen() {
 
   const { rules, isLoading } = useIqamahConfig();
   const save = useSaveIqamahConfig();
+
+  // Today's athan per prayer, so we can flag fixed times set before athan.
+  const { items: prayerItems } = usePrayerTimes();
+  const athanByPrayer = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const p of prayerItems) m[p.rawName.toLowerCase()] = p.athanTimeRaw;
+    return m;
+  }, [prayerItems]);
 
   const [forms, setForms] = useState<Record<string, PrayerForm>>(() => ({ ...DEFAULTS }));
   const [hydrated, setHydrated] = useState(false);
@@ -87,7 +97,21 @@ export default function IqamahScreen() {
     });
   }, [forms, rules]);
 
+  // Prayers whose fixed iqamah is set before athan — an impossible config.
+  const invalidKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const { key } of IQAMAH_PRAYERS) {
+      const f = forms[key];
+      if (f?.mode === 'fixed' && isFixedIqamahBeforeAthan(f.fixedTime, athanByPrayer[key])) {
+        s.add(key);
+      }
+    }
+    return s;
+  }, [forms, athanByPrayer]);
+  const hasInvalid = invalidKeys.size > 0;
+
   const handleSave = () => {
+    if (hasInvalid) return;
     const payload: IqamahRuleInput[] = IQAMAH_PRAYERS.map(({ key }) => {
       const f = forms[key];
       return {
@@ -105,7 +129,7 @@ export default function IqamahScreen() {
       {/* Header */}
       <View className="flex-row items-center px-5" style={{ height: 52 }}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color={fgRgb} />
+          <Icon name="chevron-back" size={22} color={fgRgb} />
         </Pressable>
         <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
           Iqamah Times
@@ -184,17 +208,26 @@ export default function IqamahScreen() {
                 </View>
 
                 {f.mode === 'fixed' ? (
-                  <View className="flex-row items-center justify-between">
-                    <Text style={{ color: labelColor, fontSize: 13 }}>Iqamah at</Text>
-                    <TimePicker
-                      value={f.fixedTime}
-                      onChange={(v) => update(key, { fixedTime: v })}
-                      mode="24h"
-                      accentRgb={accentRgb}
-                      fgRgb={fgRgb}
-                      borderColor={borderColor}
-                    />
-                  </View>
+                  <>
+                    <View className="flex-row items-center justify-between">
+                      <Text style={{ color: labelColor, fontSize: 13 }}>Iqamah at</Text>
+                      <TimePicker
+                        value={f.fixedTime}
+                        onChange={(v) => update(key, { fixedTime: v })}
+                        mode="24h"
+                        accentRgb={accentRgb}
+                        fgRgb={fgRgb}
+                        borderColor={borderColor}
+                      />
+                    </View>
+                    {invalidKeys.has(key) && (
+                      <Text style={{ color: '#ef4444', fontSize: 11, marginTop: 8 }}>
+                        Iqamah is before today&apos;s athan (
+                        {formatTimePreview(athanByPrayer[key]?.slice(0, 5) ?? '', '24h')}). Pick a
+                        later time.
+                      </Text>
+                    )}
+                  </>
                 ) : (
                   <View className="flex-row items-center justify-between">
                     <Text style={{ color: labelColor, fontSize: 13 }}>Minutes after athan</Text>
@@ -237,9 +270,9 @@ export default function IqamahScreen() {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleSave}
-            disabled={!dirty || save.isPending}
+            disabled={!dirty || save.isPending || hasInvalid}
             className="items-center justify-center rounded-full bg-primary"
-            style={{ height: 48, marginTop: 8, opacity: !dirty || save.isPending ? 0.5 : 1 }}
+            style={{ height: 48, marginTop: 8, opacity: !dirty || save.isPending || hasInvalid ? 0.5 : 1 }}
           >
             <Text className="text-[15px] font-semibold text-primary-foreground">
               {save.isPending ? 'Saving...' : save.isSuccess && !dirty ? 'Saved' : 'Save'}
@@ -285,7 +318,7 @@ function Stepper({
         opacity: disabled ? 0.35 : 1,
       }}
     >
-      <Ionicons name={icon} size={18} color={fgRgb} />
+      <Icon name={icon} size={18} color={fgRgb} />
     </TouchableOpacity>
   );
 }

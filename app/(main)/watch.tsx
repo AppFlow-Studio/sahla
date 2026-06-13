@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
+import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import MasjidLogo from '@/assets/masjid-logo.svg';
 import NoWifiSignal from '@/assets/images/no_wifi_signal.png';
@@ -72,14 +72,14 @@ function ActionButton({
   color = '#ffffff',
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label?: string;
   color?: string;
   onPress?: () => void;
 }) {
   return (
     <Pressable onPress={onPress} className="items-center active:opacity-70">
-      <Ionicons name={icon} size={28} color={color} />
+      <Icon name={icon} size={28} color={color} />
       {label ? (
         <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
           {label}
@@ -122,10 +122,11 @@ function LikeButton({
   return (
     <Pressable onPress={handlePress} className="items-center active:opacity-70">
       <Animated.View style={heartStyle}>
-        <Ionicons
+        <Icon
           name={liked ? 'heart' : 'heart-outline'}
           size={28}
           color={liked ? '#FF0005' : '#ffffff'}
+          fill={liked ? '#FF0005' : 'none'}
         />
       </Animated.View>
       <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
@@ -161,7 +162,7 @@ function ReelMenu({
         className="flex-row items-center active:opacity-70"
         style={{ paddingHorizontal: 14, paddingVertical: 12 }}
       >
-        <Ionicons name="ban-outline" size={14} color="#0A261E" />
+        <Icon name="ban-outline" size={14} color="#0A261E" />
         <Text style={{ marginLeft: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
           Not interested
         </Text>
@@ -172,7 +173,7 @@ function ReelMenu({
         className="flex-row items-center active:opacity-70"
         style={{ paddingHorizontal: 14, paddingVertical: 12 }}
       >
-        <Ionicons name="flag-outline" size={14} color="#0A261E" />
+        <Icon name="flag-outline" size={14} color="#0A261E" />
         <Text style={{ marginLeft: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
           Report
         </Text>
@@ -309,7 +310,7 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
             </Text>
             <View style={{ marginTop: 4 }} className="flex-row items-center">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Ionicons
+                <Icon
                   key={i}
                   name="star"
                   size={10}
@@ -467,7 +468,7 @@ function DescriptionPanel({
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 }}>
               <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>Description</Text>
               <Pressable onPress={onClose} hitSlop={12}>
-                <Ionicons name="close" size={22} color="#ffffff" />
+                <Icon name="close" size={22} color="#ffffff" />
               </Pressable>
             </View>
           </View>
@@ -577,7 +578,7 @@ function ReportSheet({
             style={{ paddingHorizontal: 22, paddingVertical: 14 }}
           >
             <Text style={{ fontSize: 15, color: '#0A261E' }}>{r.label}</Text>
-            <Ionicons name="chevron-forward" size={16} color="rgba(10,38,30,0.4)" />
+            <Icon name="chevron-forward" size={16} color="rgba(10,38,30,0.4)" />
           </Pressable>
         ))}
 
@@ -588,7 +589,7 @@ function ReportSheet({
           className="flex-row items-center active:opacity-60"
           style={{ paddingHorizontal: 22, paddingVertical: 16 }}
         >
-          <Ionicons name="ban-outline" size={16} color="#B00020" />
+          <Icon name="ban-outline" size={16} color="#B00020" />
           <Text style={{ marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#B00020' }}>
             Block {masjidName}
           </Text>
@@ -810,7 +811,7 @@ export function ReelItem({
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="play" size={40} color="#ffffff" style={{ marginLeft: 4 }} />
+            <Icon name="play" size={40} color="#ffffff" style={{ marginLeft: 4 }} />
           </View>
         </View>
       ) : null}
@@ -823,7 +824,7 @@ export function ReelItem({
           burstStyle,
         ]}
       >
-        <Ionicons name="heart" size={104} color="#FF0005" style={{ transform: [{ rotate: '-12deg' }] }} />
+        <Icon name="heart" size={104} color="#FF0005" fill="#FF0005" style={{ transform: [{ rotate: '-12deg' }] }} />
       </Animated.View>
 
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -929,13 +930,13 @@ export function ReelItem({
                 numberOfLines={2}
                 onPress={() => setDescriptionOpen(true)}
                 onTextLayout={(e) => setCaptionTruncated(e.nativeEvent.lines.length > 1)}
-                style={{ fontSize: 10, color: '#ffffff', flex: 1 }}
+                style={{ fontSize: 12, color: '#ffffff', flex: 1 }}
               >
                 {reel.caption}
               </Text>
               {captionTruncated && (
                 <Pressable onPress={() => setDescriptionOpen(true)} hitSlop={8}>
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: '#ffffff', marginLeft: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#ffffff', marginLeft: 4 }}>
                     more
                   </Text>
                 </Pressable>
@@ -1003,14 +1004,26 @@ export default function WatchScreen() {
   const netInfo = useNetInfo();
   const isOffline = netInfo.isConnected === false;
   const showNoConnection = isError || isOffline;
-  const renderItem = useCallback(({ item, index }: { item: Reel; index: number }) => (
-    <ReelItem
-      reel={item}
-      height={height}
-      // Pause the underlying reel while the no-connection overlay is showing.
-      isActive={index === activeIndex && isFocused && !showNoConnection}
-    />
-  ), [height, activeIndex, isFocused, showNoConnection]);
+  const renderItem = useCallback(({ item, index }: { item: Reel; index: number }) => {
+    // iOS provides only a handful of simultaneous H.264 hardware decoders.
+    // Mounting a VideoView/player for every reel at once (the FlatList default
+    // keeps them all alive) exhausts that pool and starves even the on-screen
+    // reel, which then renders as a black frame. Mount only the active reel and
+    // its immediate neighbors (so the next swipe is pre-warmed); render every
+    // other row as a cheap black placeholder of the same height so paging and
+    // getItemLayout stay exact.
+    if (Math.abs(index - activeIndex) > 1) {
+      return <View style={{ height, width: '100%' }} className="bg-black" />;
+    }
+    return (
+      <ReelItem
+        reel={item}
+        height={height}
+        // Pause the underlying reel while the no-connection overlay is showing.
+        isActive={index === activeIndex && isFocused && !showNoConnection}
+      />
+    );
+  }, [height, activeIndex, isFocused, showNoConnection]);
   const keyExtractor = useCallback((item: Reel) => item.reel_id, []);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
   const onViewableItemsChanged = useRef(

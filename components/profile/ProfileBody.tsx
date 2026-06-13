@@ -18,20 +18,21 @@ import SectionHeader from "./SectionHeader";
 
 const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: replace with real App Store URL
 
-const COMMUNITY_ICON = require("@/assets/images/Vector_addfriends.png");
-const SAVED_PROGRAMS_AND_EVENTS_ICON = require("@/assets/images/Saved_Programgs_and_events.png");
-const SAVED_CLIPS_ICON = require("@/assets/images/saved_clips.png");
-const PAYMENT_HISTORY_ICON = require("@/assets/images/Payment_history.png");
-const PAYMENT_METHODS_ICON = require("@/assets/images/Payment_Methods.png");
-const PRAYER_ALERTS_ICON = require("@/assets/images/Bell_Ring.png");
-const PROGRAMS_ICON = require("@/assets/images/Programs.png");
-const EVENTS_ICON = require("@/assets/images/Events.png");
-const MAS_BAG_ICON = require("@/assets/images/Mas_bag.png");
-const APPLICATION_ICON = require("@/assets/images/Start_Application.png");
-const CHECK_STATUS_ICON = require("@/assets/images/check_status2.png");
-const MANAGE_SUBS_ICON = require("@/assets/images/Manage_subs.png");
-const FEEDBACK_ICON = require("@/assets/images/feedback.png");
-const ADMIN_ICON = require("@/assets/images/Admin_Portal.png");
+// Profile menu row icons, mapped to the shared Lucide registry (src/components/ui/icon.tsx).
+const COMMUNITY_ICON = "user-plus";
+const SAVED_PROGRAMS_AND_EVENTS_ICON = "calendar-heart";
+const SAVED_CLIPS_ICON = "clapperboard";
+const PAYMENT_HISTORY_ICON = "receipt-outline";
+const PAYMENT_METHODS_ICON = "card-outline";
+const PRAYER_ALERTS_ICON = "bell";
+const PROGRAMS_ICON = "graduation-cap";
+const EVENTS_ICON = "calendar-outline";
+const MAS_BAG_ICON = "shopping-bag";
+const APPLICATION_ICON = "file-text";
+const CHECK_STATUS_ICON = "clipboard-check";
+const MANAGE_SUBS_ICON = "repeat";
+const FEEDBACK_ICON = "message-outline";
+const ADMIN_ICON = "shield";
 
 type Props = {
   onPressPersonalized: () => void;

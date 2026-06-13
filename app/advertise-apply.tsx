@@ -1,4 +1,3 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
@@ -20,14 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 
 import { CardVisual } from '@/src/components/stripe-card-visual';
+import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useConfigStore } from '@/src/stores/config-store';
 import { useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { env } from '@/src/lib/env';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 type FormData = {
   fullName: string;
@@ -287,7 +285,7 @@ export default function AdvertiseApplyScreen() {
                 hitSlop={12}
                 className="h-8 w-8 items-center justify-center"
               >
-                <Ionicons name="arrow-back" size={22} color={fgRgb} />
+                <Icon name="arrow-back" size={22} color={fgRgb} />
               </Pressable>
               <Text className="ml-3 text-[16px] font-semibold text-foreground">
                 {step === 'payment' || step === 'processing'
@@ -327,7 +325,7 @@ export default function AdvertiseApplyScreen() {
             {step === 'success' && (
               <View className="items-center px-5 pt-16">
                 <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-foreground/5">
-                  <MaterialCommunityIcons
+                  <Icon
                     name="check-circle"
                     size={48}
                     color={primaryRgb}
@@ -539,7 +537,7 @@ export default function AdvertiseApplyScreen() {
                           </View>
                         ) : (
                           <View className="h-[150px] items-center justify-center">
-                            <MaterialCommunityIcons
+                            <Icon
                               name="cloud-upload-outline"
                               size={32}
                               color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.4)`}
@@ -606,7 +604,7 @@ export default function AdvertiseApplyScreen() {
                         </>
                       ) : (
                         <>
-                          <MaterialCommunityIcons
+                          <Icon
                             name="image-plus"
                             size={36}
                             color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
@@ -656,7 +654,7 @@ export default function AdvertiseApplyScreen() {
                                 : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.03)`,
                             }}
                           >
-                            <MaterialCommunityIcons
+                            <Icon
                               name={action.icon as IconName}
                               size={18}
                               color={
@@ -682,7 +680,7 @@ export default function AdvertiseApplyScreen() {
 
                     {/* Address row - live */}
                     <View className="flex-row items-center border-t border-foreground/5 px-4 py-3.5">
-                      <MaterialCommunityIcons
+                      <Icon
                         name="map-marker-outline"
                         size={16}
                         color={
@@ -706,7 +704,7 @@ export default function AdvertiseApplyScreen() {
                           Open in Maps
                         </Text>
                       </View>
-                      <MaterialCommunityIcons
+                      <Icon
                         name="chevron-right"
                         size={18}
                         color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`}
@@ -718,7 +716,7 @@ export default function AdvertiseApplyScreen() {
                 {/* Pricing info */}
                 <View className="mx-5 mt-6 rounded-2xl bg-muted/60 px-5 py-4">
                   <View className="flex-row items-center gap-2">
-                    <MaterialCommunityIcons
+                    <Icon
                       name="information-outline"
                       size={16}
                       color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.4)`}
@@ -990,7 +988,7 @@ function ReceiptCard({
           className="mb-2 h-9 w-9 items-center justify-center rounded-full"
           style={{ backgroundColor: `${tint ?? '#0A261E'}1A` }}
         >
-          <MaterialCommunityIcons name="storefront" size={18} color={tint} />
+          <Icon name="storefront" size={18} color={tint} />
         </View>
         {merchant ? (
           <Text className="text-[13px] font-semibold text-foreground" numberOfLines={1}>

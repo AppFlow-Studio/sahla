@@ -1,5 +1,5 @@
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Platform, Pressable, Text, View } from "react-native";
+import { Icon } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 const platformUiFont = Platform.select({
@@ -28,7 +28,7 @@ export default function Notifications({ onEnablePress }: Props) {
       }}
     >
       <View className="min-w-0 flex-1 flex-row items-center gap-2 pr-2">
-        <IconSymbol name="bell.fill" size={14} color={accentRgb} />
+        <Icon name="bell" size={14} color={accentRgb} fill={accentRgb} />
         <Text
           numberOfLines={1}
           style={{
@@ -60,7 +60,7 @@ export default function Notifications({ onEnablePress }: Props) {
         >
           Enable
         </Text>
-        <IconSymbol name="chevron.right" size={8} color={accentRgb} />
+        <Icon name="chevron-right" size={14} color={accentRgb} />
       </Pressable>
     </View>
   );

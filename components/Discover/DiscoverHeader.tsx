@@ -214,19 +214,24 @@ export default function DiscoverHeader({
               <Text
                 style={{
                   fontFamily: platformUiFont,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: isActive ? "600" : "500",
                   color: isActive ? fgRgb : mutedFgRgb,
                 }}
               >
                 {tab}
               </Text>
-              {isActive ? (
-                <View
-                  className="mt-1 h-px w-4"
-                  style={{ backgroundColor: fgRgb }}
-                />
-              ) : null}
+              {/* Underline space is always reserved (transparent when
+                  inactive) so the label height never changes — the text
+                  stays put instead of nudging up when a tab activates. */}
+              <View
+                className="self-stretch"
+                style={{
+                  height: 1,
+                  marginTop: 4,
+                  backgroundColor: isActive ? fgRgb : "transparent",
+                }}
+              />
             </Pressable>
           );
         })}

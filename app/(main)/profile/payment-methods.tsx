@@ -20,8 +20,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+
+import { Icon } from '@/src/components/ui/icon';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
@@ -245,7 +247,7 @@ export default function PaymentMethodsScreen() {
           }}
         >
           <Pressable onPress={() => router.back()} hitSlop={12} style={{ marginRight: 16 }}>
-            <Ionicons name="chevron-back" size={24} color={fgRgb} />
+            <Icon name="chevron-back" size={24} color={fgRgb} />
           </Pressable>
           <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>Payment Methods</Text>
         </View>
@@ -272,7 +274,7 @@ export default function PaymentMethodsScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="shield-checkmark" size={16} color={accentRgb} />
+                <Icon name="shield-checkmark" size={16} color={accentRgb} />
                 <Text style={{ fontSize: 12, fontWeight: '600', color: accentRgb, letterSpacing: 0.3, marginLeft: 6 }}>
                   SECURED BY STRIPE
                 </Text>
@@ -300,7 +302,7 @@ export default function PaymentMethodsScreen() {
                 marginBottom: 24,
               }}
             >
-              <Ionicons name="add" size={20} color={pfgRgb} />
+              <Icon name="add" size={20} color={pfgRgb} />
               <Text style={{ fontSize: 15, fontWeight: '600', color: pfgRgb, marginLeft: 8 }}>
                 Add New Card
               </Text>
@@ -321,7 +323,7 @@ export default function PaymentMethodsScreen() {
                   marginBottom: 16,
                 }}
               >
-                <Ionicons name="card-outline" size={36} color={accentRgb} />
+                <Icon name="card-outline" size={36} color={accentRgb} />
               </View>
               <Text style={{ fontSize: 18, fontWeight: '700', color: fgRgb, marginBottom: 6 }}>
                 No Saved Cards
@@ -390,7 +392,7 @@ export default function PaymentMethodsScreen() {
                         {deletingId === card.id ? (
                           <ActivityIndicator size="small" color={mutedFgRgb} />
                         ) : (
-                          <Ionicons name="trash-outline" size={18} color={pfgRgb} />
+                          <Icon name="trash-outline" size={18} color={pfgRgb} />
                         )}
                       </Pressable>
                     </View>
