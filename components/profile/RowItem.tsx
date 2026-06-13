@@ -1,33 +1,26 @@
-import { Image } from "expo-image";
-import type { ImageSourcePropType } from "react-native";
 import { Platform, Pressable, Text, View } from "react-native";
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Icon, type IconName } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 type Props = {
   title: string;
-  icon: ImageSourcePropType;
+  icon: IconName;
   onPress: () => void;
 };
 
 export default function RowItem({ title, icon, onPress }: Props) {
   const { colors } = useMasjidConfig();
-  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
-  const fgRgb40 = `rgba(${colors.foreground.replace(/ /g, ",")}, 0.4)`;
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
   return (
     <Pressable
       onPress={onPress}
       className="flex-row items-center justify-between px-4 py-3"
     >
       <View className="flex-row items-center gap-2">
-        {/* Tint the (monochrome) icon glyph so it follows the masjid theme. */}
-        <Image
-          source={icon}
-          style={{ width: 19, height: 19 }}
-          contentFit="contain"
-          tintColor={fgRgb}
-        />
+        {/* Icon stroke follows the masjid theme foreground. */}
+        <Icon name={icon} size={16} color={fgRgb} />
         <Text
           className="text-foreground"
           style={{
@@ -41,7 +34,7 @@ export default function RowItem({ title, icon, onPress }: Props) {
           {title}
         </Text>
       </View>
-      <IconSymbol name="chevron.right" size={8} color={fgRgb40} />
+      <Icon name="chevron-right" size={14} color={`rgba(${fg},0.4)`} />
     </Pressable>
   );
 }

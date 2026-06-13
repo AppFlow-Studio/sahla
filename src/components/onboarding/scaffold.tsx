@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
 const SERIF = 'PlayfairDisplay_500Medium';
@@ -76,7 +76,7 @@ export function OnboardingScaffold({
             hitSlop={12}
             className="mr-3 h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color={surfaceRgb} />
+            <Icon name="arrow-back" size={20} color={surfaceRgb} />
           </Pressable>
           <View className="flex-1 flex-row" style={{ gap: 6 }}>
             {Array.from({ length: totalSteps }).map((_, i) => (

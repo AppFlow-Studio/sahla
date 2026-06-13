@@ -10,11 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-
+import { Icon } from '@/src/components/ui/icon';
+import type { IconName } from '@/src/components/ui/icon';
 import { type CommunityPartner } from '@/src/hooks/use-community-partners';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 /** Theme colors so the carousel works on light (Home) and dark (Prayer) surfaces. */
 export type PartnerColors = {
@@ -122,7 +120,7 @@ function PartnerCard({ partner, colors }: { partner: CommunityPartner; colors: P
           <Image source={{ uri: partner.flyerImg }} contentFit="cover" style={{ width: '100%', height: '100%' }} />
         ) : (
           <>
-            <MaterialCommunityIcons name="storefront-outline" size={64} color={colors.text} />
+            <Icon name="storefront-outline" size={64} color={colors.text} />
             {partner.name ? (
               <Text
                 style={{ marginTop: 8, paddingHorizontal: 16, textAlign: 'center', fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Georgia' }}
@@ -152,7 +150,7 @@ function PartnerCard({ partner, colors }: { partner: CommunityPartner; colors: P
                 onPress={() => openUrl('https://maps.apple.com/?q=' + encodeURIComponent(partner.address!))}
                 style={{ marginTop: 8, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 5 }}
               >
-                <MaterialCommunityIcons name="map-marker-outline" size={12} color={colors.text} />
+                <Icon name="map-marker-outline" size={12} color={colors.text} />
                 <Text style={{ marginLeft: 4, fontSize: 10, fontWeight: '600', color: colors.text }}>Directions</Text>
               </TouchableOpacity>
             ) : null}
@@ -176,7 +174,7 @@ function Pill({ icon, color, border, onPress }: { icon: string; color: string; b
       onPress={onPress}
       style={{ height: 30, width: 30, alignItems: 'center', justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: border }}
     >
-      <MaterialCommunityIcons name={icon as IconName} size={15} color={color} />
+      <Icon name={icon as IconName} size={15} color={color} />
     </TouchableOpacity>
   );
 }

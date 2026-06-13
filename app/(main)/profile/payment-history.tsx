@@ -17,8 +17,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
@@ -203,7 +203,7 @@ function EmptyState({ fgRgb, accentRgb, cardRgb }: { fgRgb: string; accentRgb: s
               marginBottom: 24,
             }}
           >
-            <Ionicons name="receipt-outline" size={36} color={accentRgb} />
+            <Icon name="receipt-outline" size={36} color={accentRgb} />
           </View>
           <Text style={{ fontSize: 20, fontWeight: '700', color: fgRgb, textAlign: 'center', marginBottom: 8 }}>
             No Payments Yet
@@ -262,7 +262,7 @@ function PaymentCard({
                 marginRight: 12,
               }}
             >
-              <Ionicons name={status.icon} size={20} color={status.color} />
+              <Icon name={status.icon} size={20} color={status.color} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, fontWeight: '600', color: fgRgb }}>
@@ -272,7 +272,7 @@ function PaymentCard({
                 {payment.label || 'Donation'}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                <Ionicons name="card-outline" size={12} color={withAlpha(fgRgb, 0.25)} />
+                <Icon name="card-outline" size={12} color={withAlpha(fgRgb, 0.25)} />
                 <Text style={{ fontSize: 11, color: withAlpha(fgRgb, 0.25), marginLeft: 4 }}>
                   {getPaymentMethodDisplay(payment.paymentMethod)}
                 </Text>
@@ -386,7 +386,7 @@ export default function PaymentHistoryScreen() {
         }}
       >
         <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={{ marginRight: 16 }}>
-          <Ionicons name="chevron-back" size={24} color={fgRgb} />
+          <Icon name="chevron-back" size={24} color={fgRgb} />
         </TouchableOpacity>
         <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>Payment History</Text>
       </View>
@@ -483,14 +483,14 @@ export default function PaymentHistoryScreen() {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: withAlpha(mutedFgRgb, 0.08), justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
-                    <Ionicons name="alert-circle-outline" size={18} color={mutedFgRgb} />
+                    <Icon name="alert-circle-outline" size={18} color={mutedFgRgb} />
                   </View>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: fgRgb }}>Incomplete Payments</Text>
                   <View style={{ backgroundColor: withAlpha(mutedFgRgb, 0.08), borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 }}>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: mutedFgRgb }}>{incompletePayments.length}</Text>
                   </View>
                 </View>
-                <Ionicons name={showIncomplete ? 'chevron-up' : 'chevron-down'} size={18} color={withAlpha(fgRgb, 0.25)} />
+                <Icon name={showIncomplete ? 'chevron-up' : 'chevron-down'} size={18} color={withAlpha(fgRgb, 0.25)} />
               </TouchableOpacity>
 
               {showIncomplete &&

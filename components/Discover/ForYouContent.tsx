@@ -1,4 +1,5 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
+import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
 import { Platform, Pressable, Text, View } from "react-native";
 
@@ -74,11 +75,7 @@ function CustomizedPill({
       className="flex-row items-center rounded-full px-4 py-3"
       style={{ backgroundColor: pillBg }}
     >
-      <Image
-        source={require("@/assets/images/Discover_for_you_vector.png")}
-        style={{ width: 24, height: 24 }}
-        contentFit="contain"
-      />
+      <Feather name="sun" size={18} color={accentRgb} />
       <View className="ml-3 flex-1">
         <Text
           style={{

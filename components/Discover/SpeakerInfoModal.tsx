@@ -170,11 +170,10 @@ export default function SpeakerInfoModal({
             style={[
               {
                 backgroundColor: mutedRgb,
-                borderRadius: 48,
+                borderRadius: 28,
                 paddingTop: 12,
                 paddingBottom: 28,
                 paddingHorizontal: 24,
-                minHeight: 500,
                 overflow: "hidden",
               },
               sheetStyle,
@@ -216,9 +215,10 @@ export default function SpeakerInfoModal({
             <Text
               style={{
                 fontFamily: platformUiFont,
-                fontSize: 13,
-                fontWeight: "600",
-                color: fgRgb,
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 1.5,
+                color: accentRgb,
                 marginTop: 14,
               }}
             >
@@ -227,53 +227,64 @@ export default function SpeakerInfoModal({
             <View
               style={{
                 height: 1,
-                backgroundColor: fgRgb,
+                backgroundColor: `rgba(${fg}, 0.12)`,
                 marginTop: 10,
-                marginBottom: 22,
+                marginBottom: 20,
               }}
             />
 
             {status === "loading" ? (
               <View style={{ paddingVertical: 36, alignItems: "center" }}>
-                <ActivityIndicator color={fgRgb} />
+                <ActivityIndicator color={accentRgb} />
               </View>
             ) : (
               <>
+                {/* Profile header — avatar + name on one line */}
                 <View
                   style={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: 12,
-                    backgroundColor: mutedRgb,
-                    overflow: "hidden",
+                    flexDirection: "row",
                     alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 8,
+                    gap: 14,
+                    marginBottom: credentials.length > 0 ? 22 : 4,
                   }}
                 >
-                  {data?.speaker_img ? (
-                    <Image
-                      source={{ uri: data.speaker_img }}
-                      style={{ width: "100%", height: "100%" }}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <Feather name="user" size={28} color={fgRgb} />
-                  )}
-                </View>
+                  <View
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 18,
+                      backgroundColor: mutedRgb,
+                      borderWidth: 1,
+                      borderColor: `rgba(${fg}, 0.08)`,
+                      overflow: "hidden",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {data?.speaker_img ? (
+                      <Image
+                        source={{ uri: data.speaker_img }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Feather name="user" size={30} color={`rgba(${fg}, 0.5)`} />
+                    )}
+                  </View>
 
-                <Text
-                  style={{
-                    fontFamily: platformUiFont,
-                    fontSize: 11,
-                    lineHeight: 18,
-                    fontWeight: "600",
-                    color: fgRgb,
-                    marginBottom: 8,
-                  }}
-                >
-                  {displayName}
-                </Text>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontFamily: platformTitleFont,
+                      fontSize: 18,
+                      lineHeight: 24,
+                      fontWeight: "700",
+                      color: fgRgb,
+                    }}
+                  >
+                    {displayName}
+                  </Text>
+                </View>
 
                 {credentials.length > 0 ? (
                   <View>
@@ -282,26 +293,27 @@ export default function SpeakerInfoModal({
                         key={`${cred}-${idx}`}
                         style={{
                           flexDirection: "row",
-                          marginBottom: idx === credentials.length - 1 ? 0 : 16,
-                          paddingRight: 8,
+                          alignItems: "flex-start",
+                          marginBottom: idx === credentials.length - 1 ? 0 : 14,
+                          paddingRight: 4,
                         }}
                       >
                         <View
                           style={{
-                            width: 4,
-                            height: 4,
-                            borderRadius: 2,
+                            width: 6,
+                            height: 6,
+                            borderRadius: 3,
                             backgroundColor: accentRgb,
                             marginTop: 7,
-                            marginRight: 8,
+                            marginRight: 12,
                           }}
                         />
                         <Text
                           style={{
                             flex: 1,
                             fontFamily: platformUiFont,
-                            fontSize: 11,
-                            lineHeight: 18,
+                            fontSize: 14,
+                            lineHeight: 21,
                             fontWeight: "400",
                             color: mutedFgRgb,
                           }}

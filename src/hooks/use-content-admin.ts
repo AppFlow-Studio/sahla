@@ -165,20 +165,27 @@ async function loadImagePicker(): Promise<ImagePickerModule> {
   return await import('expo-image-picker');
 }
 
-const BUCKET = 'profile-pics';
-
 /**
- * Picks a cover image and uploads it to the `profile-pics` bucket under
- * `content/{key}/cover.{ext}`. `key` is the content_id when editing, or a
- * caller-supplied draft id when creating before the row exists. Returns the
- * public URL. Mirrors useUploadSpeakerPhoto, but uses a 16:9 crop for banners.
+ * Picks a cover image and posts it to the `upload-content-image` edge function,
+ * which uploads it to Bunny Edge Storage under
+ * `content/{mosque_id}/{key}/cover.{ext}` and returns the public CDN URL. `key`
+ * is the content_id when editing, or a caller-supplied draft id when creating
+ * before the row exists. The caller persists the returned URL onto
+ * `content_items.image` via the create/update mutation.
+ *
+ * Previously this uploaded directly to the Supabase Storage `profile-pics`
+ * bucket; that broke once the bucket's RLS was locked down to per-user folders
+ * (the avatar→Bunny migration on 2026-06-08), so covers moved to Bunny too.
  */
 export function useUploadContentImage() {
   const supabase = useSupabase();
+  const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const [isUploading, setIsUploading] = useState(false);
 
   const pickAndUpload = useCallback(
     async (key: string, source: 'camera' | 'gallery'): Promise<string | null> => {
+      if (!mosqueUuid) throw new Error('No mosque configured');
+
       const ImagePicker = await loadImagePicker();
 
       const permission =
@@ -207,27 +214,32 @@ export function useUploadContentImage() {
       if (result.canceled || !result.assets?.[0]) return null;
       const asset = result.assets[0];
 
-      const response = await fetch(asset.uri);
-      const arrayBuffer = await response.arrayBuffer();
-
-      const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
-      const contentType = asset.mimeType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-      const path = `content/${key}/cover.${ext}`;
-
       setIsUploading(true);
       try {
-        const { error: uploadErr } = await supabase.storage
-          .from(BUCKET)
-          .upload(path, arrayBuffer, { contentType, upsert: true });
-        if (uploadErr) throw new Error(uploadErr.message);
+        const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
 
-        const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-        return `${data.publicUrl}?t=${Date.now()}`;
+        const form = new FormData();
+        form.append('file', {
+          uri: asset.uri,
+          name: `cover.${ext}`,
+          type: asset.mimeType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+        } as unknown as Blob);
+        form.append('mosque_id', mosqueUuid);
+        form.append('content_key', key);
+
+        const { data, error } = await supabase.functions.invoke<{
+          url: string;
+          error?: string;
+        }>('upload-content-image', { body: form });
+        if (error) throw new Error(error.message);
+        if (!data?.url) throw new Error('Upload succeeded but no URL returned');
+
+        return data.url;
       } finally {
         setIsUploading(false);
       }
     },
-    [supabase],
+    [supabase, mosqueUuid],
   );
 
   return { pickAndUpload, isUploading };

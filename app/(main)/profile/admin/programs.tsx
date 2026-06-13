@@ -18,12 +18,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSpeakers } from '@/src/hooks/use-speakers';
 import {
@@ -39,6 +38,7 @@ import {
 } from '@/src/hooks/use-content-admin';
 import { TimePicker } from '@/src/components/admin/time-picker';
 import { DatePicker } from '@/src/components/admin/date-picker';
+import { FilterButton } from '@/src/components/admin/filter-button';
 import {
   WEEK_OF_MONTH_OPTIONS,
   describeRecurrence,
@@ -100,10 +100,12 @@ export default function ProgramsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useMasjidConfig();
-  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
-  const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
+  const fg = colors.foreground.replace(/ /g, ',');
+  const fgRgb = `rgb(${fg})`;
+  const mutedRgb = `rgba(${fg}, 0.5)`;
   const borderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.1)`;
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const cardRgb = `rgb(${colors.card.replace(/ /g, ',')})`;
 
   const { items, isLoading } = useAdminContentItems();
   const deleteItem = useDeleteContentItem();
@@ -112,7 +114,6 @@ export default function ProgramsScreen() {
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-  const [dateFilterOpen, setDateFilterOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
     // Type filter (All / Programs / Events tabs)
@@ -158,32 +159,24 @@ export default function ProgramsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-card" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-card">
+      <View style={{ flex: 1, paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={fgRgb} />
+            <Icon name="chevron-back" size={22} color={fgRgb} />
           </Pressable>
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
             Programs & Events
           </Text>
         </View>
+        {/* The date-filter button is rendered as a screen-root overlay (see
+            <FilterButton/> below) so it can morph open over the page — it
+            floats one gap to the left of the "+". */}
         <View className="flex-row items-center" style={{ gap: 14 }}>
-          <TouchableOpacity
-            onPress={() => setDateFilterOpen(true)}
-            activeOpacity={0.7}
-            hitSlop={8}
-            accessibilityLabel="Filter events by date"
-          >
-            <Ionicons
-              name={dateFilter === 'all' ? 'funnel-outline' : 'funnel'}
-              size={22}
-              color={dateFilter === 'all' ? fgRgb : accentRgb}
-            />
-          </TouchableOpacity>
           <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
-            <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
+            <Icon name="add-circle-outline" size={26} color={accentRgb} />
           </TouchableOpacity>
         </View>
       </View>
@@ -222,7 +215,7 @@ export default function ProgramsScreen() {
         </View>
       ) : filteredItems.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="megaphone-outline" size={48} color={mutedRgb} />
+          <Icon name="megaphone-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
             {items.length === 0
               ? 'No programs or events yet. Tap + to create one.'
@@ -251,75 +244,25 @@ export default function ProgramsScreen() {
         />
       )}
 
-      <ContentFormModal visible={showForm} item={editing} onClose={() => setShowForm(false)} />
+        <ContentFormModal visible={showForm} item={editing} onClose={() => setShowForm(false)} />
+      </View>
 
-      {/* Date filter — liquid-glass backdrop with a small picker card.
-          Same BlurView pattern as the donation modal. */}
-      <Modal
-        visible={dateFilterOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDateFilterOpen(false)}
-      >
-        <Pressable
-          style={{ flex: 1 }}
-          onPress={() => setDateFilterOpen(false)}
-          accessibilityLabel="Close filter"
-        >
-          <BlurView
-            intensity={40}
-            tint="dark"
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-          >
-            {/* Stop the outer Pressable from swallowing taps inside the card. */}
-            <Pressable
-              onPress={() => {}}
-              style={{
-                width: 260,
-                borderRadius: 18,
-                overflow: 'hidden',
-                backgroundColor: 'rgba(255,255,255,0.85)',
-                paddingVertical: 8,
-              }}
-            >
-              {DATE_FILTER_VALUES.map((value, idx) => {
-                const active = value === dateFilter;
-                return (
-                  <Pressable
-                    key={value}
-                    onPress={() => {
-                      setDateFilter(value);
-                      setDateFilterOpen(false);
-                    }}
-                    style={{
-                      paddingHorizontal: 18,
-                      paddingVertical: 14,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderBottomWidth: idx < DATE_FILTER_VALUES.length - 1 ? 0.5 : 0,
-                      borderBottomColor: 'rgba(0,0,0,0.08)',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        fontWeight: active ? '600' : '500',
-                        color: '#0a261e',
-                      }}
-                    >
-                      {dateFilterLabel(value, filter)}
-                    </Text>
-                    {active ? (
-                      <Ionicons name="checkmark" size={18} color={accentRgb} />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </Pressable>
-          </BlurView>
-        </Pressable>
-      </Modal>
+      {/* Date-filter button — a glass disc that morphs into its options
+          popover, anchored at the header's top-right. */}
+      <FilterButton
+        value={dateFilter}
+        options={DATE_FILTER_VALUES.map((v) => ({
+          id: v,
+          title: dateFilterLabel(v, filter),
+        }))}
+        onChange={(id) => setDateFilter(id as DateFilter)}
+        fgRgb={fgRgb}
+        accentRgb={accentRgb}
+        cardRgb={cardRgb}
+        borderColor={borderColor}
+        insetsTop={insets.top}
+        active={dateFilter !== 'all'}
+      />
     </View>
   );
 }
@@ -381,7 +324,7 @@ function ContentCard({
           <Image source={{ uri: item.image }} style={{ width: 56, height: 44 }} />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <Ionicons name="image-outline" size={18} color={mutedRgb} />
+            <Icon name="image-outline" size={18} color={mutedRgb} />
           </View>
         )}
       </View>
@@ -396,10 +339,10 @@ function ContentCard({
       </View>
 
       <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 12 }}>
-        <Ionicons name="pencil-outline" size={18} color={mutedRgb} />
+        <Icon name="pencil-outline" size={18} color={mutedRgb} />
       </TouchableOpacity>
       <TouchableOpacity onPress={onDelete} hitSlop={8}>
-        <Ionicons name="trash-outline" size={18} color="rgb(239,68,68)" />
+        <Icon name="trash-outline" size={18} color="rgb(239,68,68)" />
       </TouchableOpacity>
     </View>
   );
@@ -552,8 +495,10 @@ function ContentFormModal({
     try {
       const url = await pickAndUpload(key, 'gallery');
       if (url) setImage(url);
-    } catch {
-      // Permission denied or picker cancelled
+    } catch (e) {
+      // Surface real failures (permission denied, upload errors) instead of
+      // silently doing nothing.
+      Alert.alert('Couldn’t add image', e instanceof Error ? e.message : 'Please try again.');
     }
   }, [item, pickAndUpload]);
 
@@ -745,7 +690,7 @@ function ContentFormModal({
                 <Image source={{ uri: image }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
               ) : (
                 <>
-                  <Ionicons name="image-outline" size={26} color={mutedRgb} />
+                  <Icon name="image-outline" size={26} color={mutedRgb} />
                   <Text style={{ color: labelColor, fontSize: 11, marginTop: 6 }}>Add cover image</Text>
                 </>
               )}

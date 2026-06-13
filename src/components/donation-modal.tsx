@@ -45,7 +45,7 @@ type CardDetails = { complete: boolean; brand?: string; last4?: string };
 // A reusable card returned by the get-payment-methods edge function.
 type SavedCard = { id: string; brand: string; last4: string; expMonth: number; expYear: number };
 const formatBrand = (b: string) => (b ? b.charAt(0).toUpperCase() + b.slice(1) : 'Card');
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Icon } from '@/src/components/ui/icon';
 
 import { CardVisual } from './stripe-card-visual';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
@@ -671,7 +671,7 @@ export function DonationModal({
                       style={{ width: '33.333%', height: 52 }}
                     >
                       {k === 'back' ? (
-                        <MaterialCommunityIcons name="backspace-outline" size={22} color={`rgba(${fg},0.5)`} />
+                        <Icon name="backspace-outline" size={22} color={`rgba(${fg},0.5)`} />
                       ) : (
                         <Text style={{ fontSize: 24, fontWeight: '300', color: fgRgb }}>{k}</Text>
                       )}
@@ -748,14 +748,14 @@ export function DonationModal({
                     marginRight: 12,
                   }}
                 >
-                  <Ionicons name="chevron-back" size={18} color={`rgba(${fg},0.45)`} />
+                  <Icon name="chevron-back" size={18} color={`rgba(${fg},0.45)`} />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: fgRgb }}>
                     {onCardEntry ? 'Card details' : 'Payment details'}
                   </Text>
                 </View>
-                <Ionicons name="lock-closed" size={13} color={`rgba(${fg},0.25)`} />
+                <Icon name="lock-closed" size={13} color={`rgba(${fg},0.25)`} />
               </View>
 
               {!inputFocused && (
@@ -845,7 +845,7 @@ export function DonationModal({
                           gap: 12,
                         }}
                       >
-                        <Ionicons name="card" size={20} color={`rgba(${fg},0.5)`} />
+                        <Icon name="card" size={20} color={`rgba(${fg},0.5)`} />
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 14, fontWeight: '600', color: fgRgb }}>
                             {formatBrand(card.brand)} •••• {card.last4}
@@ -866,7 +866,7 @@ export function DonationModal({
                             justifyContent: 'center',
                           }}
                         >
-                          {selected && <Ionicons name="checkmark" size={12} color={bgRgb} />}
+                          {selected && <Icon name="checkmark" size={12} color={bgRgb} />}
                         </View>
                       </TouchableOpacity>
                     );
@@ -888,11 +888,11 @@ export function DonationModal({
                       gap: 12,
                     }}
                   >
-                    <Ionicons name="add-circle-outline" size={20} color={`rgba(${fg},0.5)`} />
+                    <Icon name="add-circle-outline" size={20} color={`rgba(${fg},0.5)`} />
                     <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: fgRgb }}>
                       Use a new card
                     </Text>
-                    <Ionicons name="chevron-forward" size={18} color={`rgba(${fg},0.3)`} />
+                    <Icon name="chevron-forward" size={18} color={`rgba(${fg},0.3)`} />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -950,7 +950,7 @@ export function DonationModal({
                         justifyContent: 'center',
                       }}
                     >
-                      {saveCard && <Ionicons name="checkmark" size={11} color={bgRgb} />}
+                      {saveCard && <Icon name="checkmark" size={11} color={bgRgb} />}
                     </View>
                     <Text style={{ fontSize: 13, color: `rgba(${fg},0.6)` }}>
                       Save card for future donations
@@ -975,7 +975,7 @@ export function DonationModal({
                   gap: 8,
                 }}
               >
-                <Ionicons name="shield-checkmark" size={16} color={bgRgb} />
+                <Icon name="shield-checkmark" size={16} color={bgRgb} />
                 <Text style={{ fontSize: 16, fontWeight: '700', color: bgRgb }}>
                   Donate ${displayAmount}
                 </Text>
@@ -985,7 +985,7 @@ export function DonationModal({
               <>
               {/* Security footer */}
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, gap: 5 }}>
-                <Ionicons name="lock-closed-outline" size={10} color={`rgba(${fg},0.25)`} />
+                <Icon name="lock-closed-outline" size={10} color={`rgba(${fg},0.25)`} />
                 <Text style={{ fontSize: 10, color: `rgba(${fg},0.25)`, fontWeight: '500' }}>
                   Encrypted & secured by Stripe
                 </Text>
@@ -1059,7 +1059,7 @@ export function DonationModal({
                     elevation: 6,
                   }}
                 >
-                  <Ionicons name="checkmark" size={48} color={bgRgb} />
+                  <Icon name="checkmark" size={48} color={bgRgb} />
                 </Animated.View>
               </View>
 

@@ -25,6 +25,7 @@ type BuildTimeMasjid = { displayName: string };
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
   sahla: { displayName: "Sahla Demo Masjid" },
   "mas-cnj": { displayName: "MAS Central New Jersey" },
+  "mas-brooklyn-mqb18esx": { displayName: "MAS BK" },
 };
 
 const MASJID_ID = process.env.MASJID_ID ?? "sahla";

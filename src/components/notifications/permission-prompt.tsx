@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@clerk/clerk-expo';
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, Text, View } from 'react-native';
 import Animated, {
@@ -13,6 +13,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import MasjidLogo from '@/assets/masjid-logo.svg';
+import { Icon } from '@/src/components/ui/icon';
+import type { MasjidConfig } from '@/src/config/types';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { requestAndRegisterToken } from '@/src/hooks/use-register-push-token';
 import { useSupabase } from '@/src/hooks/use-supabase';
@@ -51,47 +54,70 @@ const RISE_EASE = Easing.out(Easing.back(1.2)); // soft settle with a tiny overs
 const SWIPE_EASE = Easing.in(Easing.cubic); //     accelerate as it flicks away
 
 /** The rotating set of app notifications shown in the mockup. */
-type Notif = { icon: keyof typeof Ionicons.glyphMap; tint: string; title: string; time: string; body: string };
+type Notif = { title: string; time: string; body: string };
 const NOTIFS: Notif[] = [
   {
-    icon: 'time-outline',
-    tint: '184 146 42', // gold
     title: 'Prayer Times',
     time: 'now',
     body: 'Maghrib begins in 15 minutes — 8:42 PM',
   },
   {
-    icon: 'calendar-outline',
-    tint: '70 130 110', // teal-green
     title: 'Jummah Reminder',
     time: '9:41 AM',
     body: "This week's khutbah starts at 1:30 PM",
   },
   {
-    icon: 'book-outline',
-    tint: '184 146 42',
     title: 'Daily Reading',
     time: 'now',
     body: "It's time for your daily Qur'an reading",
   },
   {
-    icon: 'people-outline',
-    tint: '70 130 110',
     title: 'Upcoming Program',
     time: '5m ago',
     body: 'Youth Halaqa tonight at 7:00 PM',
   },
   {
-    icon: 'heart-outline',
-    tint: '198 96 72', // warm clay
     title: 'Community',
     time: '12m ago',
     body: "Join tonight's community iftar at the masjid",
   },
 ];
 
-/** One frosted iOS-style notification card with an app icon, title, time + body. */
-function NotificationCard({ notif }: { notif: Notif }) {
+/**
+ * The masjid's app icon, shown on every notification the way iOS stamps an
+ * app's icon onto each of its banners. Prefers the tenant's remote `logoUrl`
+ * (a real uploaded icon) and falls back to the bundled brand glyph.
+ */
+function AppIcon({ config }: { config: MasjidConfig }) {
+  return (
+    <View
+      style={{
+        height: 40,
+        width: 40,
+        borderRadius: 11,
+        overflow: 'hidden',
+        backgroundColor: rgb(config.colors.onboardingBackground),
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {config.logoUrl ? (
+        <Image
+          source={{ uri: config.logoUrl }}
+          style={{ height: 40, width: 40 }}
+          contentFit="cover"
+        />
+      ) : (
+        <MasjidLogo width={26} height={26} />
+      )}
+    </View>
+  );
+}
+
+/** One frosted iOS-style notification card with the masjid app icon, title, time + body. */
+function NotificationCard({ notif, config }: { notif: Notif; config: MasjidConfig }) {
   return (
     <View
       style={{
@@ -105,18 +131,7 @@ function NotificationCard({ notif }: { notif: Notif }) {
         borderColor: 'rgba(255, 255, 255, 0.16)',
       }}
     >
-      <View
-        style={{
-          height: 40,
-          width: 40,
-          borderRadius: 11,
-          backgroundColor: rgb(notif.tint),
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name={notif.icon} size={22} color="#fff" />
-      </View>
+      <AppIcon config={config} />
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{notif.title}</Text>
@@ -137,7 +152,7 @@ function NotificationCard({ notif }: { notif: Notif }) {
  * Cycles through `NOTIFS` one at a time: each rises up into place, holds, then
  * is swiped off the left edge — and the next one rises in after it. Loops.
  */
-function NotificationFeed() {
+function NotificationFeed({ config }: { config: MasjidConfig }) {
   const [current, setCurrent] = useState(0);
   const tx = useSharedValue(0);
   const ty = useSharedValue(OFFSCREEN);
@@ -174,14 +189,14 @@ function NotificationFeed() {
 
   return (
     <Animated.View style={style}>
-      <NotificationCard notif={NOTIFS[current]} />
+      <NotificationCard notif={NOTIFS[current]} config={config} />
     </Animated.View>
   );
 }
 
 /** Wallpaper + device colors for the phone mockup. */
 const PHONE_FRAME = '#0a0a0b'; //  titanium/black bezel
-const PHONE_SCREEN = '#06140e'; // dark wallpaper (deep brand green)
+const PHONE_SCREEN = '#1c1c1e'; // dark wallpaper (neutral charcoal grey)
 
 /**
  * The upper portion of an iPhone (bezel, dynamic island, status bar, lock-screen
@@ -240,9 +255,9 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
         >
           <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>9:41</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="cellular" size={15} color="#fff" />
-            <Ionicons name="wifi" size={15} color="#fff" />
-            <Ionicons name="battery-full" size={20} color="#fff" />
+            <Icon name="cellular" size={15} color="#fff" />
+            <Icon name="wifi" size={15} color="#fff" />
+            <Icon name="battery-full" size={20} color="#fff" />
           </View>
         </View>
 
@@ -363,7 +378,7 @@ export function NotificationPermissionPrompt() {
         {/* ── Top: an iPhone mockup with notifications cascading onto it ── */}
         <View style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
           <PhoneFrame>
-            <NotificationFeed />
+            <NotificationFeed config={config} />
           </PhoneFrame>
         </View>
 

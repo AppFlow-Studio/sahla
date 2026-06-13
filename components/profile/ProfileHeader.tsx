@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
+import { Icon } from '@/src/components/ui/icon';
 import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile } from '@/src/hooks/use-profile';
@@ -152,7 +152,7 @@ export default function ProfileHeader() {
             hitSlop={10}
             className="absolute -bottom-2 -right-2 rounded-full bg-accent p-1 active:opacity-80"
           >
-            <EvilIcons name="pencil" size={14} color={fgRgb} />
+            <Icon name="pencil" size={14} color={fgRgb} />
           </Pressable>
         </View>
 

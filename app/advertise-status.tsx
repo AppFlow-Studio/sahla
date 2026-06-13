@@ -1,9 +1,9 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useMyAds, useCancelAdSubscription, type MyAd } from '@/src/hooks/use-my-ads';
 
@@ -69,7 +69,7 @@ export default function AdvertiseStatusScreen() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-row items-center px-5" style={{ height: 52 }}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={fgRgb} />
+            <Icon name="chevron-back" size={22} color={fgRgb} />
           </Pressable>
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
             My Business Ads
@@ -88,7 +88,7 @@ export default function AdvertiseStatusScreen() {
             className="flex-1 items-center justify-center px-10"
             style={{ marginBottom: insets.top + 52 }}
           >
-            <MaterialCommunityIcons name="storefront-outline" size={40} color={mutedRgb} />
+            <Icon name="storefront-outline" size={40} color={mutedRgb} />
             <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
               You haven't applied for any business ads yet.
             </Text>

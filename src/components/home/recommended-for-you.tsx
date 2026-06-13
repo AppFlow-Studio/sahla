@@ -1,12 +1,11 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import { Icon } from '@/src/components/ui/icon';
+import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useRecommendation } from '@/src/hooks/use-Recommendation';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 const ICON_BY_TYPE: Record<string, IconName> = {
   class: 'school-outline',
@@ -64,7 +63,7 @@ export function RecommendedForYou() {
                     contentFit="cover"
                   />
                 ) : (
-                  <MaterialCommunityIcons
+                  <Icon
                     name={ICON_BY_TYPE[item.type ?? ''] ?? 'star-outline'}
                     size={64}
                     color={`rgba(${fg},0.85)`}

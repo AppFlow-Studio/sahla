@@ -1,5 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
+
+import { Icon } from '@/src/components/ui/icon';
 
 type OptionRowProps = {
   label: string;
@@ -28,7 +29,7 @@ export function OptionRow({ label, selected, onToggle, showDivider = true }: Opt
               : 'h-[22px] w-[22px] items-center justify-center rounded-full border border-onboarding-bg/30'
           }
         >
-          {selected && <Ionicons name="checkmark" size={14} color="#FFFBF2" />}
+          {selected && <Icon name="checkmark" size={14} color="#FFFBF2" />}
         </View>
       </View>
       {showDivider && <View className="h-px bg-onboarding-bg/10" />}

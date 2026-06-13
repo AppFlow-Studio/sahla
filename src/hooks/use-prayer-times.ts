@@ -137,11 +137,11 @@ function getHijriDate(): string | null {
 
 const PRAYER_ICONS: Record<string, string> = {
   fajr: 'weather-sunset-up',
-  sunrise: 'white-balance-sunny',
+  sunrise: 'weather-sunny',
   dhuhr: 'white-balance-sunny',
-  asr: 'weather-sunny',
+  asr: 'weather-partly-cloudy',
   maghrib: 'weather-sunset-down',
-  isha: 'moon-waning-crescent',
+  isha: 'weather-night',
 };
 
 export type SimplePrayer = {
@@ -279,34 +279,33 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
       ? items.findIndex((p) => timeToSeconds(p.athanTimeRaw) > now.totalSeconds)
       : -1;
 
-    // The first non-passed entry becomes "next" in the list.
-    // If there's an upcoming prayer (athan not yet arrived), that's "next".
-    // Otherwise the current prayer window (athan passed, but next athan not yet) is "next".
+    // Once Isha (the last prayer) has passed there's no upcoming athan today, so
+    // the next prayer is tomorrow's Fajr — count down to it and highlight Fajr.
+    const fajrIdx = items.findIndex((p) => p.rawName.toLowerCase() === 'fajr');
+    const fallbackToFajr = isToday && upcomingIdx < 0 && fajrIdx >= 0;
+
+    // Which row is "next": the upcoming prayer, tomorrow's Fajr once everything
+    // has passed, otherwise the current (athan-passed) prayer window.
     const nextIdx = upcomingIdx >= 0
       ? upcomingIdx
-      : items.findIndex((p) => p.status !== 'passed');
+      : fallbackToFajr
+        ? fajrIdx
+        : items.findIndex((p) => p.status !== 'passed');
     if (isToday && nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
 
-    // Countdown always targets the next upcoming athan (not yet arrived).
+    // Countdown targets the upcoming prayer's iqamah, or tomorrow's Fajr.
     const countdownPrayer = isToday && upcomingIdx >= 0 ? items[upcomingIdx] : null;
-    const nextTimeRaw = countdownPrayer
-      ? (countdownPrayer.iqamahTimeRaw || countdownPrayer.athanTimeRaw)
-      : null;
 
     let secondsToIqamah: number | null = null;
-    let fallbackToFajr = false;
 
-    if (nextTimeRaw) {
+    if (countdownPrayer) {
+      const nextTimeRaw = countdownPrayer.iqamahTimeRaw || countdownPrayer.athanTimeRaw;
       secondsToIqamah = timeToSeconds(nextTimeRaw) - now.totalSeconds;
-    } else if (isToday) {
-      // All prayers passed — count down to tomorrow's Fajr
-      const fajr = items.find((p) => p.rawName === 'fajr');
-      if (fajr) {
-        const fajrSec = timeToSeconds(fajr.athanTimeRaw);
-        const DAY = 86400;
-        secondsToIqamah = fajrSec + DAY - now.totalSeconds;
-        fallbackToFajr = true;
-      }
+    } else if (fallbackToFajr) {
+      const fajr = items[fajrIdx];
+      const fajrTimeRaw = fajr.iqamahTimeRaw || fajr.athanTimeRaw;
+      const DAY = 86400;
+      secondsToIqamah = timeToSeconds(fajrTimeRaw) + DAY - now.totalSeconds;
     }
 
     const countdownLabel =
@@ -317,7 +316,7 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
     const prayers: SimplePrayer[] = items.map((p) => ({
       name: p.name,
       time: p.athan,
-      icon: PRAYER_ICONS[p.rawName] ?? 'weather-sunny',
+      icon: PRAYER_ICONS[p.rawName.toLowerCase()] ?? 'weather-sunny',
       isActive: p.status === 'next',
     }));
 
@@ -330,7 +329,7 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
         }
       : fallbackToFajr
         ? {
-            name: 'Fajr',
+            name: items[fajrIdx].name,
             type: 'athan',
             timeRemaining: countdownLabel ?? '',
           }

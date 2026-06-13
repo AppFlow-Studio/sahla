@@ -21,8 +21,8 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import {
   useCreateSpeaker,
@@ -81,14 +81,14 @@ export default function SheikhsScreen() {
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={fgRgb} />
+            <Icon name="chevron-back" size={22} color={fgRgb} />
           </Pressable>
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
             Sheikhs
           </Text>
         </View>
         <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
-          <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
+          <Icon name="add-circle-outline" size={26} color={accentRgb} />
         </TouchableOpacity>
       </View>
 
@@ -98,7 +98,7 @@ export default function SheikhsScreen() {
         </View>
       ) : speakers.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="people-outline" size={48} color={mutedRgb} />
+          <Icon name="people-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
             No sheikhs added yet. Tap + to add one.
           </Text>
@@ -171,7 +171,7 @@ function SpeakerCard({
           <Image source={{ uri: speaker.speaker_img }} style={{ width: 44, height: 44 }} />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <Ionicons name="person" size={20} color={mutedRgb} />
+            <Icon name="person" size={20} color={mutedRgb} />
           </View>
         )}
       </View>
@@ -188,10 +188,10 @@ function SpeakerCard({
       </View>
 
       <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 12 }}>
-        <Ionicons name="pencil-outline" size={18} color={mutedRgb} />
+        <Icon name="pencil-outline" size={18} color={mutedRgb} />
       </TouchableOpacity>
       <TouchableOpacity onPress={onDelete} hitSlop={8}>
-        <Ionicons name="trash-outline" size={18} color="rgb(239,68,68)" />
+        <Icon name="trash-outline" size={18} color="rgb(239,68,68)" />
       </TouchableOpacity>
     </View>
   );
@@ -423,7 +423,7 @@ function SpeakerFormModal({
                 ) : photoUrl ? (
                   <Image source={{ uri: photoUrl }} style={{ width: 72, height: 72 }} />
                 ) : (
-                  <Ionicons name="camera-outline" size={24} color={mutedRgb} />
+                  <Icon name="camera-outline" size={24} color={mutedRgb} />
                 )}
               </View>
               <Text style={{ color: labelColor, fontSize: 10, textAlign: 'center', marginTop: 4 }}>

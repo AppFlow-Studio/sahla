@@ -1,7 +1,4 @@
 import { useAuth } from "@clerk/clerk-expo";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useEffect, useState } from "react";
@@ -24,6 +21,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Icon } from "@/src/components/ui/icon";
 import SpeakerInfoModal from "@/components/Discover/SpeakerInfoModal";
 import { ContentNotificationSettingsSheet } from "@/components/content/ContentNotificationSettingsSheet";
 import {
@@ -36,13 +34,15 @@ import { useSupabase } from "@/src/hooks/use-supabase";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useConfigStore } from "@/src/stores/config-store";
 
-const BUSH = "#0A261E";
-const TRAY_BG = "#EFEDE6";
-const CARD_BG = "#F5F3EE";
-const CHIP_BG = "#F3EBD2";
-const CHIP_TEXT = "#8B6F1A";
-const MUTED = "rgba(10,38,30,0.55)";
 const SHEET_RADIUS = 40;
+
+// Colors come from the active masjid theme (`useMasjidConfig().colors`), which
+// stores each value as a `"R G B"` triplet. These helpers turn a triplet into a
+// usable CSS color so the screen re-themes per tenant instead of shipping a
+// fixed green/gold palette.
+const rgb = (triplet: string) => `rgb(${triplet.replace(/ /g, ",")})`;
+const rgba = (triplet: string, alpha: number) =>
+  `rgba(${triplet.replace(/ /g, ",")},${alpha})`;
 
 const platformTitleFont = Platform.select({
   ios: "SF Pro Display",
@@ -66,7 +66,7 @@ type Detail = {
   speakers: string[] | null;
 };
 
-function SkeletonPulse({ width, height, borderRadius = 8, style }: { width: number | string; height: number; borderRadius?: number; style?: any }) {
+function SkeletonPulse({ width, height, borderRadius = 8, style, color }: { width: number | string; height: number; borderRadius?: number; style?: any; color: string }) {
   const opacity = useSharedValue(0.35);
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.8, { duration: 900 }), -1, true);
@@ -74,33 +74,33 @@ function SkeletonPulse({ width, height, borderRadius = 8, style }: { width: numb
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   return (
     <Animated.View
-      style={[{ width, height, borderRadius, backgroundColor: "rgba(10,38,30,0.1)" }, animStyle, style]}
+      style={[{ width, height, borderRadius, backgroundColor: color }, animStyle, style]}
     />
   );
 }
 
-function ContentSkeleton() {
+function ContentSkeleton({ cardBg, pulseColor }: { cardBg: string; pulseColor: string }) {
   const screenWidth = Dimensions.get("window").width;
   return (
     <View style={{ flex: 1 }}>
-      {/* Image placeholder — square to match the 1:1 flyer */}
-      <SkeletonPulse width="100%" height={screenWidth} borderRadius={0} style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }} />
+      {/* Image placeholder — 16:9 to match the banner cover crop */}
+      <SkeletonPulse color={pulseColor} width="100%" height={screenWidth * 9 / 16} borderRadius={0} style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }} />
 
       <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
         {/* Title */}
-        <SkeletonPulse width="75%" height={28} borderRadius={6} style={{ marginBottom: 10 }} />
-        <SkeletonPulse width="50%" height={28} borderRadius={6} style={{ marginBottom: 20 }} />
+        <SkeletonPulse color={pulseColor} width="75%" height={28} borderRadius={6} style={{ marginBottom: 10 }} />
+        <SkeletonPulse color={pulseColor} width="50%" height={28} borderRadius={6} style={{ marginBottom: 20 }} />
 
         {/* Speaker chip */}
-        <SkeletonPulse width={140} height={36} borderRadius={18} style={{ marginBottom: 24 }} />
+        <SkeletonPulse color={pulseColor} width={140} height={36} borderRadius={18} style={{ marginBottom: 24 }} />
 
         {/* Description card */}
-        <View style={{ backgroundColor: CARD_BG, borderRadius: 16, padding: 16 }}>
-          <SkeletonPulse width={60} height={10} borderRadius={4} style={{ marginBottom: 14 }} />
-          <SkeletonPulse width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse width="60%" height={12} borderRadius={4} />
+        <View style={{ backgroundColor: cardBg, borderRadius: 16, padding: 16 }}>
+          <SkeletonPulse color={pulseColor} width={60} height={10} borderRadius={4} style={{ marginBottom: 14 }} />
+          <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse color={pulseColor} width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse color={pulseColor} width="60%" height={12} borderRadius={4} />
         </View>
       </View>
     </View>
@@ -144,8 +144,18 @@ export default function ContentDetailScreen() {
   const { userId } = useAuth();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const { colors } = useMasjidConfig();
-  const toastBg = `rgb(${colors.foreground.replace(/ /g, ",")})`;
-  const toastText = `rgb(${colors.background.replace(/ /g, ",")})`;
+  const toastBg = rgb(colors.foreground);
+  const toastText = rgb(colors.background);
+
+  // Themed palette (was a hardcoded green/gold set). Each maps to a theme token
+  // so the screen follows the active masjid's branding.
+  const BUSH = rgb(colors.foreground); //     primary text, icons, "Save to Library"
+  const SURFACE = rgb(colors.muted); //       image placeholder + card/button backgrounds
+  const CARD_BG = SURFACE;
+  const TRAY_BG = SURFACE;
+  const CHIP_BG = rgba(colors.accent, 0.16); // pale accent fill behind the speaker chip
+  const CHIP_TEXT = rgb(colors.accent); //     accent-colored speaker name
+  const MUTED = rgba(colors.foreground, 0.55); // muted/secondary text
   const [detail, setDetail] = useState<Detail | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
@@ -377,7 +387,7 @@ export default function ContentDetailScreen() {
         ]}
       >
         {status === "loading" ? (
-          <ContentSkeleton />
+          <ContentSkeleton cardBg={CARD_BG} pulseColor={rgba(colors.foreground, 0.1)} />
         ) : status === "error" || !detail ? (
           <View className="flex-1 items-center justify-center px-6">
             <Text style={{ color: BUSH }}>{error ?? "Not found"}</Text>
@@ -393,7 +403,7 @@ export default function ContentDetailScreen() {
                 <View
                   style={{
                     width: "100%",
-                    aspectRatio: 1,
+                    aspectRatio: 16 / 9,
                     backgroundColor: TRAY_BG,
                     borderTopLeftRadius: SHEET_RADIUS,
                     borderTopRightRadius: SHEET_RADIUS,
@@ -422,7 +432,7 @@ export default function ContentDetailScreen() {
                     onPress={dismiss}
                     accessibilityLabel="Close"
                   >
-                    <AntDesign name="close" size={16} color="#1A1A1A" />
+                    <Icon name="close" size={16} color="#1A1A1A" />
                   </CircleButton>
                   <View className="flex-row items-center" style={{ gap: 8 }}>
                     {isNotifOptedIn && !isPast ? (
@@ -459,7 +469,7 @@ export default function ContentDetailScreen() {
                             isNotifOptedIn ? "Turn off reminders" : "Turn on reminders"
                           }
                         >
-                          <Ionicons
+                          <Icon
                             name={isNotifOptedIn ? "notifications" : "notifications-outline"}
                             size={16}
                             color="#1A1A1A"
@@ -509,7 +519,7 @@ export default function ContentDetailScreen() {
                     className="mt-4 flex-row items-center self-start rounded-full px-4 py-2"
                     style={{ backgroundColor: CHIP_BG }}
                   >
-                    <Feather name="user" size={14} color={CHIP_TEXT} />
+                    <Icon name="user" size={14} color={CHIP_TEXT} />
                     <Text
                       style={{
                         marginLeft: 8,
@@ -521,7 +531,7 @@ export default function ContentDetailScreen() {
                     >
                       {firstSpeaker}
                     </Text>
-                    <AntDesign
+                    <Icon
                       name="right"
                       size={12}
                       color={CHIP_TEXT}
@@ -583,7 +593,7 @@ export default function ContentDetailScreen() {
                 paddingBottom: Math.max(insets.bottom - 8, 12),
                 backgroundColor: "#FFFFFF",
                 borderTopWidth: 1,
-                borderTopColor: "rgba(10,38,30,0.08)",
+                borderTopColor: rgba(colors.foreground, 0.08),
               }}
             >
               <Pressable
@@ -595,7 +605,7 @@ export default function ContentDetailScreen() {
                 accessibilityState={{ selected: isSaved, disabled: saveDisabled }}
                 accessibilityLabel={isSaved ? "Remove from Library" : "Save to Library"}
               >
-                <Ionicons
+                <Icon
                   name={isSaved ? "heart" : "heart-outline"}
                   size={18}
                   color={BUSH}
@@ -644,7 +654,7 @@ export default function ContentDetailScreen() {
             className="flex-row items-center active:opacity-80"
             style={{ paddingVertical: 14, paddingHorizontal: 16 }}
           >
-            <Ionicons name="checkmark-circle" size={20} color={toastText} />
+            <Icon name="checkmark-circle" size={20} color={toastText} />
             <View style={{ flex: 1, marginLeft: 10, marginRight: 8 }}>
               <Text
                 style={{
@@ -668,7 +678,7 @@ export default function ContentDetailScreen() {
                 {reminderMessage}
               </Text>
             </View>
-            <Ionicons
+            <Icon
               name="chevron-forward"
               size={16}
               color={toastText}
@@ -705,7 +715,7 @@ export default function ContentDetailScreen() {
             className="flex-row items-center active:opacity-80"
             style={{ paddingVertical: 14, paddingHorizontal: 16 }}
           >
-            <Ionicons name="heart" size={20} color={toastText} />
+            <Icon name="heart" size={20} color={toastText} fill={toastText} />
             <View style={{ flex: 1, marginLeft: 10, marginRight: 8 }}>
               <Text
                 style={{
@@ -729,7 +739,7 @@ export default function ContentDetailScreen() {
                 {detail?.name ?? "This"} is in your library
               </Text>
             </View>
-            <Ionicons
+            <Icon
               name="chevron-forward"
               size={16}
               color={toastText}

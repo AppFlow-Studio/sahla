@@ -1,6 +1,6 @@
 import { useSignIn } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Icon } from '@/src/components/ui/icon';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -116,7 +116,7 @@ export default function ForgotPasswordScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color={surfaceAlpha60} />
+            <Icon name="arrow-back" size={20} color={surfaceAlpha60} />
           </Pressable>
         </View>
 

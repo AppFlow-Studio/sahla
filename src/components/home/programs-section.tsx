@@ -1,13 +1,12 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import { Icon } from '@/src/components/ui/icon';
+import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useContentItems, type ContentItem } from '@/src/hooks/use-content-items';
 import { describeRecurrence, ruleFromRow } from '@/src/lib/recurrence';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 const SHORT_MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -96,7 +95,7 @@ export function ProgramsSection() {
                   contentFit="cover"
                 />
               ) : (
-                <MaterialCommunityIcons
+                <Icon
                   name={iconFor(program)}
                   size={24}
                   color={fgRgb}
@@ -114,7 +113,7 @@ export function ProgramsSection() {
                 {categoryFor(program)}
               </Text>
             </View>
-            <MaterialCommunityIcons
+            <Icon
               name="chevron-right"
               size={16}
               color={`rgba(${colors.foreground.replace(/ /g, ',')},0.4)`}

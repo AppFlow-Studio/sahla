@@ -21,9 +21,9 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
@@ -223,7 +223,7 @@ export default function JummahAdminScreen() {
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={fgRgb} />
+            <Icon name="chevron-back" size={22} color={fgRgb} />
           </Pressable>
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
             Jummah Schedule
@@ -236,7 +236,7 @@ export default function JummahAdminScreen() {
           disabled={atCapacity}
           style={{ opacity: atCapacity ? 0.35 : 1 }}
         >
-          <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
+          <Icon name="add-circle-outline" size={26} color={accentRgb} />
         </TouchableOpacity>
       </View>
 
@@ -246,7 +246,7 @@ export default function JummahAdminScreen() {
         </View>
       ) : slots.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="calendar-outline" size={48} color={mutedRgb} />
+          <Icon name="calendar-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
             No Jummah slots yet. Tap + to add one.
           </Text>
@@ -333,7 +333,7 @@ function JummahCard({
         }}
       >
         {slot.is_school ? (
-          <Ionicons name="school-outline" size={18} color={accentRgb} />
+          <Icon name="school-outline" size={18} color={accentRgb} />
         ) : (
           <Text style={{ color: accentRgb, fontSize: 13, fontWeight: '700' }}>
             {badge}
@@ -362,10 +362,10 @@ function JummahCard({
       ) : null}
 
       <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 16 }}>
-        <Ionicons name="pencil-outline" size={16} color={mutedRgb} />
+        <Icon name="pencil-outline" size={16} color={mutedRgb} />
       </TouchableOpacity>
       <TouchableOpacity onPress={onDelete} hitSlop={8}>
-        <Ionicons name="trash-outline" size={16} color="rgb(239,68,68)" />
+        <Icon name="trash-outline" size={16} color="rgb(239,68,68)" />
       </TouchableOpacity>
     </Pressable>
   );
@@ -672,11 +672,11 @@ function JummahFormModal({
                   marginRight: 10,
                 }}
               >
-                <Ionicons name="person-outline" size={14} color={labelColor} />
+                <Icon name="person-outline" size={14} color={labelColor} />
               </View>
               <Text style={{ color: fgRgb, fontSize: 13, flex: 1 }}>Unassigned</Text>
               {selectedSpeaker === null && (
-                <Ionicons name="checkmark-circle" size={20} color={accentRgb} />
+                <Icon name="checkmark-circle" size={20} color={accentRgb} />
               )}
             </TouchableOpacity>
 
@@ -707,7 +707,7 @@ function JummahFormModal({
                     <Image source={{ uri: s.speaker_img }} style={{ width: 32, height: 32 }} />
                   ) : (
                     <View className="flex-1 items-center justify-center">
-                      <Ionicons name="person" size={14} color={labelColor} />
+                      <Icon name="person" size={14} color={labelColor} />
                     </View>
                   )}
                 </View>
@@ -715,7 +715,7 @@ function JummahFormModal({
                   {s.speaker_name ?? 'Unnamed'}
                 </Text>
                 {selectedSpeaker === s.speaker_id && (
-                  <Ionicons name="checkmark-circle" size={20} color={accentRgb} />
+                  <Icon name="checkmark-circle" size={20} color={accentRgb} />
                 )}
               </TouchableOpacity>
             ))}

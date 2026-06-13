@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+import { findConnectedCustomerId } from "../_shared/stripe-customer.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -37,19 +38,6 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("stripe_id")
-      .eq("id", user_id)
-      .single();
-
-    if (!profile?.stripe_id) {
-      return new Response(
-        JSON.stringify({ methods: [] }),
-        { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
-      );
-    }
-
     // Look up mosque's connected Stripe account
     const { data: mosque, error: mosqueError } = await supabase
       .from("mosques")
@@ -64,6 +52,12 @@ serve(async (req: Request) => {
       );
     }
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("profile_email")
+      .eq("id", user_id)
+      .single();
+
     const stripe = new Stripe(stripeSecret, {
       apiVersion: "2024-12-18.acacia",
       httpClient: Stripe.createFetchHttpClient(),
@@ -71,8 +65,26 @@ serve(async (req: Request) => {
 
     const stripeAccountOpts = { stripeAccount: mosque.stripe_account_id };
 
+    // Saved cards live on the mosque's connected account — resolve the customer
+    // that exists there (not the global profiles.stripe_id, which may be on a
+    // different mosque's account).
+    const customerId = await findConnectedCustomerId({
+      stripe,
+      supabase,
+      connectedAccountId: mosque.stripe_account_id,
+      userId: user_id,
+      email: profile?.profile_email,
+    });
+
+    if (!customerId) {
+      return new Response(
+        JSON.stringify({ methods: [] }),
+        { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
     const paymentMethods = await stripe.paymentMethods.list(
-      { customer: profile.stripe_id, type: "card" },
+      { customer: customerId, type: "card" },
       stripeAccountOpts,
     );
 

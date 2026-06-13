@@ -1,14 +1,12 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 const BENEFITS = [
   {
@@ -74,7 +72,7 @@ export default function AdvertiseScreen() {
             hitSlop={12}
             className="ml-5 mt-2 h-8 w-8 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={22} color={fgRgb} />
+            <Icon name="arrow-back" size={22} color={fgRgb} />
           </Pressable>
 
           {/* Hero */}
@@ -167,7 +165,7 @@ export default function AdvertiseScreen() {
             {BENEFITS.map((benefit) => (
               <View key={benefit.title} className="flex-row items-center gap-4">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-foreground/5">
-                  <MaterialCommunityIcons
+                  <Icon
                     name={benefit.icon}
                     size={20}
                     color={fgRgb}
@@ -230,7 +228,7 @@ export default function AdvertiseScreen() {
 
               {/* Flyer placeholder */}
               <View className="h-[160px] items-center justify-center bg-foreground/5">
-                <MaterialCommunityIcons
+                <Icon
                   name="image-outline"
                   size={36}
                   color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
@@ -249,7 +247,7 @@ export default function AdvertiseScreen() {
                 ].map((action) => (
                   <View key={action.label} className="items-center gap-1.5">
                     <View className="h-10 w-10 items-center justify-center rounded-full bg-foreground/5">
-                      <MaterialCommunityIcons
+                      <Icon
                         name={action.icon as IconName}
                         size={18}
                         color={fgRgb}
@@ -264,7 +262,7 @@ export default function AdvertiseScreen() {
 
               {/* Address row */}
               <Pressable className="flex-row items-center border-t border-foreground/5 px-4 py-3.5">
-                <MaterialCommunityIcons
+                <Icon
                   name="map-marker-outline"
                   size={16}
                   color={fgRgb}
@@ -277,7 +275,7 @@ export default function AdvertiseScreen() {
                     Open in Maps
                   </Text>
                 </View>
-                <MaterialCommunityIcons
+                <Icon
                   name="chevron-right"
                   size={18}
                   color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`}

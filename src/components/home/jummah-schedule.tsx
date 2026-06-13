@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { Icon } from '@/src/components/ui/icon';
+import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useJummahSchedule, type JummahSlot } from '@/src/hooks/use-jummah-schedule';
 import { JummahDetailSheet } from './jummah-detail-sheet';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export function JummahScheduleCard() {
   const { colors } = useMasjidConfig();
@@ -72,7 +71,7 @@ export function JummahScheduleCard() {
                 marginRight: 12,
               }}
             >
-              <MaterialCommunityIcons
+              <Icon
                 name={slot.icon as IconName}
                 size={18}
                 color={accentRgb}

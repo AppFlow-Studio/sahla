@@ -1,7 +1,7 @@
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-import { Image } from "expo-image";
 import { Platform, Pressable, Text, View } from "react-native";
+
+import { Icon } from "@/src/components/ui/icon";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 type Props = {
     onPress: () => void;
@@ -9,21 +9,16 @@ type Props = {
 
 export default function PersonalizedCard({ onPress }: Props) {
   const { colors } = useMasjidConfig();
-  const fgRgb40 = `rgba(${colors.foreground.replace(/ /g, ",")}, 0.4)`;
+  const fg = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const fg40 = `rgba(${colors.foreground.replace(/ /g, ",")},0.4)`;
   return (
     <Pressable className="w-full flex-row justify-between items-center bg-accent/20 rounded-[30px] px-5"
     style={{ minHeight: 53, paddingVertical: 12 }}
     onPress={onPress}
     >
         <View className="flex-row items-center gap-1">
-            <Image
-            source = {require("@/assets/images/Vector-2.png")}
-            style = {{
-                width: 21,
-                height: 21
-            }}
-            contentFit="cover"
-            />
+            {/* Themed vector (was a baked-in gold PNG) so it follows the masjid palette. */}
+            <Icon name="white-balance-sunny" size={21} color={fg} />
             <View className="flex-col ml-2">
                 <Text
                 className="text-foreground"
@@ -52,7 +47,7 @@ export default function PersonalizedCard({ onPress }: Props) {
             </View>
         </View>
 
-        <IconSymbol name="chevron.right" size={8} color={fgRgb40} />
+        <Icon name="chevron-right" size={14} color={fg40} />
     </Pressable>
   )
 }
