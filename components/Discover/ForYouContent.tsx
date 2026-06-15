@@ -1,5 +1,5 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/src/components/ui/icon";
 import { Image } from "expo-image";
 import { Platform, Pressable, Text, View } from "react-native";
 
@@ -75,7 +75,7 @@ function CustomizedPill({
       className="flex-row items-center rounded-full px-4 py-3"
       style={{ backgroundColor: pillBg }}
     >
-      <Feather name="sun" size={18} color={accentRgb} />
+      <Icon name="fingerprint" size={18} color={accentRgb} />
       <View className="ml-3 flex-1">
         <Text
           style={{

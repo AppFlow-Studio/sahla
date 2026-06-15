@@ -70,16 +70,18 @@ function ActionButton({
   icon,
   label,
   color = '#ffffff',
+  fill = 'none',
   onPress,
 }: {
   icon: IconName;
   label?: string;
   color?: string;
+  fill?: string;
   onPress?: () => void;
 }) {
   return (
     <Pressable onPress={onPress} className="items-center active:opacity-70">
-      <Icon name={icon} size={28} color={color} />
+      <Icon name={icon} size={28} color={color} fill={fill} />
       {label ? (
         <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
           {label}
@@ -895,6 +897,7 @@ export function ReelItem({
           <ActionButton
             icon={saved ? 'bookmark' : 'bookmark-outline'}
             color={saved ? '#B8922A' : '#ffffff'}
+            fill={saved ? '#B8922A' : 'none'}
             onPress={() => toggleSave.mutate(saved)}
           />
           <ActionButton icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />

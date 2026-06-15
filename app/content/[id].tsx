@@ -473,6 +473,7 @@ export default function ContentDetailScreen() {
                             name={isNotifOptedIn ? "notifications" : "notifications-outline"}
                             size={16}
                             color="#1A1A1A"
+                            fill={isNotifOptedIn ? "#1A1A1A" : "none"}
                           />
                         </CircleButton>
                         {hasCustomTimings && isNotifOptedIn ? (
@@ -609,6 +610,7 @@ export default function ContentDetailScreen() {
                   name={isSaved ? "heart" : "heart-outline"}
                   size={18}
                   color={BUSH}
+                  fill={isSaved ? BUSH : "none"}
                 />
                 <Text
                   style={{

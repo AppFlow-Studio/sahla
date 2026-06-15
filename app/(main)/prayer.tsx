@@ -730,19 +730,18 @@ function SupportMasjidCard({ c }: { c: Palette }) {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <GlassView
-          glassEffectStyle="regular"
+        <View
           style={{
             width: 40,
             height: 40,
             borderRadius: 20,
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: 'hidden',
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
           <Text style={{ color: c.gold, fontSize: 20, lineHeight: 22 }}>♥</Text>
-        </GlassView>
+        </View>
         <View>
           <Text style={{ color: c.text, fontSize: 14, fontWeight: '700' }}>
             Support Your Masjid
@@ -752,19 +751,18 @@ function SupportMasjidCard({ c }: { c: Palette }) {
       </View>
 
       <Pressable onPress={open}>
-        <GlassView
-          glassEffectStyle="regular"
+        <View
           style={{
             borderRadius: 999,
             paddingHorizontal: 16,
             paddingVertical: 8,
-            overflow: 'hidden',
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
           <Text style={{ color: c.gold, fontSize: 11, fontWeight: '800' }}>
             DONATE →
           </Text>
-        </GlassView>
+        </View>
       </Pressable>
     </View>
   );
@@ -874,6 +872,7 @@ function PrayerRowItem({
           name={bellActive ? 'bell' : 'bell-outline'}
           size={16}
           color={bellActive ? c.gold : c.muted}
+          fill={bellActive ? c.gold : 'none'}
         />
       </Pressable>
     </View>
