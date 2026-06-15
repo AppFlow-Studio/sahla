@@ -31,6 +31,7 @@ import {
   Delete,
   Ellipsis,
   Eye,
+  Fingerprint,
   Flag,
   Goal,
   FileText,
@@ -224,6 +225,7 @@ const ICONS: Record<string, ComponentType<LucideProps>> = {
   clapperboard: Clapperboard,
   'graduation-cap': GraduationCap,
   'calendar-heart': CalendarHeart,
+  fingerprint: Fingerprint,
 };
 
 export type IconName = keyof typeof ICONS;

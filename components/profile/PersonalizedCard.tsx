@@ -11,6 +11,7 @@ export default function PersonalizedCard({ onPress }: Props) {
   const { colors } = useMasjidConfig();
   const fg = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const fg40 = `rgba(${colors.foreground.replace(/ /g, ",")},0.4)`;
+  const accent = `rgb(${colors.accent.replace(/ /g, ",")})`;
   return (
     <Pressable className="w-full flex-row justify-between items-center bg-accent/20 rounded-[30px] px-5"
     style={{ minHeight: 53, paddingVertical: 12 }}
@@ -18,7 +19,7 @@ export default function PersonalizedCard({ onPress }: Props) {
     >
         <View className="flex-row items-center gap-1">
             {/* Themed vector (was a baked-in gold PNG) so it follows the masjid palette. */}
-            <Icon name="white-balance-sunny" size={21} color={fg} />
+            <Icon name="fingerprint" size={21} color={accent} />
             <View className="flex-col ml-2">
                 <Text
                 className="text-foreground"
