@@ -313,37 +313,30 @@ export function NotificationPermissionPrompt() {
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // TODO(testing): always show on every launch. Restore the gated block below
-  // before shipping so it only shows once when permission is undetermined.
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    setVisible(true);
-  }, []);
+    if (storage.getBoolean(SHOWN_KEY)) return;
 
-  // useEffect(() => {
-  //   if (Platform.OS === 'web') return;
-  //   if (storage.getBoolean(SHOWN_KEY)) return;
-  //
-  //   const Notifications = getNotificationsModule();
-  //   if (!Notifications) return;
-  //
-  //   let active = true;
-  //   void (async () => {
-  //     try {
-  //       const { status } = await Notifications.getPermissionsAsync();
-  //       if (!active) return;
-  //       // Only nudge when the OS prompt hasn't been answered yet. If the user
-  //       // already granted/denied at the OS level there's nothing to ask.
-  //       if (status === 'undetermined') setVisible(true);
-  //       else storage.set(SHOWN_KEY, true);
-  //     } catch {
-  //       // Native module not ready (pre-EAS build) — skip silently.
-  //     }
-  //   })();
-  //   return () => {
-  //     active = false;
-  //   };
-  // }, []);
+    const Notifications = getNotificationsModule();
+    if (!Notifications) return;
+
+    let active = true;
+    void (async () => {
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (!active) return;
+        // Only nudge when the OS prompt hasn't been answered yet. If the user
+        // already granted/denied at the OS level there's nothing to ask.
+        if (status === 'undetermined') setVisible(true);
+        else storage.set(SHOWN_KEY, true);
+      } catch {
+        // Native module not ready (pre-EAS build) — skip silently.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const dismiss = useCallback(() => {
     storage.set(SHOWN_KEY, true);
