@@ -46,24 +46,19 @@ import { useContentItems } from "@/src/hooks/use-content-items";
 import { describeRecurrence, ruleFromRow } from "@/src/lib/recurrence";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useRecommendation } from "@/src/hooks/use-Recommendation";
+import { useProgramCategories } from "@/src/hooks/use-program-categories";
+import {
+  DEFAULT_CATEGORIES,
+  defaultImageForTitle,
+} from "@/src/lib/program-category-defaults";
 
-const PROGRAMS: ProgramItem[] = [
-  {
-    id: "p1",
-    title: "Kids",
-    image: require("@/assets/images/kids_discover_design.png"),
-  },
-  {
-    id: "p2",
-    title: "Youth",
-    image: require("@/assets/images/youth_discover_design.png"),
-  },
-  {
-    id: "p3",
-    title: "Adults",
-    image: require("@/assets/images/adult_discover_design.png"),
-  },
-];
+// Fallback cards shown when a mosque hasn't configured custom categories.
+const DEFAULT_PROGRAMS: ProgramItem[] = DEFAULT_CATEGORIES.map((c, i) => ({
+  id: `default-${i}`,
+  title: c.title,
+  image: c.image,
+  audience: c.audience_filter,
+}));
 
 function formatTime12(time: string | null): string {
   if (!time) return "";
@@ -190,6 +185,22 @@ export default function DiscoverScreen() {
     error: recError,
     refetch: refetchRecs,
   } = useRecommendation();
+
+  // Admin-managed Discover "Programs" cards. Falls back to the bundled
+  // Kids/Youth/Adults defaults when a mosque hasn't configured any.
+  const { categories: programCategories } = useProgramCategories();
+  const programCards = useMemo<ProgramItem[]>(() => {
+    if (programCategories.length === 0) return DEFAULT_PROGRAMS;
+    return programCategories.map((c) => ({
+      id: c.id,
+      title: c.title,
+      image: c.image_url
+        ? { uri: c.image_url }
+        : defaultImageForTitle(c.title),
+      audience: c.audience_filter,
+      bgColor: c.bg_color,
+    }));
+  }, [programCategories]);
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(() => {
@@ -535,10 +546,10 @@ export default function DiscoverScreen() {
 
                 <View className="mt-4">
                   <ProgramsSection
-                    items={PROGRAMS}
+                    items={programCards}
                     onPressItem={(item) =>
                       goToProgramsWithFilter(
-                        item.title as AudienceFilter,
+                        (item.audience ?? item.title) as AudienceFilter,
                       )
                     }
                     onPressSeeAll={() => goToProgramsWithFilter("All")}
