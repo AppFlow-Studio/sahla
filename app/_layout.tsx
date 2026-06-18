@@ -141,6 +141,13 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
+          name="quran"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
           name="reminders-settings"
           options={{
             headerShown: false,

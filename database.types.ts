@@ -3351,6 +3351,96 @@ export type Database = {
           },
         ]
       }
+      program_categories: {
+        Row: {
+          audience_filter: string
+          bg_color: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          mosque_id: string
+          sort_order: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          audience_filter?: string
+          bg_color?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          mosque_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          audience_filter?: string
+          bg_color?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          mosque_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_categories_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_category_content: {
+        Row: {
+          category_id: string
+          content_id: string
+          created_at: string
+          mosque_id: string
+          sort_order: number
+        }
+        Insert: {
+          category_id: string
+          content_id: string
+          created_at?: string
+          mosque_id: string
+          sort_order?: number
+        }
+        Update: {
+          category_id?: string
+          content_id?: string
+          created_at?: string
+          mosque_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_category_content_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "program_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_category_content_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["content_id"]
+          },
+          {
+            foreignKeyName: "program_category_content_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       speaker_data: {
         Row: {
           created_at: string

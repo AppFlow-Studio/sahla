@@ -11,6 +11,7 @@ const QUICK_ACTIONS = [
   { id: 'volunteer', icon: 'account-group', label: 'VOLUNTEER' },
   { id: 'advertise', icon: 'bullhorn', label: 'ADVERTISE' },
   { id: 'prayers', icon: 'clock', label: 'PRAYERS' },
+  { id: 'quran', icon: 'book-open-variant', label: 'QURAN' },
 ] as const;
 
 export function QuickActions() {
@@ -24,22 +25,23 @@ export function QuickActions() {
     if (id === 'donate') openDonation();
     else if (id === 'prayers') router.push('/prayer');
     else if (id === 'advertise') router.push('/advertise');
+    else if (id === 'quran') router.push('/quran');
   };
 
   return (
-    <View className="flex-row justify-center gap-4">
+    <View className="flex-row justify-between">
       {QUICK_ACTIONS.map((action) => (
         <TouchableOpacity
           key={action.id}
-          className="items-center"
+          className="flex-1 items-center"
           activeOpacity={0.7}
           onPress={() => handlePress(action.id)}
         >
           <View
             className="mb-2 items-center justify-center rounded-[20px] border border-foreground/10 bg-muted"
             style={{
-              height: 63,
-              width: 66,
+              height: 60,
+              width: 60,
               shadowColor: fgRgb,
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.02,

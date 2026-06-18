@@ -38,11 +38,15 @@ export function HomeHeader() {
         {/* Render the pattern at a FIXED size (the approved zoom) so the box
             height above only controls where the decoration stops — shrinking
             the box clips it instead of zooming it. 341x400 = the tall asset
-            scaled to the zoom the design engineer signed off on. */}
+            scaled to the zoom the design engineer signed off on.
+            The asset fades out at both its top and bottom edges; the negative
+            top offset slides its dense middle up to the top of the visible box
+            so the pattern stays strong at the top-right and thins toward the
+            bottom (the faded edge lands at y=220, flush with the box bottom). */}
         <Image
           source={patternSource}
           tintColor={accentRgb}
-          style={{ position: 'absolute', top: 0, right: 0, width: 341, height: 400, opacity: 0.35, transform: [{ rotate: '180deg' }] }}
+          style={{ position: 'absolute', top: -180, right: 0, width: 341, height: 400, opacity: 0.35, transform: [{ rotate: '180deg' }] }}
           contentFit="cover"
         />
         {/* Soften the pattern's left edge so it dissolves into the

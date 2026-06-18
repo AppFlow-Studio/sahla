@@ -9,6 +9,10 @@ export type ProgramItem = {
   id: string;
   title: string;
   image?: ImageSourcePropType;
+  /** Which Discover "Programs" filter tapping this card opens into. */
+  audience?: "All" | "Kids" | "Youth" | "Adults";
+  /** Solid background shown behind/instead of the cover image. */
+  bgColor?: string | null;
 };
 
 type Props = {
@@ -41,7 +45,7 @@ function ProgramCard({
       <View
         className="h-[217px] w-full overflow-hidden rounded-[16px] border"
         style={{
-          backgroundColor: cardRgb,
+          backgroundColor: item.bgColor ?? cardRgb,
           borderColor,
         }}
       >
