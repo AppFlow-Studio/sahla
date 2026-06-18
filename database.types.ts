@@ -3395,6 +3395,52 @@ export type Database = {
           },
         ]
       }
+      program_category_content: {
+        Row: {
+          category_id: string
+          content_id: string
+          created_at: string
+          mosque_id: string
+          sort_order: number
+        }
+        Insert: {
+          category_id: string
+          content_id: string
+          created_at?: string
+          mosque_id: string
+          sort_order?: number
+        }
+        Update: {
+          category_id?: string
+          content_id?: string
+          created_at?: string
+          mosque_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_category_content_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "program_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_category_content_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["content_id"]
+          },
+          {
+            foreignKeyName: "program_category_content_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       speaker_data: {
         Row: {
           created_at: string

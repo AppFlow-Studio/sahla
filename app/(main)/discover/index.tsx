@@ -21,8 +21,8 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AudienceBrowse, {
-  type AudienceFilter,
   type AudienceItem,
+  type BrowseFilter,
 } from "@/components/Discover/AudienceBrowse";
 import DiscoverHeader, {
   type DiscoverTab,
@@ -47,6 +47,7 @@ import { describeRecurrence, ruleFromRow } from "@/src/lib/recurrence";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useRecommendation } from "@/src/hooks/use-Recommendation";
 import { useProgramCategories } from "@/src/hooks/use-program-categories";
+import { useProgramCategoryContent } from "@/src/hooks/use-program-category-content";
 import {
   DEFAULT_CATEGORIES,
   defaultImageForTitle,
@@ -123,7 +124,7 @@ export default function DiscoverScreen() {
   const [direction, setDirection] = useState<"right" | "left">("right");
   const [nextTab, setNextTab] = useState<DiscoverTab | null>(null);
   const [programsInitialFilter, setProgramsInitialFilter] =
-    useState<AudienceFilter>("All");
+    useState<string>("All");
   const [hasMounted, setHasMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [fontsLoaded] = useFonts({ PlayfairDisplay_500Medium });
@@ -172,8 +173,8 @@ export default function DiscoverScreen() {
   );
 
   const goToProgramsWithFilter = useCallback(
-    (audience: AudienceFilter) => {
-      setProgramsInitialFilter(audience);
+    (filterKey: string) => {
+      setProgramsInitialFilter(filterKey);
       switchTab("Programs");
     },
     [switchTab],
@@ -189,6 +190,7 @@ export default function DiscoverScreen() {
   // Admin-managed Discover "Programs" cards. Falls back to the bundled
   // Kids/Youth/Adults defaults when a mosque hasn't configured any.
   const { categories: programCategories } = useProgramCategories();
+  const { byContent: programCategoryByContent } = useProgramCategoryContent();
   const programCards = useMemo<ProgramItem[]>(() => {
     if (programCategories.length === 0) return DEFAULT_PROGRAMS;
     return programCategories.map((c) => ({
@@ -201,6 +203,24 @@ export default function DiscoverScreen() {
       bgColor: c.bg_color,
     }));
   }, [programCategories]);
+
+  // When a mosque has configured program cards, the Programs tab pills become
+  // those cards (filtering by the program↔card assignments) instead of the
+  // built-in Kids/Youth/Adults audiences. With no cards, `undefined` lets
+  // AudienceBrowse fall back to its default audience filters.
+  const programFilters = useMemo<BrowseFilter[] | undefined>(() => {
+    if (programCategories.length === 0) return undefined;
+    return [
+      { key: "All", label: "All" },
+      ...programCategories.map((c) => ({ key: c.id, label: c.title })),
+    ];
+  }, [programCategories]);
+
+  const matchProgramFilter = useCallback(
+    (item: AudienceItem, key: string) =>
+      programCategoryByContent.get(item.id)?.has(key) ?? false,
+    [programCategoryByContent],
+  );
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(() => {
@@ -513,9 +533,9 @@ export default function DiscoverScreen() {
                 items={programBrowseItems}
                 onPressItem={openContent}
                 initialFilter={programsInitialFilter}
-                onPressSeeAll={(audience) =>
-                  setProgramsInitialFilter(audience)
-                }
+                filters={programFilters}
+                matchFilter={programFilters ? matchProgramFilter : undefined}
+                onPressSeeAll={(key) => setProgramsInitialFilter(key)}
                 allTabFooter={<DonateCard />}
               />
             ) : (
@@ -549,7 +569,11 @@ export default function DiscoverScreen() {
                     items={programCards}
                     onPressItem={(item) =>
                       goToProgramsWithFilter(
-                        (item.audience ?? item.title) as AudienceFilter,
+                        // With cards configured, the card id IS the filter key;
+                        // otherwise route by the card's audience bucket.
+                        programFilters
+                          ? item.id
+                          : item.audience ?? item.title,
                       )
                     }
                     onPressSeeAll={() => goToProgramsWithFilter("All")}

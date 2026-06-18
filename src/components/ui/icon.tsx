@@ -37,7 +37,6 @@ import {
   FileText,
   Funnel,
   GraduationCap,
-  GripVertical,
   Heart,
   Image as ImageIcon,
   ImagePlus,
@@ -123,7 +122,6 @@ const ICONS: Record<string, ComponentType<LucideProps>> = {
   'information-outline': Info,
   'cloud-upload-outline': CloudUpload,
   'image-plus': ImagePlus,
-  'reorder-three-outline': GripVertical,
 
   // notifications & bookmarks
   bell: Bell,

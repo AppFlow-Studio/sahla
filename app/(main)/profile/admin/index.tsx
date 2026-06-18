@@ -66,15 +66,6 @@ export default function AdminHub() {
           onPress={() => router.push('/profile/admin/sheikhs')}
         />
         <AdminRow
-          title="Program Categories"
-          subtitle="Customize the Discover category cards"
-          icon="images-outline"
-          fgRgb={fgRgb}
-          mutedRgb={mutedRgb}
-          borderColor={borderColor}
-          onPress={() => router.push('/profile/admin/program-categories')}
-        />
-        <AdminRow
           title="Jummah Schedule"
           subtitle="Assign speakers and topics"
           icon="calendar-outline"

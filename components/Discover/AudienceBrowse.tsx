@@ -38,23 +38,41 @@ export type AudienceItem = {
 };
 
 export type AudienceFilter = "All" | "Kids" | "Youth" | "Adults";
-const FILTERS: AudienceFilter[] = ["All", "Kids", "Youth", "Adults"];
+
+/** A single selectable pill. `key` is the filter identity (audience name or a
+ *  program-category id); `label` is what the user sees. */
+export type BrowseFilter = { key: string; label: string };
+
+const DEFAULT_FILTERS: BrowseFilter[] = [
+  { key: "All", label: "All" },
+  { key: "Kids", label: "Kids" },
+  { key: "Youth", label: "Youth" },
+  { key: "Adults", label: "Adults" },
+];
 
 type Props = {
   items: AudienceItem[];
   onPressItem: (id: string) => void;
-  onPressSeeAll?: (audience: Exclude<AudienceFilter, "All">) => void;
+  onPressSeeAll?: (key: string) => void;
   allTabFooter?: React.ReactNode;
   kind?: "events" | "programs";
-  initialFilter?: AudienceFilter;
+  initialFilter?: string;
+  /** Override the pills. Defaults to the All/Kids/Youth/Adults audience set.
+   *  The first entry is treated as the "show everything" tab. */
+  filters?: BrowseFilter[];
+  /** Whether an item belongs under a given non-"all" filter key. Defaults to
+   *  audience matching (Kids/Youth/Adults via item flags). */
+  matchFilter?: (item: AudienceItem, key: string) => boolean;
 };
 
 function FilterPills({
+  filters,
   active,
   onSelect,
 }: {
-  active: AudienceFilter;
-  onSelect: (f: AudienceFilter) => void;
+  filters: BrowseFilter[];
+  active: string;
+  onSelect: (key: string) => void;
 }) {
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
@@ -64,43 +82,63 @@ function FilterPills({
   const pillTrackBg = `rgba(${fg}, 0.06)`;
   const pillTrackBorder = `rgba(${fg}, 0.4)`;
 
-  return (
-    <View className="px-6">
-      <View
-        className="flex-row items-center"
+  // Up to 4 pills fit the full-width segmented look; beyond that, scroll.
+  const scrollable = filters.length > 4;
+
+  const pill = (f: BrowseFilter) => {
+    const isActive = f.key === active;
+    return (
+      <Pressable
+        key={f.key}
+        onPress={() => onSelect(f.key)}
+        className={scrollable ? "items-center justify-center" : "flex-1 items-center justify-center"}
         style={{
-          backgroundColor: pillTrackBg,
+          paddingVertical: 7,
+          paddingHorizontal: scrollable ? 16 : 0,
           borderRadius: 999,
-          padding: 3,
-          borderWidth: 0.5,
-          borderColor: pillTrackBorder,
+          backgroundColor: isActive ? primaryRgb : "transparent",
         }}
       >
-        {FILTERS.map((f) => {
-          const isActive = f === active;
-          return (
-            <Pressable
-              key={f}
-              onPress={() => onSelect(f)}
-              className="flex-1 items-center justify-center"
-              style={{
-                paddingVertical: 7,
-                borderRadius: 999,
-                backgroundColor: isActive ? primaryRgb : "transparent",
-              }}
-            >
-              <Text
-                style={{
-                  fontFamily: platformUiFont,
-                  fontSize: 11,
-                  color: isActive ? bgRgb : mutedFgRgb,
-                }}
-              >
-                {f}
-              </Text>
-            </Pressable>
-          );
-        })}
+        <Text
+          numberOfLines={1}
+          style={{
+            fontFamily: platformUiFont,
+            fontSize: 11,
+            color: isActive ? bgRgb : mutedFgRgb,
+          }}
+        >
+          {f.label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  const trackStyle = {
+    backgroundColor: pillTrackBg,
+    borderRadius: 999,
+    padding: 3,
+    borderWidth: 0.5,
+    borderColor: pillTrackBorder,
+  } as const;
+
+  if (scrollable) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 24 }}
+      >
+        <View className="flex-row items-center" style={trackStyle}>
+          {filters.map(pill)}
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <View className="px-6">
+      <View className="flex-row items-center" style={trackStyle}>
+        {filters.map(pill)}
       </View>
     </View>
   );
@@ -352,27 +390,29 @@ function Section({
         >
           {label}
         </Text>
-        <Pressable
-          onPress={onPressSeeAll}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`See all ${label}`}
-          className="flex-row items-center"
-        >
-          <Text
-            style={{
-              fontFamily: platformUiFont,
-              fontSize: 10,
-              textTransform: "uppercase",
-              color: mutedFgRgb,
-              letterSpacing: 0.4,
-              marginRight: 4,
-            }}
+        {onPressSeeAll ? (
+          <Pressable
+            onPress={onPressSeeAll}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`See all ${label}`}
+            className="flex-row items-center"
           >
-            See all
-          </Text>
-          <AntDesign name="arrow-right" size={10} color={mutedFgRgb} />
-        </Pressable>
+            <Text
+              style={{
+                fontFamily: platformUiFont,
+                fontSize: 10,
+                textTransform: "uppercase",
+                color: mutedFgRgb,
+                letterSpacing: 0.4,
+                marginRight: 4,
+              }}
+            >
+              See all
+            </Text>
+            <AntDesign name="arrow-right" size={10} color={mutedFgRgb} />
+          </Pressable>
+        ) : null}
       </View>
       <View
         style={{
@@ -474,8 +514,13 @@ export default function AudienceBrowse({
   allTabFooter,
   kind = "events",
   initialFilter,
+  filters = DEFAULT_FILTERS,
+  matchFilter,
 }: Props) {
-  const [filter, setFilter] = useState<AudienceFilter>(initialFilter ?? "All");
+  const allKey = filters[0]?.key ?? "All";
+  const match = matchFilter ?? ((item, key) => matchesAudience(item, key as Exclude<AudienceFilter, "All">));
+
+  const [filter, setFilter] = useState<string>(initialFilter ?? allKey);
   const [direction, setDirection] = useState<"left" | "right">("right");
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -487,49 +532,55 @@ export default function AudienceBrowse({
     if (initialFilter) setFilter(initialFilter);
   }, [initialFilter]);
 
+  const indexOfKey = (key: string) => filters.findIndex((f) => f.key === key);
+
   // Change filter while recording the swipe/tap direction so the new content
   // slides in from the matching side.
-  const goToFilter = (next: AudienceFilter) => {
+  const goToFilter = (next: string) => {
     if (next === filter) return;
-    setDirection(FILTERS.indexOf(next) > FILTERS.indexOf(filter) ? "right" : "left");
+    setDirection(indexOfKey(next) > indexOfKey(filter) ? "right" : "left");
     setFilter(next);
   };
 
-  const grouped = useMemo(() => {
-    const kids: AudienceItem[] = [];
-    const youth: AudienceItem[] = [];
-    const adults: AudienceItem[] = [];
-    for (const item of items) {
-      if (item.isKids) kids.push(item);
-      else if (item.isYouth) youth.push(item);
-      else adults.push(item);
-    }
-    return { kids, youth, adults };
-  }, [items]);
+  const nonAllFilters = useMemo(
+    () => filters.filter((f) => f.key !== allKey),
+    [filters, allKey],
+  );
 
-  const showAudienceList = filter !== "All";
+  // All-tab carousels: one per filter, plus a catch-all for items matching none
+  // (empty for the audience default; holds uncategorized programs otherwise).
+  const allViewSections = useMemo(() => {
+    const sections = nonAllFilters.map((f) => ({
+      key: f.key,
+      label: f.label,
+      items: items.filter((item) => match(item, f.key)),
+    }));
+    const uncategorized = items.filter(
+      (item) => !nonAllFilters.some((f) => match(item, f.key)),
+    );
+    return { sections, uncategorized };
+  }, [items, nonAllFilters, match]);
+
+  const showAudienceList = filter !== allKey;
 
   const itemsForAudience = useMemo(() => {
     if (!showAudienceList) return [];
-    return items.filter((item) => matchesAudience(item, filter));
-  }, [items, filter, showAudienceList]);
+    return items.filter((item) => match(item, filter));
+  }, [items, filter, showAudienceList, match]);
 
+  const activeLabel = filters.find((f) => f.key === filter)?.label ?? filter;
   const allLabel = kind === "programs" ? "All programs" : "All events";
   const secondaryLabel =
     kind === "programs" ? "Weekly programs" : "Upcoming events";
   const secondaryFilter = (item: AudienceItem) =>
     kind === "programs" ? item.isWeekly === true : item.isUpcoming === true;
 
-  const showKids = filter === "All" || filter === "Kids";
-  const showYouth = filter === "All" || filter === "Youth";
-  const showAdults = filter === "All" || filter === "Adults";
-
   const kindNoun = kind === "programs" ? "programs" : "events";
 
-  // Swipe horizontally to move through the All / Kids / Youth / Adults filters.
+  // Swipe horizontally to move through the filters.
   const cycleFilter = (dir: 1 | -1) => {
-    const next = FILTERS.indexOf(filter) + dir;
-    if (next >= 0 && next < FILTERS.length) goToFilter(FILTERS[next]);
+    const next = indexOfKey(filter) + dir;
+    if (next >= 0 && next < filters.length) goToFilter(filters[next].key);
   };
 
   const swipe = useMemo(
@@ -543,14 +594,14 @@ export default function AudienceBrowse({
           if (e.translationX < -55 || e.velocityX < -600) runOnJS(cycleFilter)(1);
           else if (e.translationX > 55 || e.velocityX > 600) runOnJS(cycleFilter)(-1);
         }),
-    [filter],
+    [filter, filters],
   );
 
   return (
     <GestureDetector gesture={swipe}>
     <View>
       <View style={{ marginTop: 22 }}>
-        <FilterPills active={filter} onSelect={goToFilter} />
+        <FilterPills filters={filters} active={filter} onSelect={goToFilter} />
       </View>
 
       <View style={{ overflow: "hidden" }}>
@@ -572,7 +623,7 @@ export default function AudienceBrowse({
       {showAudienceList ? (
         itemsForAudience.length === 0 ? (
           <EmptyState
-            title={`No ${filter.toLowerCase()} ${kindNoun}`}
+            title={`No ${activeLabel.toLowerCase()} ${kindNoun}`}
             subtitle="Check back soon or try another filter."
           />
         ) : (
@@ -596,43 +647,29 @@ export default function AudienceBrowse({
         />
       ) : (
         <>
-          {showKids ? (
+          {allViewSections.sections.map((s) => (
             <Section
-              label="Kids"
-              items={grouped.kids}
+              key={s.key}
+              label={s.label}
+              items={s.items}
               onPressItem={onPressItem}
               onPressSeeAll={() => {
-                if (onPressSeeAll) onPressSeeAll("Kids");
-                else goToFilter("Kids");
+                if (onPressSeeAll) onPressSeeAll(s.key);
+                else goToFilter(s.key);
               }}
             />
-          ) : null}
-          {showYouth ? (
+          ))}
+          {allViewSections.uncategorized.length > 0 ? (
             <Section
-              label="Youth"
-              items={grouped.youth}
+              label={`Other ${kindNoun}`}
+              items={allViewSections.uncategorized}
               onPressItem={onPressItem}
-              onPressSeeAll={() => {
-                if (onPressSeeAll) onPressSeeAll("Youth");
-                else goToFilter("Youth");
-              }}
-            />
-          ) : null}
-          {showAdults ? (
-            <Section
-              label="Adults"
-              items={grouped.adults}
-              onPressItem={onPressItem}
-              onPressSeeAll={() => {
-                if (onPressSeeAll) onPressSeeAll("Adults");
-                else goToFilter("Adults");
-              }}
             />
           ) : null}
         </>
       )}
 
-      {filter === "All" && allTabFooter ? (
+      {filter === allKey && allTabFooter ? (
         <View className="px-6" style={{ marginTop: 24 }}>
           {allTabFooter}
         </View>
