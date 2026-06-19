@@ -12,6 +12,29 @@ import {
   type AdSubmission,
 } from '@/src/hooks/use-ad-submissions';
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+/** "Live for 3 days" / "Live for 2 months" — coarse, admin-glanceable. */
+function formatLiveDuration(iso: string): string {
+  const days = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+  if (days < 1) return 'Live since today';
+  if (days < 30) return `Live for ${days} day${days === 1 ? '' : 's'}`;
+  const months = Math.floor(days / 30);
+  return `Live for ${months} month${months === 1 ? '' : 's'}`;
+}
+
+function formatMoney(cents: number, currency: string | null): string {
+  const amount = (cents / 100).toFixed(2);
+  const symbol = !currency || currency.toLowerCase() === 'usd' ? '$' : '';
+  return symbol ? `${symbol}${amount}` : `${amount} ${currency!.toUpperCase()}`;
+}
+
 const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
   pending_payment: { label: 'Awaiting payment', bg: 'rgba(0,0,0,0.06)', fg: 'rgba(0,0,0,0.5)' },
   submitted: { label: 'Needs review', bg: 'rgba(180,146,42,0.15)', fg: '#8a6d1f' },
@@ -152,6 +175,50 @@ export default function AdminBusinessAds() {
                       <Text className="text-[12px] text-foreground/45">{s.personal_phone}</Text>
                     ) : null}
                   </View>
+
+                  {s.live_since || s.started_at || s.payments.length > 0 ? (
+                    <View className="mt-3 rounded-xl border border-foreground/10 bg-foreground/[0.03] px-3.5 py-3">
+                      {s.live_since ? (
+                        <View className="flex-row items-center">
+                          <View
+                            style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#16a34a' }}
+                          />
+                          <Text className="ml-2 text-[12.5px] font-semibold text-foreground/75">
+                            {formatLiveDuration(s.live_since)}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {s.started_at ? (
+                        <Text className="mt-1 text-[12px] text-foreground/50">
+                          Started {formatDate(s.started_at)}
+                        </Text>
+                      ) : null}
+
+                      {s.payments.length > 0 ? (
+                        <View className="mt-2.5 border-t border-foreground/10 pt-2.5">
+                          <Text className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-foreground/40">
+                            Payments
+                          </Text>
+                          <View className="gap-1">
+                            {s.payments.map((p, i) => (
+                              <View
+                                key={`${s.submission_id}-pay-${i}`}
+                                className="flex-row items-center justify-between"
+                              >
+                                <Text className="text-[12px] text-foreground/55">
+                                  {p.kind === 'first' ? 'First payment' : 'Monthly'} ·{' '}
+                                  {formatDate(p.paid_at)}
+                                </Text>
+                                <Text className="text-[12.5px] font-semibold text-foreground/75">
+                                  {formatMoney(p.amount_cents, p.currency)}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
 
                   {s.status === 'submitted' ? (
                     <View className="mt-3 flex-row gap-2">
