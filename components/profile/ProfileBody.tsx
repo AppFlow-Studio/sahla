@@ -50,8 +50,12 @@ function SignOutButton() {
   return (
     <Pressable
       onPress={async () => {
-        resetOnboarding();
+        // Sign out first: once isSignedIn flips false the auth guard wins
+        // regardless of onboarding state. Resetting onboarding before signOut
+        // resolves briefly satisfies showOnboarding (still signed in +
+        // complete=false) and flashes the onboarding screen.
         await signOut();
+        resetOnboarding();
       }}
       className="rounded-full border border-red-500/30 px-8 py-3 active:opacity-70"
     >
@@ -84,8 +88,10 @@ function DeleteAccountButton() {
                 body: {},
               });
               if (error) throw error;
-              resetOnboarding();
+              // Sign out before resetting onboarding — see SignOutButton note:
+              // the reverse order flashes the onboarding screen mid-sign-out.
               await signOut();
+              resetOnboarding();
             } catch (err: any) {
               setDeleting(false);
               Alert.alert(

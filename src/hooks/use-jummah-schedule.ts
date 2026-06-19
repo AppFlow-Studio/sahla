@@ -97,12 +97,12 @@ export function useJummahWindow(): boolean {
   if (DEBUG_FORCE_JUMMAH_WINDOW) return true;
 
   if (weekday === 'Thu') {
-    const maghrib = items.find((p) => p.rawName === 'maghrib');
+    const maghrib = items.find((p) => p.rawName.toLowerCase() === 'maghrib');
     if (!maghrib) return false;
     return nowSec >= timeRawToSeconds(maghrib.athanTimeRaw);
   }
   if (weekday === 'Fri') {
-    const asr = items.find((p) => p.rawName === 'asr');
+    const asr = items.find((p) => p.rawName.toLowerCase() === 'asr');
     if (!asr) return true; // no Asr data → keep the card up through Friday
     return nowSec < timeRawToSeconds(asr.athanTimeRaw);
   }
