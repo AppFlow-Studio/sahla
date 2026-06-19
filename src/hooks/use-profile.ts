@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSupabase } from '@/src/hooks/use-supabase';
 
 const PROFILE_COLUMNS =
-  'id, first_name, last_name, profile_email, phone_number, profile_pic, stripe_id, created_at' as const;
+  'id, first_name, last_name, profile_email, phone_number, profile_pic, date_of_birth, stripe_id, created_at' as const;
 
 export type ProfileRow = {
   id: string;
@@ -13,6 +13,8 @@ export type ProfileRow = {
   profile_email: string | null;
   phone_number: string | null;
   profile_pic: string | null;
+  /** "YYYY-MM-DD" (Postgres date via PostgREST). */
+  date_of_birth: string | null;
   stripe_id: string | null;
   created_at: string | null;
 };
@@ -25,6 +27,7 @@ const MOCK_PROFILE: ProfileRow = {
   profile_email: 'kareem.w@example.com',
   phone_number: '(718) 555-0142',
   profile_pic: null,
+  date_of_birth: '1995-04-12',
   stripe_id: null,
   created_at: '2024-09-15T00:00:00Z',
 };
@@ -81,6 +84,7 @@ export type ProfileUpdate = {
   profile_email?: string | null;
   phone_number?: string | null;
   profile_pic?: string | null;
+  date_of_birth?: string | null;
 };
 
 export function useUpdateProfile() {

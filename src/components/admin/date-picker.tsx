@@ -28,6 +28,8 @@ export function DatePicker({
   labelColor,
   borderColor,
   allowClear = false,
+  maximumDate,
+  minimumDate,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -37,6 +39,10 @@ export function DatePicker({
   borderColor: string;
   /** Show a "Clear" action (for optional dates like an end date). */
   allowClear?: boolean;
+  /** Latest selectable date (e.g. today, for a date of birth). */
+  maximumDate?: Date;
+  /** Earliest selectable date. */
+  minimumDate?: Date;
 }) {
   const [show, setShow] = useState(false);
   const date = parseYMD(value);
@@ -72,6 +78,8 @@ export function DatePicker({
           mode="date"
           display="compact"
           accentColor={accentRgb}
+          maximumDate={maximumDate}
+          minimumDate={minimumDate}
           onChange={handleChange}
         />
         {clearButton}
@@ -97,7 +105,14 @@ export function DatePicker({
       </Pressable>
       {clearButton}
       {show ? (
-        <DateTimePicker value={date} mode="date" display="default" onChange={handleChange} />
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="default"
+          maximumDate={maximumDate}
+          minimumDate={minimumDate}
+          onChange={handleChange}
+        />
       ) : null}
     </View>
   );

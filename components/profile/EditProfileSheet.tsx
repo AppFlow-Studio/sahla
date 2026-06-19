@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { DatePicker } from '@/src/components/admin/date-picker';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile, useUpdateProfile } from '@/src/hooks/use-profile';
 
@@ -88,6 +89,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
 
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const bgRgb = `rgb(${colors.card.replace(/ /g, ',')})`;
+  const accentRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
   const labelColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.6)`;
   const borderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.1)`;
   const placeholderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.25)`;
@@ -96,6 +98,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
 
   const [mounted, setMounted] = useState(false);
   const translateY = useRef(new Animated.Value(SCREEN_H)).current;
@@ -107,6 +110,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
       setLastName(profile.last_name ?? '');
       setEmail(profile.profile_email ?? '');
       setPhone(profile.phone_number ?? '');
+      setDob(profile.date_of_birth ?? '');
     }
   }, [visible, profile]);
 
@@ -152,6 +156,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
         last_name: lastName.trim() || null,
         profile_email: email.trim() || null,
         phone_number: phone.trim() || null,
+        date_of_birth: dob || null,
       },
       { onSuccess: onClose },
     );
@@ -161,7 +166,8 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
     firstName !== (profile?.first_name ?? '') ||
     lastName !== (profile?.last_name ?? '') ||
     email !== (profile?.profile_email ?? '') ||
-    phone !== (profile?.phone_number ?? '');
+    phone !== (profile?.phone_number ?? '') ||
+    dob !== (profile?.date_of_birth ?? '');
 
   return (
     <Modal
@@ -270,6 +276,32 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               borderColor={borderColor}
               placeholderColor={placeholderColor}
             />
+
+            {/* Date of birth — native picker (input when empty, edit when set) */}
+            <View style={{ marginBottom: 16 }}>
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  letterSpacing: 1.4,
+                  textTransform: 'uppercase',
+                  color: labelColor,
+                  marginBottom: 6,
+                }}
+              >
+                Date of Birth
+              </Text>
+              <DatePicker
+                value={dob}
+                onChange={setDob}
+                accentRgb={accentRgb}
+                fgRgb={fgRgb}
+                labelColor={labelColor}
+                borderColor={borderColor}
+                allowClear
+                maximumDate={new Date()}
+              />
+            </View>
           </View>
 
           {/* Save Button */}
