@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Image, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { Image, Pressable, Text, TextInput, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -7,6 +7,7 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 const TABS = ["All", "For You", "Events", "Programs"] as const;
@@ -22,12 +23,6 @@ type Props = {
   onChangeSearch?: (value: string) => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 const DURATION = 250;
 
 export default function DiscoverHeader({
@@ -38,6 +33,7 @@ export default function DiscoverHeader({
   searchValue,
   onChangeSearch,
 }: Props) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -85,7 +81,7 @@ export default function DiscoverHeader({
             <View className="flex-row items-center">
               <Text
                 style={{
-                  fontFamily: "PlayfairDisplay_500Medium",
+                  fontFamily: fonts.display,
                   fontSize: 30,
                   lineHeight: 36,
                   color: fgRgb,
@@ -151,7 +147,7 @@ export default function DiscoverHeader({
                 style={{
                   flex: 1,
                   marginLeft: 8,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   fontSize: 14,
                   color: fgRgb,
                   paddingVertical: 0,
@@ -180,7 +176,7 @@ export default function DiscoverHeader({
             >
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   fontSize: 11,
                   color: fgRgb,
                 }}
@@ -213,7 +209,7 @@ export default function DiscoverHeader({
             <Pressable key={tab} onPress={() => onSelect?.(tab)}>
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: isActive ? fonts.bodySemibold : fonts.bodyMedium,
                   fontSize: 13,
                   fontWeight: isActive ? "600" : "500",
                   color: isActive ? fgRgb : mutedFgRgb,

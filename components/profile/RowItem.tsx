@@ -1,7 +1,8 @@
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import { Icon, type IconName } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
   title: string;
@@ -11,6 +12,7 @@ type Props = {
 
 export default function RowItem({ title, icon, onPress }: Props) {
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
   return (
@@ -24,7 +26,7 @@ export default function RowItem({ title, icon, onPress }: Props) {
         <Text
           className="text-foreground"
           style={{
-            fontFamily: Platform.select({ android: "Roboto", default: undefined }),
+            fontFamily: fonts.bodyMedium,
             fontWeight: "500",
             fontSize: 13,
             lineHeight: 18,

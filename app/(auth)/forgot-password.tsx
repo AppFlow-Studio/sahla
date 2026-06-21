@@ -6,9 +6,8 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 type Step = 'email' | 'code' | 'new-password';
 
@@ -16,6 +15,7 @@ export default function ForgotPasswordScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
   const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
   const surfaceAlpha25 = `rgba(${surface}, 0.25)`;
@@ -124,7 +124,7 @@ export default function ForgotPasswordScreen() {
           <Text
             className="text-onboarding-surface"
             style={{
-              fontFamily: SERIF,
+              fontFamily: fonts.display,
               fontSize: 30,
               fontWeight: '500',
               marginBottom: 32,

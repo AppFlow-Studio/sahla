@@ -1,6 +1,6 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import Pattern from '@/assets/onboarding/pattern.svg';
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/src/components/ui/icon';
 import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useUploadProfilePhoto } from '@/src/hooks/use-upload-profile-photo';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
@@ -23,6 +24,7 @@ export default function ProfileHeader() {
   const { profile, status, error } = useProfile();
   const { user } = useUser();
   const { clerkOrgId, colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const insets = useSafeAreaInsets();
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
@@ -139,7 +141,7 @@ export default function ProfileHeader() {
               <Text
                 className="text-5xl text-primary-foreground text-center "
                 style={{
-                  fontFamily: 'CormorantGaramond_500Medium',
+                  fontFamily: fonts.display,
                   lineHeight: 48,
                 }}
               >
@@ -160,7 +162,7 @@ export default function ProfileHeader() {
           <Text
             className="mt-3 text-center text-primary-foreground"
             style={{
-              fontFamily: 'CormorantGaramond_600SemiBold',
+              fontFamily: fonts.display,
               fontSize: 21,
             }}
           >
@@ -172,10 +174,7 @@ export default function ProfileHeader() {
             <Text
               className="text-center text-primary-foreground/60"
               style={{
-                fontFamily: Platform.select({
-                  android: 'Roboto',
-                  default: undefined,
-                }),
+                fontFamily: fonts.body,
                 fontWeight: '400',
                 fontSize: 10,
               }}

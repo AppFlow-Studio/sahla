@@ -4,10 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import Mandala from '@/assets/onboarding/mandala.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
-
-const SERIF = 'CormorantGaramond_400Regular';
 
 const MANDALA_SIZE = 402;
 const HALO_SIZE = 324;
@@ -37,6 +36,7 @@ function GoldHalo() {
 export default function WelcomeFullScreen() {
   const router = useRouter();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const storedName = useOnboardingStore((s) => s.firstName);
   const firstName = storedName.trim().split(/\s+/)[0] || 'Friend';
 
@@ -79,13 +79,13 @@ export default function WelcomeFullScreen() {
                 <View style={{ marginTop: 18, alignItems: 'center' }}>
                   <Text
                     className="text-onboarding-surface"
-                    style={{ fontFamily: SERIF, fontSize: 30, lineHeight: 35 }}
+                    style={{ fontFamily: fonts.displayRegular, fontSize: 30, lineHeight: 35 }}
                   >
                     Welcome
                   </Text>
                   <Text
                     className="text-onboarding-surface"
-                    style={{ fontFamily: SERIF, fontSize: 30, lineHeight: 35 }}
+                    style={{ fontFamily: fonts.displayRegular, fontSize: 30, lineHeight: 35 }}
                   >
                     {firstName}
                   </Text>

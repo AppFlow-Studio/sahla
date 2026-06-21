@@ -2,6 +2,7 @@ import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect } from 'expo-router';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -428,6 +429,7 @@ const PERIOD_OPTIONS: { key: Period; short: string; long: string }[] = [
 ];
 
 function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueReading?: () => void }) {
+  const fonts = useFontFamily();
   const [period, setPeriod] = useState<Period>('day');
   const version = useTrackerVersion();
 
@@ -475,7 +477,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
         >
           <Icon name="book-open-page-variant" size={16} color={c.gold} />
         </GlassView>
-        <Text style={{ color: c.text, fontSize: 24, fontFamily: 'PlayfairDisplay_400Regular', fontWeight: '400' }}>
+        <Text style={{ color: c.text, fontSize: 24, fontFamily: fonts.displayRegular, fontWeight: '400' }}>
           Quran Goal
         </Text>
       </View>
@@ -542,7 +544,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
               position: 'absolute',
               color: c.text,
               fontSize: 22,
-              fontFamily: 'CormorantGaramond_400Regular',
+              fontFamily: fonts.displayRegular,
             }}
           >
             {Math.round(percent * 100)}%
@@ -615,13 +617,14 @@ function PeriodToggle({
 }
 
 function RemembrancesSection({ c }: { c: Palette }) {
+  const fonts = useFontFamily();
   return (
     <View style={{ marginTop: 18, marginBottom: 16 }}>
       <Text
         style={{
           color: c.text,
           fontSize: 24,
-          fontFamily: 'PlayfairDisplay_400Regular',
+          fontFamily: fonts.displayRegular,
           fontWeight: '400',
           marginBottom: 22,
         }}
@@ -962,6 +965,7 @@ const SKELETON_PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
 export default function PrayerScreen() {
   const c = usePalette();
+  const fonts = useFontFamily();
   const [now, setNow] = useState(new Date());
   const [quranOpen, setQuranOpen] = useState(false);
   const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
@@ -1187,7 +1191,7 @@ export default function PrayerScreen() {
                 textAlign: 'center',
                 marginTop: 24,
                 fontWeight: '400',
-                fontFamily: 'PlayfairDisplay_400Regular',
+                fontFamily: fonts.displayRegular,
               }}
             >
               Prayer Times

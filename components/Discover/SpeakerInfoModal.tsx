@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
-  Platform,
   Pressable,
   Text,
   View,
@@ -18,19 +17,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useSupabase } from "@/src/hooks/use-supabase";
-
-const platformTitleFont = Platform.select({
-  ios: "SF Pro Display",
-  android: "Roboto",
-  default: "system-ui",
-});
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 function splitIntoSentences(text: string): string[] {
   return text
@@ -58,6 +47,7 @@ export default function SpeakerInfoModal({
   mosqueUuid,
   onClose,
 }: Props) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -200,7 +190,7 @@ export default function SpeakerInfoModal({
               >
                 <Text
                   style={{
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.body,
                     fontSize: 22,
                     fontWeight: "400",
                     color: fgRgb,
@@ -214,7 +204,7 @@ export default function SpeakerInfoModal({
 
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.bodySemibold,
                 fontSize: 12,
                 fontWeight: "700",
                 letterSpacing: 1.5,
@@ -275,7 +265,7 @@ export default function SpeakerInfoModal({
                   <Text
                     style={{
                       flex: 1,
-                      fontFamily: platformTitleFont,
+                      fontFamily: fonts.display,
                       fontSize: 18,
                       lineHeight: 24,
                       fontWeight: "700",
@@ -311,7 +301,7 @@ export default function SpeakerInfoModal({
                         <Text
                           style={{
                             flex: 1,
-                            fontFamily: platformUiFont,
+                            fontFamily: fonts.body,
                             fontSize: 14,
                             lineHeight: 21,
                             fontWeight: "400",
@@ -326,7 +316,7 @@ export default function SpeakerInfoModal({
                 ) : (
                   <Text
                     style={{
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                       fontSize: 14,
                       lineHeight: 22,
                       color: sublabelColor,

@@ -2,18 +2,27 @@ import { vars } from 'nativewind';
 import { View } from 'react-native';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { resolveFontTheme } from '@/src/theme/fonts';
 
 /**
- * Injects the active masjid's colors as NativeWind CSS variables so every
- * `className="bg-primary"` / `text-foreground` / etc. resolves at runtime.
+ * Injects the active masjid's colors and font theme as NativeWind CSS
+ * variables so every `className="bg-primary"` / `text-foreground` /
+ * `font-display` / `font-body` resolves at runtime.
  *
  * Tailwind custom property names are kebab-case and consumed via
- * `rgb(var(--color-x) / <alpha-value>)` — see `tailwind.config.js`.
+ * `rgb(var(--color-x) / <alpha-value>)` (colors) and `var(--font-x)`
+ * (fonts) — see `tailwind.config.js`.
  */
 export function ThemeRoot({ children }: { children: React.ReactNode }) {
   const config = useMasjidConfig();
+  const fonts = resolveFontTheme(config.fontTheme);
 
   const themeVars = vars({
+    '--font-display': fonts.display,
+    '--font-display-regular': fonts.displayRegular,
+    '--font-body': fonts.body,
+    '--font-body-medium': fonts.bodyMedium,
+    '--font-body-semibold': fonts.bodySemibold,
     '--color-primary': config.colors.primary,
     '--color-primary-foreground': config.colors.primaryForeground,
     '--color-accent': config.colors.accent,

@@ -1,4 +1,6 @@
-import { Image, Platform, Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
+
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 const BELL_PNG = require('@/assets/images/notifcation_bell_for_notification_screen.png');
 
@@ -6,17 +8,13 @@ const INK = '#0A261E';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
 const SURFACE = '#FFFBF2';
 
-const PLAYFAIR = Platform.select({
-  ios: 'PlayfairDisplay-Medium',
-  default: 'PlayfairDisplay_500Medium',
-});
-
 type Props = {
   masjidName: string;
   onEnablePress?: () => void;
 };
 
 export function NotificationsEmpty({ masjidName, onEnablePress }: Props) {
+  const fonts = useFontFamily();
   return (
     <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingTop: 24 }}>
       <Image
@@ -27,7 +25,7 @@ export function NotificationsEmpty({ masjidName, onEnablePress }: Props) {
 
       <Text
         style={{
-          fontFamily: PLAYFAIR,
+          fontFamily: fonts.display,
           fontWeight: '500',
           fontSize: 25,
           lineHeight: 32,

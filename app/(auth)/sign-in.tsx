@@ -8,10 +8,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -20,6 +19,7 @@ export default function SignInScreen() {
   const clerk = useClerk();
   const router = useRouter();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -209,7 +209,7 @@ export default function SignInScreen() {
         <View className="flex-1 justify-center px-6">
           <Text
             className="text-onboarding-surface"
-            style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
           >
             Welcome back
           </Text>

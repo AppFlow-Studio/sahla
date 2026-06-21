@@ -3,9 +3,11 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 
 import { useFeaturedContent } from '@/src/hooks/use-featured-content';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 export function FeaturedCard() {
   const { featured } = useFeaturedContent();
+  const fonts = useFontFamily();
 
   if (!featured) return null;
 
@@ -22,7 +24,7 @@ export function FeaturedCard() {
         <View className="mt-3">
           <Text
             className="text-[17px] font-bold text-primary-foreground"
-            style={{ fontFamily: 'Georgia' }}
+            style={{ fontFamily: fonts.displayRegular }}
           >
             {featured.title}
           </Text>

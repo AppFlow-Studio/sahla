@@ -25,7 +25,15 @@ if (Platform.OS !== 'web') {
 
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
-import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
+import {
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium,
+} from '@expo-google-fonts/cormorant-garamond';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_500Medium,
@@ -167,9 +175,15 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
+    // All weights referenced by any FONT_THEME in src/theme/fonts.ts must be
+    // registered here so a masjid's chosen theme renders without a fallback.
     PlayfairDisplay_400Regular,
     PlayfairDisplay_500Medium,
     CormorantGaramond_400Regular,
+    CormorantGaramond_500Medium,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
     UthmanicHafs: require('../assets/fonts/UthmanicHafs_V22.ttf'),
   });
 

@@ -1,16 +1,11 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Icon } from "@/src/components/ui/icon";
 import { Image } from "expo-image";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useUserPreferences } from "@/src/hooks/use-user-preferences";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 export type ForYouRowItem = {
   id: string;
@@ -36,6 +31,7 @@ function CustomizedPill({
   onPress?: () => void;
   prefState: PrefState;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -79,7 +75,7 @@ function CustomizedPill({
       <View className="ml-3 flex-1">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 12,
             fontWeight: "600",
             color: fgRgb,
@@ -90,7 +86,7 @@ function CustomizedPill({
         </Text>
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 11,
             color: mutedFgRgb,
             lineHeight: 14,
@@ -102,7 +98,7 @@ function CustomizedPill({
       </View>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.body,
           fontSize: 12,
           color: accentRgb,
           marginRight: 4,
@@ -116,6 +112,7 @@ function CustomizedPill({
 }
 
 function SectionHeading({ label }: { label: string }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -123,7 +120,7 @@ function SectionHeading({ label }: { label: string }) {
     <View className="px-6">
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "700",
           letterSpacing: 0.6,
@@ -148,6 +145,7 @@ function Row({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -187,7 +185,7 @@ function Row({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
@@ -199,7 +197,7 @@ function Row({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.body,
               fontSize: 11,
               lineHeight: 16,
               marginTop: 2,

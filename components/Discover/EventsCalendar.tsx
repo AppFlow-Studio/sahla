@@ -1,7 +1,7 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -14,13 +14,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 const MONTH_NAMES = [
@@ -117,6 +112,7 @@ function MonthHeader({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -125,7 +121,7 @@ function MonthHeader({
       <Text
         style={{
           flex: 1,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "700",
           letterSpacing: 0.6,
@@ -169,6 +165,7 @@ function DayCell({
   hasEvent: boolean;
   onPress: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
@@ -199,7 +196,7 @@ function DayCell({
       >
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 12,
             textAlign: "center",
             color: selected ? bgRgb : fgRgb,
@@ -233,6 +230,7 @@ function CalendarGrid({
   eventDates: Set<string>;
   onSelect: (d: Date) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
 
@@ -250,7 +248,7 @@ function CalendarGrid({
           >
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 11,
                 color: mutedFgRgb,
               }}
@@ -285,6 +283,7 @@ function ModeToggle({
   mode: Mode;
   onChange: (m: Mode) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
   const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
@@ -318,7 +317,7 @@ function ModeToggle({
             >
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                   fontSize: 12,
                   fontWeight: "600",
                   color: isActive ? bgRgb : mutedFgRgb,
@@ -343,6 +342,7 @@ function EventRow({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -383,7 +383,7 @@ function EventRow({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
@@ -396,7 +396,7 @@ function EventRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 11,
                 lineHeight: 16,
                 marginTop: 2,
@@ -432,6 +432,7 @@ function EventRow({
 }
 
 function DayHeading({ date }: { date: Date }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -442,7 +443,7 @@ function DayHeading({ date }: { date: Date }) {
     <View className="px-6" style={{ marginTop: 22 }}>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "700",
           letterSpacing: 0.6,
@@ -459,6 +460,7 @@ function DayHeading({ date }: { date: Date }) {
 }
 
 export default function EventsCalendar({ items, onPressItem }: Props) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
 
@@ -576,7 +578,7 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
                 <View className="px-6" style={{ paddingVertical: 24 }}>
                   <Text
                     style={{
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                       fontSize: 12,
                       color: mutedFgRgb,
                     }}
@@ -609,7 +611,7 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
               >
                 <Text
                   style={{
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.body,
                     fontSize: 12,
                     color: mutedFgRgb,
                   }}

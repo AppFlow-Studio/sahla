@@ -2,7 +2,6 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -17,13 +16,8 @@ import Animated, {
   SlideOutRight,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 export type AudienceItem = {
   id: string;
@@ -74,6 +68,7 @@ function FilterPills({
   active: string;
   onSelect: (key: string) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
@@ -102,7 +97,7 @@ function FilterPills({
         <Text
           numberOfLines={1}
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 11,
             color: isActive ? bgRgb : mutedFgRgb,
           }}
@@ -151,6 +146,7 @@ function Card({
   item: AudienceItem;
   onPress: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -184,7 +180,7 @@ function Card({
         numberOfLines={1}
         style={{
           marginTop: 10,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "600",
           color: fgRgb,
@@ -197,7 +193,7 @@ function Card({
         numberOfLines={1}
         style={{
           marginTop: 2,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.body,
           fontSize: 12,
           color: mutedFgRgb,
           lineHeight: 16,
@@ -218,6 +214,7 @@ function ListRow({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -257,7 +254,7 @@ function ListRow({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
@@ -270,7 +267,7 @@ function ListRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 12,
                 color: mutedFgRgb,
                 lineHeight: 16,
@@ -284,7 +281,7 @@ function ListRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.bodyMedium,
                 fontSize: 12,
                 color: accentRgb,
                 fontWeight: "500",
@@ -322,6 +319,7 @@ function ListSection({
   items: AudienceItem[];
   onPressItem: (id: string) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -331,7 +329,7 @@ function ListSection({
       <View className="px-6">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "700",
             letterSpacing: 0.6,
@@ -369,6 +367,7 @@ function Section({
   onPressItem: (id: string) => void;
   onPressSeeAll?: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -380,7 +379,7 @@ function Section({
         <Text
           style={{
             flex: 1,
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "700",
             letterSpacing: 0.6,
@@ -400,7 +399,7 @@ function Section({
           >
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 10,
                 textTransform: "uppercase",
                 color: mutedFgRgb,
@@ -449,6 +448,7 @@ function EmptyState({
   title: string;
   subtitle?: string;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -471,7 +471,7 @@ function EmptyState({
       </View>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 14,
           fontWeight: "600",
           color: fgRgb,
@@ -483,7 +483,7 @@ function EmptyState({
       {subtitle ? (
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 12,
             color: mutedFgRgb,
             textAlign: "center",

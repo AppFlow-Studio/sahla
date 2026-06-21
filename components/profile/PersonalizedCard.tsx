@@ -1,7 +1,8 @@
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
     onPress: () => void;
@@ -9,6 +10,7 @@ type Props = {
 
 export default function PersonalizedCard({ onPress }: Props) {
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const fg = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const fg40 = `rgba(${colors.foreground.replace(/ /g, ",")},0.4)`;
   const accent = `rgb(${colors.accent.replace(/ /g, ",")})`;
@@ -24,7 +26,7 @@ export default function PersonalizedCard({ onPress }: Props) {
                 <Text
                 className="text-foreground"
                 style = {{
-                    fontFamily: Platform.select({ android: "Roboto", default: undefined }),
+                    fontFamily: fonts.bodySemibold,
                     fontWeight: "600",
                     fontSize: 11,
                     lineHeight: 18,
@@ -36,7 +38,7 @@ export default function PersonalizedCard({ onPress }: Props) {
                 <Text
                 className="text-foreground/60"
                 style = {{
-                    fontFamily: Platform.select({ android: "Roboto", default: undefined }),
+                    fontFamily: fonts.body,
                     fontWeight: "400",
                     fontSize: 10,
                     lineHeight: 18,

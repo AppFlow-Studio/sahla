@@ -14,10 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import Mandala from '@/assets/onboarding/mandala.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useUserPreferences } from '@/src/hooks/use-user-preferences';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 const MANDALA_SIZE = 402;
 const HALO_SIZE = 324;
@@ -46,6 +45,7 @@ function CreamHalo() {
 export default function AllSetScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const fonts = useFontFamily();
   const { markPersonalizationComplete } = useUserPreferences();
 
   // Reaching this screen means the personalization flow is finished — stamp it
@@ -127,13 +127,13 @@ export default function AllSetScreen() {
               <View style={{ alignItems: 'center' }}>
                 <Text
                   className="text-onboarding-bg"
-                  style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 28 }}
+                  style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28 }}
                 >
                   You&rsquo;re all set
                 </Text>
                 <Text
                   className="text-onboarding-bg mt-1"
-                  style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 28 }}
+                  style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28 }}
                 >
                   {firstName}
                 </Text>

@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   Alert,
-  Platform,
   Pressable,
   Text,
   TextInput,
@@ -12,6 +11,7 @@ import {
 
 import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
 import { useOnboardingDraft } from '@/src/contexts/onboarding-draft-context';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useOnboardingSubmit } from '@/src/hooks/use-onboarding-submit';
 
@@ -28,15 +28,10 @@ const LANGUAGES = [
   'Other',
 ] as const;
 
-const platformUiFont = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
-
 export default function ConfirmScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const fonts = useFontFamily();
   const draft = useOnboardingDraft();
   const { colors } = useMasjidConfig();
   const submit = useOnboardingSubmit();
@@ -95,7 +90,7 @@ export default function ConfirmScreen() {
   }, [submit, draft, firstName, lastName, phone, language, router]);
 
   const inputStyle = {
-    fontFamily: platformUiFont,
+    fontFamily: fonts.body,
     fontSize: 14,
     color: surfaceRgb,
     backgroundColor: inputBg,
@@ -119,7 +114,7 @@ export default function ConfirmScreen() {
       <View className="mt-8" style={{ gap: 20 }}>
         {/* First Name */}
         <View>
-          <Text style={{ fontFamily: platformUiFont, fontSize: 11, color: labelColor, marginBottom: 6 }}>
+          <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
             First name
           </Text>
           <TextInput
@@ -133,7 +128,7 @@ export default function ConfirmScreen() {
 
         {/* Last Name */}
         <View>
-          <Text style={{ fontFamily: platformUiFont, fontSize: 11, color: labelColor, marginBottom: 6 }}>
+          <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
             Last name
           </Text>
           <TextInput
@@ -147,7 +142,7 @@ export default function ConfirmScreen() {
 
         {/* Phone */}
         <View>
-          <Text style={{ fontFamily: platformUiFont, fontSize: 11, color: labelColor, marginBottom: 6 }}>
+          <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
             Phone number
           </Text>
           <TextInput
@@ -162,7 +157,7 @@ export default function ConfirmScreen() {
 
         {/* Language */}
         <View>
-          <Text style={{ fontFamily: platformUiFont, fontSize: 11, color: labelColor, marginBottom: 6 }}>
+          <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
             Preferred language
           </Text>
           <Pressable
@@ -174,7 +169,7 @@ export default function ConfirmScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ fontFamily: platformUiFont, fontSize: 14, color: surfaceRgb }}>
+            <Text style={{ fontFamily: fonts.body, fontSize: 14, color: surfaceRgb }}>
               {language}
             </Text>
             <Text style={{ color: labelColor, fontSize: 12 }}>
@@ -210,7 +205,7 @@ export default function ConfirmScreen() {
                 >
                   <Text
                     style={{
-                      fontFamily: platformUiFont,
+                      fontFamily: lang === language ? fonts.bodySemibold : fonts.body,
                       fontSize: 13,
                       color: lang === language ? accentRgb : surfaceRgb,
                       fontWeight: lang === language ? '600' : '400',

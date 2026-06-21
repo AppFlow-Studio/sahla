@@ -1,20 +1,15 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo } from "react";
-import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import EventsCalendar, {
   type EventCalendarItem,
 } from "@/components/Discover/EventsCalendar";
 import { useContentItems } from "@/src/hooks/use-content-items";
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 function toTitleCase(s: string): string {
   return s
@@ -43,6 +38,7 @@ function deriveCategory(item: {
 
 export default function DiscoverCalendarScreen() {
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -99,7 +95,7 @@ export default function DiscoverCalendarScreen() {
             </Pressable>
             <Text
               style={{
-                fontFamily: "PlayfairDisplay_500Medium",
+                fontFamily: fonts.display,
                 fontSize: 30,
                 lineHeight: 36,
                 color: fgRgb,
@@ -110,7 +106,7 @@ export default function DiscoverCalendarScreen() {
             </Text>
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 12,
                 color: mutedFgRgb,
                 marginTop: 4,

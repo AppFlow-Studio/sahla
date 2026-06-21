@@ -40,6 +40,7 @@ import {
   PlatformPay,
 } from '@stripe/stripe-react-native';
 import { useStripeAccount } from '@/src/providers/stripe-account-provider';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 // CardField onCardChange details type
 type CardDetails = { complete: boolean; brand?: string; last4?: string };
 // A reusable card returned by the get-payment-methods edge function.
@@ -78,6 +79,7 @@ export function DonationModal({
   onClose: () => void;
 }) {
   const { colors, displayName } = useMasjidConfig();
+  const fonts = useFontFamily();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const supabase = useSupabase();
   const { profile } = useProfile();
@@ -596,7 +598,7 @@ export function DonationModal({
 
               <Text
                 className="mt-5 text-center text-foreground"
-                style={{ fontSize: 48, fontFamily: 'PlayfairDisplay_400Regular' }}
+                style={{ fontSize: 48, fontFamily: fonts.displayRegular }}
               >
                 ${displayAmount}
               </Text>
@@ -786,7 +788,7 @@ export function DonationModal({
                     <Text
                       style={{
                         fontSize: 26,
-                        fontFamily: 'PlayfairDisplay_400Regular',
+                        fontFamily: fonts.displayRegular,
                         color: fgRgb,
                         marginTop: 1,
                       }}
@@ -1075,7 +1077,7 @@ export function DonationModal({
                 <Text
                   style={{
                     fontSize: 22,
-                    fontFamily: 'PlayfairDisplay_400Regular',
+                    fontFamily: fonts.displayRegular,
                     color: fgRgb,
                     textAlign: 'center',
                   }}

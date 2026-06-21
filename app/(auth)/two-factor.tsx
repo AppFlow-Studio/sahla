@@ -5,16 +5,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 export default function TwoFactorScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const clerk = useClerk();
   const router = useRouter();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
   const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
   const surfaceAlpha25 = `rgba(${surface}, 0.25)`;
@@ -117,7 +117,7 @@ export default function TwoFactorScreen() {
         <View className="flex-1 justify-center px-6">
           <Text
             className="text-onboarding-surface"
-            style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
           >
             Check your email
           </Text>

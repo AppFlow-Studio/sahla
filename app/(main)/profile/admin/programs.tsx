@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSpeakers } from '@/src/hooks/use-speakers';
 import {
@@ -46,14 +47,6 @@ import {
 } from '@/src/lib/recurrence';
 
 const SCREEN_H = Dimensions.get('window').height;
-
-// Mirrors the DiscoverHeader tab font so the underline tabs look native to
-// the rest of the project.
-const platformUiFont = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
 
 type Filter = 'all' | 'program' | 'event';
 const FILTERS: { value: Filter; label: string }[] = [
@@ -99,6 +92,7 @@ function formatTime12(time: string | null | undefined): string {
 export default function ProgramsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ',');
   const fgRgb = `rgb(${fg})`;
@@ -190,7 +184,7 @@ export default function ProgramsScreen() {
             <Pressable key={f.value} onPress={() => setFilter(f.value)} hitSlop={6}>
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: active ? fonts.bodySemibold : fonts.bodyMedium,
                   fontSize: 12,
                   fontWeight: active ? '600' : '500',
                   color: active ? fgRgb : mutedRgb,

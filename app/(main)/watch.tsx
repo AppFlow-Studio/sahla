@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
 import { Icon, type IconName } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import MasjidLogo from '@/assets/masjid-logo.svg';
 import NoWifiSignal from '@/assets/images/no_wifi_signal.png';
@@ -610,6 +611,7 @@ export function ReelItem({
   height: number;
   isActive: boolean;
 }) {
+  const fonts = useFontFamily();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -873,7 +875,7 @@ export function ReelItem({
           {'source' in reel && reel.source ? (
             <Text
               style={{
-                fontFamily: 'PlayfairDisplay_500Medium',
+                fontFamily: fonts.display,
                 fontSize: 14,
                 color: 'rgba(255,255,255,0.7)',
                 textAlign: 'center',

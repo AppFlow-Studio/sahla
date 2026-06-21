@@ -17,9 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import Mosque from '@/assets/onboarding/mosque.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
-const SERIF = 'PlayfairDisplay_500Medium';
 const ARABIC = 'Amiri_400Regular';
 
 const triplet = (t: string) => `rgb(${t.replace(/ /g, ',')})`;
@@ -53,6 +53,7 @@ function Halo({
 export default function WelcomeScreen() {
   const router = useRouter();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const { signOut, isSignedIn } = useAuth();
   const resetOnboarding = useOnboardingStore((s) => s.reset);
 
@@ -160,7 +161,7 @@ export default function WelcomeScreen() {
           </Text>
           <Text
             className="text-onboarding-surface"
-            style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginTop: 6 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginTop: 6 }}
           >
             Welcome
           </Text>

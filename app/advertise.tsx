@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
@@ -30,6 +31,7 @@ const MOCK_CHART_BARS = [0.4, 0.55, 0.7, 0.5, 0.65, 0.85, 1.0];
 
 export default function AdvertiseScreen() {
   const router = useRouter();
+  const fonts = useFontFamily();
   const supabase = useSupabase();
   const { displayName, colors } = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
@@ -79,7 +81,7 @@ export default function AdvertiseScreen() {
           <View className="px-5 pt-4">
             <Text
               className="text-[28px] font-bold leading-[34px] text-foreground"
-              style={{ fontFamily: 'PlayfairDisplay_500Medium' }}
+              style={{ fontFamily: fonts.display }}
             >
               Advertise to The{'\n'}Community
             </Text>

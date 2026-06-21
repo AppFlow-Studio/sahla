@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   Pressable,
   Text,
   useWindowDimensions,
@@ -14,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import {
   filterSavedReels,
   useSavedReels,
@@ -27,13 +27,6 @@ const GAP = 2; // YouTube Shorts has thin gaps between cells
 // Reuses the app's text-on-cream palette (dark green primary).
 const INK = '#0a261e';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
-
-// Same UI font Discover uses for its tab labels — keep the two screens aligned.
-const platformUiFont = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
 
 /**
  * Cell preview — when there's a real `thumbnail_url` we use that; otherwise we
@@ -66,6 +59,7 @@ const FILTERS: { value: SavedClipsFilter; label: string }[] = [
 ];
 
 export default function SavedClipsScreen() {
+  const fonts = useFontFamily();
   const { data, isPending, isError, refetch } = useSavedReels();
   const { width } = useWindowDimensions();
   const [filter, setFilter] = useState<SavedClipsFilter>('all');
@@ -147,7 +141,7 @@ export default function SavedClipsScreen() {
             <Pressable key={f.value} onPress={() => setFilter(f.value)} hitSlop={6}>
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: active ? fonts.bodySemibold : fonts.bodyMedium,
                   fontSize: 12,
                   fontWeight: active ? '600' : '500',
                   color: active ? INK : INK_MUTED,

@@ -1,5 +1,6 @@
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 type Props = {
@@ -9,18 +10,13 @@ type Props = {
   onPressAction?: () => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 export default function SectionTitle({
   title,
   actionLabel,
   actionLeading,
   onPressAction,
 }: Props) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -30,7 +26,7 @@ export default function SectionTitle({
       <View className="flex-row items-center justify-between pb-3">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "600",
             letterSpacing: 0.5,
@@ -49,7 +45,7 @@ export default function SectionTitle({
             {actionLeading}
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 10,
                 color: mutedFgRgb,
                 textTransform: "uppercase",

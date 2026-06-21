@@ -1,7 +1,8 @@
 import { Image } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import SectionTitle from "./SectionTitle";
@@ -20,12 +21,6 @@ type Props = {
   onPressViewCalendar?: () => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 function EventRow({
   item,
   onPress,
@@ -33,6 +28,7 @@ function EventRow({
   item: EventItem;
   onPress?: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -62,7 +58,7 @@ function EventRow({
         <Text
           numberOfLines={1}
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 12,
             fontWeight: "600",
             color: fgRgb,
@@ -75,7 +71,7 @@ function EventRow({
             numberOfLines={1}
             style={{
               marginTop: 2,
-              fontFamily: platformUiFont,
+              fontFamily: fonts.body,
               fontSize: 11,
               color: mutedFgRgb,
             }}
@@ -88,7 +84,7 @@ function EventRow({
             numberOfLines={1}
             style={{
               marginTop: 2,
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodyMedium,
               fontSize: 11,
               fontWeight: "500",
               color: accentRgb,

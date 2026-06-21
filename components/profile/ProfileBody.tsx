@@ -3,6 +3,7 @@ import { useAppUpdates } from "@/src/hooks/use-app-updates";
 import { useAppVersion } from "@/src/hooks/use-app-version";
 import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useSupabase } from "@/src/hooks/use-supabase";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
 import { useUpdatesActions } from "@/src/providers/updates-provider";
@@ -126,6 +127,7 @@ export default function ProfileBody({
 }: Props) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const { isAdmin } = useIsAdmin();
   const appVersion = useAppVersion();
   const updates = useAppUpdates();
@@ -259,7 +261,7 @@ export default function ProfileBody({
           <Text
             className="text-foreground/40"
             style={{
-              fontFamily: Platform.select({ android: 'Roboto', default: undefined }),
+              fontFamily: fonts.body,
               fontSize: 11,
               lineHeight: 16,
             }}

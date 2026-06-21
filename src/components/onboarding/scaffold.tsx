@@ -4,9 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 type OnboardingScaffoldProps = {
   step: number;
@@ -39,6 +38,7 @@ export function OnboardingScaffold({
 }: OnboardingScaffoldProps) {
   const router = useRouter();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const surfaceRgb = `rgba(${config.colors.onboardingSurface.replace(/ /g, ',')}, 0.6)`;
 
   const content = (
@@ -46,7 +46,7 @@ export function OnboardingScaffold({
       <View style={{ marginTop: 48 }}>
         <Text
           className="text-onboarding-surface"
-          style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', lineHeight: 36 }}
+          style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', lineHeight: 36 }}
         >
           {title}
         </Text>

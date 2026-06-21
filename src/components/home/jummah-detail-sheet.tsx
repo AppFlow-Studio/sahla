@@ -21,6 +21,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import type { JummahSlot } from '@/src/hooks/use-jummah-schedule';
 
@@ -34,6 +35,7 @@ export function JummahDetailSheet({
   onClose: () => void;
 }) {
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const primary = colors.primary.replace(/ /g, ',');
   const mutedFg = colors.mutedForeground.replace(/ /g, ',');
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
@@ -172,7 +174,7 @@ export function JummahDetailSheet({
                       style={{
                         color: textRgb,
                         fontSize: 26,
-                        fontFamily: 'PlayfairDisplay_400Regular',
+                        fontFamily: fonts.displayRegular,
                         marginBottom: 18,
                       }}
                     >

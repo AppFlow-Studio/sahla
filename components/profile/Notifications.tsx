@@ -1,12 +1,7 @@
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Icon } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
   onEnablePress: () => void;
@@ -14,6 +9,7 @@ type Props = {
 
 export default function Notifications({ onEnablePress }: Props) {
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
 
   return (
@@ -32,7 +28,7 @@ export default function Notifications({ onEnablePress }: Props) {
         <Text
           numberOfLines={1}
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodyMedium,
             fontWeight: "500",
             fontSize: 11,
             lineHeight: 15,
@@ -51,7 +47,7 @@ export default function Notifications({ onEnablePress }: Props) {
       >
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontWeight: "400",
             fontSize: 11,
             lineHeight: 15,

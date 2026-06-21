@@ -9,10 +9,9 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 // Warm up the browser on Android for faster OAuth redirects.
 if (Platform.OS === 'android') {
@@ -65,6 +64,7 @@ export default function CreateAccountScreen() {
   const { isSignedIn, signOut } = useAuth();
   const clerk = useClerk();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
   const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
 
@@ -219,7 +219,7 @@ export default function CreateAccountScreen() {
           <Text
             className="text-onboarding-surface"
             style={{
-              fontFamily: SERIF,
+              fontFamily: fonts.display,
               fontSize: 30,
               fontWeight: '500',
               textAlign: 'center',

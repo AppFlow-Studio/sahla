@@ -20,6 +20,7 @@ import { Image } from 'expo-image';
 
 import { CardVisual } from '@/src/components/stripe-card-visual';
 import { Icon, type IconName } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
@@ -40,6 +41,7 @@ type Step = 'form' | 'payment' | 'processing' | 'success';
 export default function AdvertiseApplyScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const fonts = useFontFamily();
   const supabase = useSupabase();
   const { profile } = useProfile();
   const { id: mosqueSlug, colors, displayName } = useMasjidConfig();
@@ -333,7 +335,7 @@ export default function AdvertiseApplyScreen() {
                 </View>
                 <Text
                   className="text-center text-[24px] font-bold text-foreground"
-                  style={{ fontFamily: 'PlayfairDisplay_500Medium' }}
+                  style={{ fontFamily: fonts.display }}
                 >
                   You're All Set!
                 </Text>
@@ -621,7 +623,7 @@ export default function AdvertiseApplyScreen() {
                       <View className="border-t border-foreground/5 px-4 pb-1 pt-3">
                         <Text
                           className="text-[17px] font-bold text-foreground"
-                          style={{ fontFamily: 'Georgia' }}
+                          style={{ fontFamily: fonts.displayRegular }}
                         >
                           {form.businessName}
                         </Text>

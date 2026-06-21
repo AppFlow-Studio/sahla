@@ -1,5 +1,7 @@
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
   onRestart: () => void;
@@ -7,6 +9,7 @@ type Props = {
 };
 
 export function UpdatesBanner({ onRestart, onDismiss }: Props) {
+  const fonts = useFontFamily();
   const insets = useSafeAreaInsets();
   // Floats above the bottom tab bar (~64pt) plus the device's safe-area inset.
   const bottom = insets.bottom + 76;
@@ -36,7 +39,7 @@ export function UpdatesBanner({ onRestart, onDismiss }: Props) {
           <Text
             className="text-background"
             style={{
-              fontFamily: Platform.select({ android: 'Roboto', default: undefined }),
+              fontFamily: fonts.bodySemibold,
               fontWeight: '600',
               fontSize: 13,
               lineHeight: 18,
@@ -47,7 +50,7 @@ export function UpdatesBanner({ onRestart, onDismiss }: Props) {
           <Text
             className="text-background/70"
             style={{
-              fontFamily: Platform.select({ android: 'Roboto', default: undefined }),
+              fontFamily: fonts.body,
               fontSize: 11,
               lineHeight: 16,
               marginTop: 2,

@@ -3,8 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/src/components/ui/icon';
-
-const SERIF = 'PlayfairDisplay_500Medium';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type PersonalizationScaffoldProps = {
   step: number;
@@ -37,6 +36,7 @@ export function PersonalizationScaffold({
   onSkip,
 }: PersonalizationScaffoldProps) {
   const router = useRouter();
+  const fonts = useFontFamily();
   const progress = Math.max(0, Math.min(1, step / totalSteps));
 
   return (
@@ -81,7 +81,7 @@ export function PersonalizationScaffold({
         >
           <Text
             className="text-onboarding-bg"
-            style={{ fontFamily: SERIF, fontSize: 30, lineHeight: 35 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 35 }}
           >
             {title}
           </Text>

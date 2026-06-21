@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
@@ -13,6 +14,7 @@ const patternSource = require('@/assets/islamic-pattern-tall.png');
 
 export function HomeHeader() {
   const insets = useSafeAreaInsets();
+  const fonts = useFontFamily();
   const { colors, clerkOrgId } = useMasjidConfig();
   const { user } = useUser();
   const storedFirstName = useOnboardingStore((s) => s.firstName);
@@ -89,7 +91,7 @@ export function HomeHeader() {
             lineHeight: 52,
             marginTop: 8,
             letterSpacing: -2,
-            fontFamily: 'PlayfairDisplay_400Regular',
+            fontFamily: fonts.displayRegular,
           }}
         >
           {currentTime}

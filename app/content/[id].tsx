@@ -4,7 +4,6 @@ import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Dimensions,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -31,6 +30,7 @@ import {
 import { useContentNotifSettings } from "@/src/hooks/use-content-notification-settings";
 import { useIsSaved, useToggleSave } from "@/src/hooks/use-saved-content";
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useConfigStore } from "@/src/stores/config-store";
 
@@ -43,17 +43,6 @@ const SHEET_RADIUS = 40;
 const rgb = (triplet: string) => `rgb(${triplet.replace(/ /g, ",")})`;
 const rgba = (triplet: string, alpha: number) =>
   `rgba(${triplet.replace(/ /g, ",")},${alpha})`;
-
-const platformTitleFont = Platform.select({
-  ios: "SF Pro Display",
-  android: "Roboto",
-  default: "system-ui",
-});
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 type Detail = {
   content_id: string;
@@ -143,6 +132,7 @@ export default function ContentDetailScreen() {
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const toastBg = rgb(colors.foreground);
   const toastText = rgb(colors.background);
@@ -449,7 +439,7 @@ export default function ContentDetailScreen() {
                       >
                         <Text
                           style={{
-                            fontFamily: platformUiFont,
+                            fontFamily: fonts.bodySemibold,
                             fontSize: 12,
                             fontWeight: "600",
                             color: BUSH,
@@ -502,7 +492,7 @@ export default function ContentDetailScreen() {
               <View className="px-5 pt-6">
                 <Text
                   style={{
-                    fontFamily: platformTitleFont,
+                    fontFamily: fonts.display,
                     fontSize: 19,
                     lineHeight: 24,
                     fontWeight: "700",
@@ -524,7 +514,7 @@ export default function ContentDetailScreen() {
                     <Text
                       style={{
                         marginLeft: 8,
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.bodySemibold,
                         fontSize: 13,
                         fontWeight: "700",
                         color: CHIP_TEXT,
@@ -547,7 +537,7 @@ export default function ContentDetailScreen() {
                       marginTop: 12,
                       fontSize: 13,
                       color: MUTED,
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                     }}
                   >
                     This already happened
@@ -561,7 +551,7 @@ export default function ContentDetailScreen() {
                   >
                     <Text
                       style={{
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.bodySemibold,
                         fontSize: 11,
                         fontWeight: "700",
                         letterSpacing: 1.4,
@@ -574,7 +564,7 @@ export default function ContentDetailScreen() {
                     <Text
                       style={{
                         marginTop: 10,
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.body,
                         fontSize: 12,
                         lineHeight: 18,
                         color: BUSH,
@@ -615,7 +605,7 @@ export default function ContentDetailScreen() {
                 <Text
                   style={{
                     marginLeft: 8,
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.bodySemibold,
                     fontSize: 16,
                     fontWeight: "700",
                     color: BUSH,
@@ -663,7 +653,7 @@ export default function ContentDetailScreen() {
                   color: toastText,
                   fontSize: 14,
                   fontWeight: "700",
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                 }}
               >
                 Reminder set
@@ -673,7 +663,7 @@ export default function ContentDetailScreen() {
                   color: toastText,
                   opacity: 0.75,
                   fontSize: 12,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   marginTop: 1,
                 }}
               >
@@ -724,7 +714,7 @@ export default function ContentDetailScreen() {
                   color: toastText,
                   fontSize: 14,
                   fontWeight: "700",
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                 }}
               >
                 Saved to library
@@ -734,7 +724,7 @@ export default function ContentDetailScreen() {
                   color: toastText,
                   opacity: 0.75,
                   fontSize: 12,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   marginTop: 1,
                 }}
               >
