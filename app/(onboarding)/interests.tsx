@@ -1,28 +1,30 @@
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
 import { useOnboardingDraft } from '@/src/contexts/onboarding-draft-context';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
-const CHIPS: { key: string; label: string }[] = [
-  { key: 'daily_prayers', label: 'Daily prayers' },
-  { key: 'jummah_khutbah', label: 'Jummah & khutbah' },
-  { key: 'quran_study_tafseer', label: 'Quran study & tafseer' },
-  { key: 'halaqas_study_circles', label: 'Halaqas & study circles' },
-  { key: 'kids_programs', label: 'Kids programs' },
-  { key: 'youth_programs', label: 'Youth programs' },
-  { key: 'community_events', label: 'Community events' },
-  { key: 'sisters_programs', label: "Sisters' programs" },
-  { key: 'volunteering_service', label: 'Volunteering & service' },
-  { key: 'new_muslim_support', label: 'New Muslim support' },
-  { key: 'marriage_family', label: 'Marriage & family' },
-  { key: 'seniors_community', label: "Seniors' community" },
+const CHIPS: { key: string; labelKey: string }[] = [
+  { key: 'daily_prayers', labelKey: 'interestDailyPrayers' },
+  { key: 'jummah_khutbah', labelKey: 'interestJummahKhutbah' },
+  { key: 'quran_study_tafseer', labelKey: 'interestQuranStudyTafseer' },
+  { key: 'halaqas_study_circles', labelKey: 'interestHalaqasStudyCircles' },
+  { key: 'kids_programs', labelKey: 'interestKidsPrograms' },
+  { key: 'youth_programs', labelKey: 'interestYouthPrograms' },
+  { key: 'community_events', labelKey: 'interestCommunityEvents' },
+  { key: 'sisters_programs', labelKey: 'interestSistersPrograms' },
+  { key: 'volunteering_service', labelKey: 'interestVolunteeringService' },
+  { key: 'new_muslim_support', labelKey: 'interestNewMuslimSupport' },
+  { key: 'marriage_family', labelKey: 'interestMarriageFamily' },
+  { key: 'seniors_community', labelKey: 'interestSeniorsCommunity' },
 ];
 
 
 export default function InterestsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { selectedInterestKeys, toggleInterestKey } = useOnboardingDraft();
   const { colors } = useMasjidConfig();
 
@@ -38,9 +40,9 @@ export default function InterestsScreen() {
   return (
     <OnboardingScaffold
       step={2}
-      title="What matters most to you right now?"
-      body="Select all that apply. This helps us personalize your experience."
-      primaryLabel="Continue"
+      title={t('onboarding.interestsTitle')}
+      body={t('onboarding.interestsBody')}
+      primaryLabel={t('onboarding.continue')}
       onPrimary={handleContinue}
       primaryDisabled={selectedInterestKeys.length === 0}
       scrollable
@@ -70,7 +72,7 @@ export default function InterestsScreen() {
                 className={isSelected ? 'text-onboarding-accent' : 'text-onboarding-surface'}
                 style={{ fontSize: 13, fontWeight: isSelected ? '600' : '400' }}
               >
-                {chip.label}
+                {t(`onboarding.${chip.labelKey}`)}
               </Text>
             </Pressable>
           );
@@ -82,7 +84,7 @@ export default function InterestsScreen() {
           className="text-onboarding-surface/50 mt-4"
           style={{ fontSize: 11 }}
         >
-          {selectedInterestKeys.length} selected
+          {t('onboarding.selectedCount', { count: selectedInterestKeys.length })}
         </Text>
       )}
     </OnboardingScaffold>

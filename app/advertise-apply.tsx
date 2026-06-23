@@ -1,6 +1,7 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +21,8 @@ import { Image } from 'expo-image';
 
 import { CardVisual } from '@/src/components/stripe-card-visual';
 import { Icon, type IconName } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
@@ -39,7 +42,10 @@ type Step = 'form' | 'payment' | 'processing' | 'success';
 
 export default function AdvertiseApplyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { user } = useUser();
+  const fonts = useFontFamily();
   const supabase = useSupabase();
   const { profile } = useProfile();
   const { id: mosqueSlug, colors, displayName } = useMasjidConfig();
@@ -110,7 +116,7 @@ export default function AdvertiseApplyScreen() {
       const ImagePicker = ((mod as any).default ?? mod) as typeof import('expo-image-picker');
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (perm.status !== 'granted') {
-        Alert.alert('Permission needed', 'Photo library access was denied.');
+        Alert.alert(t('ads.permissionNeededTitle'), t('ads.permissionNeededMessage'));
         return;
       }
       // No allowsEditing: its crop is square on iOS, which would never satisfy
@@ -129,14 +135,18 @@ export default function AdvertiseApplyScreen() {
         const ratio = asset.width / asset.height;
         if (Math.abs(ratio - ASPECT) > TOLERANCE) {
           Alert.alert(
-            'Wrong aspect ratio',
-            `The flyer must be 16:9 (e.g. 1920×1080). Yours is ${asset.width}×${asset.height} (≈${ratio.toFixed(2)}:1).`,
+            t('ads.wrongAspectRatioTitle'),
+            t('ads.wrongAspectRatioMessage', {
+              width: asset.width,
+              height: asset.height,
+              ratio: ratio.toFixed(2),
+            }),
           );
           return;
         }
       }
       if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        Alert.alert('File too large', 'The flyer must be 5 MB or smaller.');
+        Alert.alert(t('ads.fileTooLargeTitle'), t('ads.fileTooLargeMessage'));
         return;
       }
 
@@ -164,7 +174,7 @@ export default function AdvertiseApplyScreen() {
       if (upErr || !data?.url) throw new Error(upErr?.message ?? 'Upload failed');
       setFlyerUrl(data.url as string);
     } catch (err: any) {
-      Alert.alert('Upload failed', err.message ?? 'Could not upload the flyer.');
+      Alert.alert(t('ads.uploadFailedTitle'), err.message ?? t('ads.uploadFailedMessage'));
     } finally {
       setFlyerUploading(false);
     }
@@ -226,7 +236,7 @@ export default function AdvertiseApplyScreen() {
     } catch (err: any) {
       setStripeAccountId(undefined);
       setSubmitting(false);
-      Alert.alert('Error', err.message ?? 'Something went wrong.');
+      Alert.alert(t('ads.errorTitle'), err.message ?? t('ads.somethingWentWrong'));
     }
   }, [form, isFormValid, submitting, user, supabase, mosqueUuid, flyerUrl]);
 
@@ -250,11 +260,11 @@ export default function AdvertiseApplyScreen() {
         setStripeAccountId(undefined);
         setStep('success');
       } else {
-        throw new Error('Payment was not completed.');
+        throw new Error(t('ads.paymentNotCompleted'));
       }
     } catch (err: any) {
       setStep('payment');
-      Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
+      Alert.alert(t('ads.paymentFailedTitle'), err.message ?? t('ads.somethingWentWrong'));
     }
   }, [clientSecret, cardComplete, confirmPayment, setStripeAccountId]);
 
@@ -285,14 +295,14 @@ export default function AdvertiseApplyScreen() {
                 hitSlop={12}
                 className="h-8 w-8 items-center justify-center"
               >
-                <Icon name="arrow-back" size={22} color={fgRgb} />
+                <Icon name={isRTL ? 'arrow-forward' : 'arrow-back'} size={22} color={fgRgb} />
               </Pressable>
-              <Text className="ml-3 text-[16px] font-semibold text-foreground">
+              <Text className="ms-3 text-[16px] font-semibold text-foreground">
                 {step === 'payment' || step === 'processing'
-                  ? 'Payment'
+                  ? t('ads.payment')
                   : step === 'success'
-                    ? 'Application Submitted'
-                    : 'Business Application'}
+                    ? t('ads.applicationSubmitted')
+                    : t('ads.businessApplication')}
               </Text>
             </View>
 
@@ -333,18 +343,18 @@ export default function AdvertiseApplyScreen() {
                 </View>
                 <Text
                   className="text-center text-[24px] font-bold text-foreground"
-                  style={{ fontFamily: 'PlayfairDisplay_500Medium' }}
+                  style={{ fontFamily: fonts.display }}
                 >
-                  You're All Set!
+                  {t('ads.allSet')}
                 </Text>
                 <Text className="mt-3 text-center text-[15px] leading-[22px] text-foreground/60">
-                  We'll review your application and get back to you within 1–3
-                  business days. Your subscription is active.
+                  {t('ads.allSetSubtitle')}
                 </Text>
 
                 <View className="mt-8 w-full">
                   <ReceiptCard
-                    title="Payment Receipt"
+                    t={t}
+                    title={t('ads.paymentReceipt')}
                     merchant={displayName}
                     monthly={monthlyDisplay}
                     onboarding={onboardingDisplay}
@@ -369,7 +379,7 @@ export default function AdvertiseApplyScreen() {
                   className="mt-6 h-[48px] w-full items-center justify-center rounded-full bg-foreground active:opacity-90"
                 >
                   <Text className="text-[16px] font-semibold text-background">
-                    Done
+                    {t('common.done')}
                   </Text>
                 </Pressable>
               </View>
@@ -380,7 +390,7 @@ export default function AdvertiseApplyScreen() {
               <View className="items-center px-5 pt-24">
                 <ActivityIndicator size="large" color={fgRgb} />
                 <Text className="mt-4 text-[15px] text-foreground/50">
-                  Processing your payment...
+                  {t('ads.processingPayment')}
                 </Text>
               </View>
             )}
@@ -390,7 +400,8 @@ export default function AdvertiseApplyScreen() {
               <View className="mt-6 px-5">
                 {/* Order receipt (pre-purchase) */}
                 <ReceiptCard
-                  title="Order Summary"
+                  t={t}
+                  title={t('ads.orderSummary')}
                   merchant={displayName}
                   monthly={monthlyDisplay}
                   onboarding={onboardingDisplay}
@@ -402,7 +413,7 @@ export default function AdvertiseApplyScreen() {
                 {/* Card entry */}
                 <View className="mt-6">
                   <Text className="mb-3 text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
-                    Card Details
+                    {t('ads.cardDetails')}
                   </Text>
                   <CardVisual
                     brand={cardBrand}
@@ -435,7 +446,7 @@ export default function AdvertiseApplyScreen() {
                 {/* Business info recap */}
                 <View className="mt-6 rounded-2xl bg-muted/30 px-4 py-3">
                   <Text className="text-[12px] font-medium text-foreground/40">
-                    Applying as
+                    {t('ads.applyingAs')}
                   </Text>
                   <Text className="mt-1 text-[14px] font-semibold text-foreground">
                     {form.businessName}
@@ -453,32 +464,32 @@ export default function AdvertiseApplyScreen() {
                 {/* Personal Info Section */}
                 <View className="mt-6 px-5">
                   <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
-                    Personal Information
+                    {t('ads.personalInformation')}
                   </Text>
 
                   <View className="mt-4 gap-4">
                     <FormField
-                      label="Full Name"
+                      label={t('ads.fullName')}
                       value={form.fullName}
                       onChangeText={update('fullName')}
-                      placeholder="Your full name"
+                      placeholder={t('ads.fullNamePlaceholder')}
                       autoComplete="name"
                       fgRgb={fgRgb}
                     />
                     <FormField
-                      label="Email"
+                      label={t('ads.email')}
                       value={form.email}
                       onChangeText={update('email')}
-                      placeholder="your@email.com"
+                      placeholder={t('ads.emailPlaceholder')}
                       keyboardType="email-address"
                       autoComplete="email"
                       fgRgb={fgRgb}
                     />
                     <FormField
-                      label="Phone"
+                      label={t('ads.phone')}
                       value={form.phone}
                       onChangeText={update('phone')}
-                      placeholder="(555) 123-4567"
+                      placeholder={t('ads.phonePlaceholder')}
                       keyboardType="phone-pad"
                       autoComplete="tel"
                       fgRgb={fgRgb}
@@ -489,29 +500,29 @@ export default function AdvertiseApplyScreen() {
                 {/* Business Info Section */}
                 <View className="mt-8 px-5">
                   <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
-                    Business Information
+                    {t('ads.businessInformation')}
                   </Text>
 
                   <View className="mt-4 gap-4">
                     <FormField
-                      label="Business Name"
+                      label={t('ads.businessName')}
                       value={form.businessName}
                       onChangeText={update('businessName')}
-                      placeholder="Your business name"
+                      placeholder={t('ads.businessNamePlaceholder')}
                       fgRgb={fgRgb}
                     />
                     <FormField
-                      label="Business Address"
+                      label={t('ads.businessAddress')}
                       value={form.businessAddress}
                       onChangeText={update('businessAddress')}
-                      placeholder="123 Main St, City, State"
+                      placeholder={t('ads.businessAddressPlaceholder')}
                       fgRgb={fgRgb}
                     />
 
                     {/* Flyer upload */}
                     <View>
                       <Text className="mb-2 text-[13px] font-medium text-foreground/70">
-                        Business Flyer
+                        {t('ads.businessFlyer')}
                       </Text>
                       <Pressable
                         onPress={pickFlyer}
@@ -529,9 +540,9 @@ export default function AdvertiseApplyScreen() {
                               contentFit="cover"
                               style={{ width: '100%', height: 150 }}
                             />
-                            <View className="absolute bottom-2 right-2 rounded-md bg-foreground/80 px-2.5 py-1">
+                            <View className="absolute bottom-2 end-2 rounded-md bg-foreground/80 px-2.5 py-1">
                               <Text className="text-[11px] font-semibold text-background">
-                                Change
+                                {t('ads.change')}
                               </Text>
                             </View>
                           </View>
@@ -543,10 +554,10 @@ export default function AdvertiseApplyScreen() {
                               color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.4)`}
                             />
                             <Text className="mt-2 text-[14px] font-medium text-foreground/60">
-                              Upload your flyer
+                              {t('ads.uploadYourFlyer')}
                             </Text>
                             <Text className="mt-0.5 text-[12px] text-foreground/35">
-                              Recommended 16:9 · PNG or JPG
+                              {t('ads.flyerHint')}
                             </Text>
                           </View>
                         )}
@@ -558,10 +569,10 @@ export default function AdvertiseApplyScreen() {
                 {/* Live Ad Preview */}
                 <View className="mt-8 px-5">
                   <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
-                    Live Preview
+                    {t('ads.livePreview')}
                   </Text>
                   <Text className="mt-1 text-[13px] text-foreground/35">
-                    This is how your ad will appear in the app
+                    {t('ads.livePreviewSubtitle')}
                   </Text>
 
                   <View
@@ -575,9 +586,9 @@ export default function AdvertiseApplyScreen() {
                     }}
                   >
                     {/* Preview badge */}
-                    <View className="absolute right-3 top-3 z-10 rounded-md bg-foreground/80 px-2.5 py-1">
+                    <View className="absolute end-3 top-3 z-10 rounded-md bg-foreground/80 px-2.5 py-1">
                       <Text className="text-[10px] font-bold uppercase tracking-[1px] text-background">
-                        Preview
+                        {t('ads.previewBadge')}
                       </Text>
                     </View>
 
@@ -596,9 +607,9 @@ export default function AdvertiseApplyScreen() {
                             contentFit="cover"
                             style={{ width: '100%', height: '100%' }}
                           />
-                          <View className="absolute bottom-2 right-2 rounded-md bg-foreground/80 px-2 py-1">
+                          <View className="absolute bottom-2 end-2 rounded-md bg-foreground/80 px-2 py-1">
                             <Text className="text-[10px] font-semibold text-background">
-                              Tap to change
+                              {t('ads.tapToChange')}
                             </Text>
                           </View>
                         </>
@@ -610,7 +621,7 @@ export default function AdvertiseApplyScreen() {
                             color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
                           />
                           <Text className="mt-2 text-[13px] text-foreground/30">
-                            Tap to upload your flyer
+                            {t('ads.tapToUploadFlyer')}
                           </Text>
                         </>
                       )}
@@ -621,7 +632,7 @@ export default function AdvertiseApplyScreen() {
                       <View className="border-t border-foreground/5 px-4 pb-1 pt-3">
                         <Text
                           className="text-[17px] font-bold text-foreground"
-                          style={{ fontFamily: 'Georgia' }}
+                          style={{ fontFamily: fonts.displayRegular }}
                         >
                           {form.businessName}
                         </Text>
@@ -632,15 +643,15 @@ export default function AdvertiseApplyScreen() {
                     <View className="flex-row justify-center gap-8 border-t border-foreground/5 py-4">
                       {(
                         [
-                          { icon: 'phone', label: 'Call', active: !!form.phone.trim() },
+                          { icon: 'phone', label: t('ads.actionCall'), active: !!form.phone.trim() },
                           {
                             icon: 'message-text-outline',
-                            label: 'SMS',
+                            label: t('ads.actionSms'),
                             active: !!form.phone.trim(),
                           },
                           {
                             icon: 'email-outline',
-                            label: 'Email',
+                            label: t('ads.actionEmail'),
                             active: !!form.email.trim(),
                           },
                         ] as const
@@ -689,7 +700,7 @@ export default function AdvertiseApplyScreen() {
                             : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.2)`
                         }
                       />
-                      <View className="ml-2.5 flex-1">
+                      <View className="ms-2.5 flex-1">
                         <Text
                           className="text-[13px]"
                           style={{
@@ -698,14 +709,14 @@ export default function AdvertiseApplyScreen() {
                               : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.2)`,
                           }}
                         >
-                          {form.businessAddress.trim() || 'Business address'}
+                          {form.businessAddress.trim() || t('ads.businessAddressPlaceholderPreview')}
                         </Text>
                         <Text className="mt-0.5 text-[10px] uppercase tracking-[0.5px] text-foreground/35">
-                          Open in Maps
+                          {t('ads.openInMaps')}
                         </Text>
                       </View>
                       <Icon
-                        name="chevron-right"
+                        name={isRTL ? 'chevron-left' : 'chevron-right'}
                         size={18}
                         color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`}
                       />
@@ -722,8 +733,10 @@ export default function AdvertiseApplyScreen() {
                       color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.4)`}
                     />
                     <Text className="text-[13px] leading-[20px] text-foreground/60">
-                      {monthlyDisplay}/month subscription + {onboardingDisplay}{' '}
-                      one-time onboarding fee
+                      {t('ads.pricingInline', {
+                        monthly: monthlyDisplay,
+                        onboarding: onboardingDisplay,
+                      })}
                     </Text>
                   </View>
                 </View>
@@ -762,10 +775,10 @@ export default function AdvertiseApplyScreen() {
                   ) : (
                     <>
                       <Text className="text-[16px] font-semibold text-background">
-                        Continue to Payment
+                        {t('ads.continueToPayment')}
                       </Text>
-                      <Text className="ml-2 text-[16px] text-background">
-                        {'\u2192'}
+                      <Text className="ms-2 text-[16px] text-background">
+                        {isRTL ? '\u2190' : '\u2192'}
                       </Text>
                     </>
                   )}
@@ -782,7 +795,7 @@ export default function AdvertiseApplyScreen() {
                   }}
                 >
                   <Text className="text-[16px] font-semibold text-background">
-                    Pay {firstPaymentDisplay} & Subscribe
+                    {t('ads.paySubscribe', { amount: firstPaymentDisplay })}
                   </Text>
                 </Pressable>
               )}
@@ -937,6 +950,7 @@ function PaidStamp({ tint }: { tint?: string }) {
  * paid" + card/date + barcode).
  */
 function ReceiptCard({
+  t,
   title,
   monthly,
   onboarding,
@@ -951,6 +965,7 @@ function ReceiptCard({
   tint,
   pageColor,
 }: {
+  t: ReturnType<typeof useTranslation>['t'];
   title: string;
   monthly: string;
   onboarding: string;
@@ -1000,7 +1015,7 @@ function ReceiptCard({
         </Text>
         {(ref || dateStr) && paid ? (
           <Text className="mt-1 text-[11px] text-foreground/40" style={{ fontVariant: ['tabular-nums'] }}>
-            {ref ? `No. ${ref}` : ''}{ref && dateStr ? '  ·  ' : ''}{dateStr ?? ''}
+            {ref ? t('ads.receiptNumber', { ref }) : ''}{ref && dateStr ? '  ·  ' : ''}{dateStr ?? ''}
           </Text>
         ) : null}
       </View>
@@ -1009,8 +1024,8 @@ function ReceiptCard({
 
       {/* Line items */}
       <View className="gap-3 px-5 pt-3">
-        <ReceiptRow label="One-time onboarding fee" value={onboarding} />
-        <ReceiptRow label="First month" value={monthly} />
+        <ReceiptRow label={t('ads.onetimeOnboardingFee')} value={onboarding} />
+        <ReceiptRow label={t('ads.firstMonth')} value={monthly} />
       </View>
 
       <View className="px-5">
@@ -1018,8 +1033,10 @@ function ReceiptCard({
           className="my-3"
           style={{ borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.12)', borderStyle: 'dashed' }}
         />
-        <ReceiptRow label={paid ? 'Total paid' : 'Due today'} value={total} bold />
-        <Text className="mt-1 text-[12px] text-foreground/40">Then {monthly}/month</Text>
+        <ReceiptRow label={paid ? t('ads.totalPaid') : t('ads.dueToday')} value={total} bold />
+        <Text className="mt-1 text-[12px] text-foreground/40">
+          {t('ads.thenPerMonth', { amount: monthly })}
+        </Text>
       </View>
 
       {/* Meta */}
@@ -1032,13 +1049,13 @@ function ReceiptCard({
           <View className="gap-1.5">
             {businessName ? (
               <View className="flex-row items-center justify-between">
-                <Text className="text-[12px] text-foreground/40">Business</Text>
+                <Text className="text-[12px] text-foreground/40">{t('ads.businessLabel')}</Text>
                 <Text className="text-[12px] font-medium text-foreground/70">{businessName}</Text>
               </View>
             ) : null}
             {last4 ? (
               <View className="flex-row items-center justify-between">
-                <Text className="text-[12px] text-foreground/40">Payment</Text>
+                <Text className="text-[12px] text-foreground/40">{t('ads.paymentLabel')}</Text>
                 <Text
                   className="text-[12px] font-medium text-foreground/70"
                   style={{ fontVariant: ['tabular-nums'] }}
@@ -1056,7 +1073,7 @@ function ReceiptCard({
         {paid ? (
           <>
             <Text className="mb-3 text-[11px] italic text-foreground/40">
-              Thank you for advertising with us
+              {t('ads.thankYouAdvertising')}
             </Text>
             <Barcode />
             {ref ? (
@@ -1070,7 +1087,7 @@ function ReceiptCard({
           </>
         ) : (
           <Text className="text-[11px] text-foreground/35">
-            You won't be charged until you confirm
+            {t('ads.notChargedUntilConfirm')}
           </Text>
         )}
       </View>

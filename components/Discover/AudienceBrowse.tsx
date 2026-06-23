@@ -1,8 +1,8 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -17,13 +17,9 @@ import Animated, {
   SlideOutRight,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 export type AudienceItem = {
   id: string;
@@ -42,13 +38,6 @@ export type AudienceFilter = "All" | "Kids" | "Youth" | "Adults";
 /** A single selectable pill. `key` is the filter identity (audience name or a
  *  program-category id); `label` is what the user sees. */
 export type BrowseFilter = { key: string; label: string };
-
-const DEFAULT_FILTERS: BrowseFilter[] = [
-  { key: "All", label: "All" },
-  { key: "Kids", label: "Kids" },
-  { key: "Youth", label: "Youth" },
-  { key: "Adults", label: "Adults" },
-];
 
 type Props = {
   items: AudienceItem[];
@@ -74,6 +63,7 @@ function FilterPills({
   active: string;
   onSelect: (key: string) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
@@ -102,7 +92,7 @@ function FilterPills({
         <Text
           numberOfLines={1}
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 11,
             color: isActive ? bgRgb : mutedFgRgb,
           }}
@@ -151,6 +141,7 @@ function Card({
   item: AudienceItem;
   onPress: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -159,7 +150,7 @@ function Card({
   return (
     <Pressable
       onPress={onPress}
-      style={{ width: 145, marginRight: 16 }}
+      style={{ width: 145, marginEnd: 16 }}
       accessibilityRole="button"
       accessibilityLabel={item.title}
     >
@@ -184,7 +175,7 @@ function Card({
         numberOfLines={1}
         style={{
           marginTop: 10,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "600",
           color: fgRgb,
@@ -197,7 +188,7 @@ function Card({
         numberOfLines={1}
         style={{
           marginTop: 2,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.body,
           fontSize: 12,
           color: mutedFgRgb,
           lineHeight: 16,
@@ -218,6 +209,8 @@ function ListRow({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -253,11 +246,11 @@ function ListRow({
           ) : null}
         </View>
 
-        <View className="ml-3 flex-1">
+        <View className="ms-3 flex-1">
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
@@ -270,7 +263,7 @@ function ListRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 12,
                 color: mutedFgRgb,
                 lineHeight: 16,
@@ -284,7 +277,7 @@ function ListRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.bodyMedium,
                 fontSize: 12,
                 color: accentRgb,
                 fontWeight: "500",
@@ -297,7 +290,11 @@ function ListRow({
           ) : null}
         </View>
 
-        <AntDesign name="right" size={12} color={mutedFgRgb} />
+        <AntDesign
+          name={isRTL ? "left" : "right"}
+          size={12}
+          color={mutedFgRgb}
+        />
       </Pressable>
 
       {showDivider ? (
@@ -322,6 +319,7 @@ function ListSection({
   items: AudienceItem[];
   onPressItem: (id: string) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -331,7 +329,7 @@ function ListSection({
       <View className="px-6">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "700",
             letterSpacing: 0.6,
@@ -369,6 +367,9 @@ function Section({
   onPressItem: (id: string) => void;
   onPressSeeAll?: () => void;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -380,7 +381,7 @@ function Section({
         <Text
           style={{
             flex: 1,
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "700",
             letterSpacing: 0.6,
@@ -395,22 +396,26 @@ function Section({
             onPress={onPressSeeAll}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={`See all ${label}`}
+            accessibilityLabel={t("discover.seeAllLabel", { label })}
             className="flex-row items-center"
           >
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 10,
                 textTransform: "uppercase",
                 color: mutedFgRgb,
                 letterSpacing: 0.4,
-                marginRight: 4,
+                marginEnd: 4,
               }}
             >
-              See all
+              {t("discover.seeAll")}
             </Text>
-            <AntDesign name="arrow-right" size={10} color={mutedFgRgb} />
+            <AntDesign
+              name={isRTL ? "arrow-left" : "arrow-right"}
+              size={10}
+              color={mutedFgRgb}
+            />
           </Pressable>
         ) : null}
       </View>
@@ -449,6 +454,7 @@ function EmptyState({
   title: string;
   subtitle?: string;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -471,7 +477,7 @@ function EmptyState({
       </View>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 14,
           fontWeight: "600",
           color: fgRgb,
@@ -483,7 +489,7 @@ function EmptyState({
       {subtitle ? (
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 12,
             color: mutedFgRgb,
             textAlign: "center",
@@ -514,9 +520,24 @@ export default function AudienceBrowse({
   allTabFooter,
   kind = "events",
   initialFilter,
-  filters = DEFAULT_FILTERS,
+  filters: filtersProp,
   matchFilter,
 }: Props) {
+  const { t } = useTranslation();
+
+  // When the caller doesn't supply pills, fall back to the built-in audience
+  // set — translating the labels while keeping the keys stable (the keys are
+  // the filter identity that `matchesAudience` switches on).
+  const defaultFilters = useMemo<BrowseFilter[]>(
+    () => [
+      { key: "All", label: t("common.all") },
+      { key: "Kids", label: t("discover.audienceKids") },
+      { key: "Youth", label: t("discover.audienceYouth") },
+      { key: "Adults", label: t("discover.audienceAdults") },
+    ],
+    [t],
+  );
+  const filters = filtersProp ?? defaultFilters;
   const allKey = filters[0]?.key ?? "All";
   const match = matchFilter ?? ((item, key) => matchesAudience(item, key as Exclude<AudienceFilter, "All">));
 
@@ -569,13 +590,21 @@ export default function AudienceBrowse({
   }, [items, filter, showAudienceList, match]);
 
   const activeLabel = filters.find((f) => f.key === filter)?.label ?? filter;
-  const allLabel = kind === "programs" ? "All programs" : "All events";
+  const allLabel =
+    kind === "programs"
+      ? t("discover.allPrograms")
+      : t("discover.allEvents");
   const secondaryLabel =
-    kind === "programs" ? "Weekly programs" : "Upcoming events";
+    kind === "programs"
+      ? t("discover.weeklyPrograms")
+      : t("discover.upcomingEvents");
   const secondaryFilter = (item: AudienceItem) =>
     kind === "programs" ? item.isWeekly === true : item.isUpcoming === true;
 
-  const kindNoun = kind === "programs" ? "programs" : "events";
+  const kindNoun =
+    kind === "programs"
+      ? t("discover.nounPrograms")
+      : t("discover.nounEvents");
 
   // Swipe horizontally to move through the filters.
   const cycleFilter = (dir: 1 | -1) => {
@@ -623,8 +652,11 @@ export default function AudienceBrowse({
       {showAudienceList ? (
         itemsForAudience.length === 0 ? (
           <EmptyState
-            title={`No ${activeLabel.toLowerCase()} ${kindNoun}`}
-            subtitle="Check back soon or try another filter."
+            title={t("discover.emptyAudienceTitle", {
+              audience: activeLabel.toLowerCase(),
+              kind: kindNoun,
+            })}
+            subtitle={t("discover.emptyAudienceSubtitle")}
           />
         ) : (
           <>
@@ -642,8 +674,8 @@ export default function AudienceBrowse({
         )
       ) : items.length === 0 ? (
         <EmptyState
-          title={`No ${kindNoun} yet`}
-          subtitle={`New ${kindNoun} will appear here when they're added.`}
+          title={t("discover.emptyKindTitle", { kind: kindNoun })}
+          subtitle={t("discover.emptyKindSubtitle", { kind: kindNoun })}
         />
       ) : (
         <>
@@ -661,7 +693,7 @@ export default function AudienceBrowse({
           ))}
           {allViewSections.uncategorized.length > 0 ? (
             <Section
-              label={`Other ${kindNoun}`}
+              label={t("discover.otherKind", { kind: kindNoun })}
               items={allViewSections.uncategorized}
               onPressItem={onPressItem}
             />

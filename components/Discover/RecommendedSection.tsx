@@ -1,7 +1,9 @@
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import type { ImageSourcePropType } from "react-native";
-import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import SectionTitle from "./SectionTitle";
 
@@ -18,12 +20,6 @@ type Props = {
   onPressSeeAll?: () => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 function RecommendedCard({
   item,
   onPress,
@@ -31,6 +27,7 @@ function RecommendedCard({
   item: RecommendedItem;
   onPress?: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -54,7 +51,7 @@ function RecommendedCard({
         numberOfLines={1}
         style={{
           marginTop: 10,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "600",
           color: fgRgb,
@@ -65,7 +62,7 @@ function RecommendedCard({
       <Text
         numberOfLines={1}
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.body,
           fontSize: 13,
           fontWeight: "400",
           color: mutedFgRgb,
@@ -82,11 +79,12 @@ export default function RecommendedSection({
   onPressItem,
   onPressSeeAll,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <View>
       <SectionTitle
-        title="Recommended for you"
-        actionLabel="See all"
+        title={t("discover.recommendedTitle")}
+        actionLabel={t("discover.seeAll")}
         onPressAction={onPressSeeAll}
       />
       <ScrollView

@@ -1,20 +1,23 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
 import { OptionRow } from '@/src/components/personalization/option-row';
 import { PersonalizationScaffold } from '@/src/components/personalization/scaffold';
 import { useUserPreferences } from '@/src/hooks/use-user-preferences';
 
+// `value` is persisted to the DB (islamic_knowledge_level) — never translate it.
 const OPTIONS = [
-  "I'm new to Islam",
-  'Learning the Basics',
-  'Solid foundation',
-  'Pursuing deeper knowledge',
+  { value: "I'm new to Islam", labelKey: 'personalization.journeyNewToIslam' },
+  { value: 'Learning the Basics', labelKey: 'personalization.journeyLearningBasics' },
+  { value: 'Solid foundation', labelKey: 'personalization.journeySolidFoundation' },
+  { value: 'Pursuing deeper knowledge', labelKey: 'personalization.journeyDeeperKnowledge' },
 ] as const;
 
 export default function JourneyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { preferences, status, upsertIslamicKnowledgeLevel } = useUserPreferences();
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -34,7 +37,10 @@ export default function JourneyScreen() {
       await upsertIslamicKnowledgeLevel.mutateAsync(selected);
       router.push('/(personalization)/availability');
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Unknown error');
+      Alert.alert(
+        t('personalization.couldNotSave'),
+        e instanceof Error ? e.message : t('personalization.unknownError'),
+      );
     }
   };
 
@@ -43,9 +49,13 @@ export default function JourneyScreen() {
   return (
     <PersonalizationScaffold
       step={3}
-      title={`Where are you in\nyour journey?`}
-      body="No judgment—we'll match content to where you are."
-      primaryLabel={upsertIslamicKnowledgeLevel.isPending ? 'Saving…' : 'Continue →'}
+      title={t('personalization.journeyTitle')}
+      body={t('personalization.journeyBody')}
+      primaryLabel={
+        upsertIslamicKnowledgeLevel.isPending
+          ? t('personalization.saving')
+          : t('personalization.continue')
+      }
       onPrimary={handleContinue}
       primaryDisabled={upsertIslamicKnowledgeLevel.isPending || status === 'loading'}
       onSkip={handleSkip}
@@ -53,10 +63,10 @@ export default function JourneyScreen() {
       <View>
         {OPTIONS.map((option, i) => (
           <OptionRow
-            key={option}
-            label={option}
-            selected={selected === option}
-            onToggle={() => select(option)}
+            key={option.value}
+            label={t(option.labelKey)}
+            selected={selected === option.value}
+            onToggle={() => select(option.value)}
             showDivider={i < OPTIONS.length - 1}
           />
         ))}

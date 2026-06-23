@@ -9,7 +9,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useIsRTL } from '../hooks/use-is-rtl';
 import TopOrnament from '../../assets/quran-top-ornament.svg';
 import {
   getPageForAyah,
@@ -39,6 +42,7 @@ function writeViewMode(mode: ViewMode) {
 type Props = { onClose?: () => void; initial?: LastViewed | null };
 
 export default function QuranScreen({ onClose, initial }: Props = {}) {
+  const { t } = useTranslation();
   const palette = useQuranPalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const [surahs, setSurahs] = useState<Surah[]>([]);
@@ -69,7 +73,7 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
         const rows = await getSurahs();
         if (!cancelled) setSurahs(rows);
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? 'Failed to load Quran database.');
+        if (!cancelled) setError(e?.message ?? t('quran.loadError'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -176,7 +180,7 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
     return (
       <View style={[styles.root, styles.center]}>
         <ActivityIndicator size="large" color={palette.gold} />
-        <Text style={styles.loadingText}>Loading Quran…</Text>
+        <Text style={styles.loadingText}>{t('quran.loading')}</Text>
       </View>
     );
   }
@@ -199,15 +203,15 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
           <View style={styles.titleBlock}>
             <View style={styles.titleRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.title}>Surahs</Text>
-                <Text style={styles.subtitle}>114 Chapters of the Holy Quran</Text>
+                <Text style={styles.title}>{t('quran.title')}</Text>
+                <Text style={styles.subtitle}>{t('quran.subtitle')}</Text>
               </View>
               <Pressable
                 onPress={() => setTrackerOpen(true)}
                 hitSlop={10}
                 style={styles.trackerBtn}
               >
-                <Text style={styles.trackerBtnText}>Tracker</Text>
+                <Text style={styles.trackerBtnText}>{t('quran.tracker')}</Text>
               </Pressable>
               {onClose ? (
                 <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
@@ -218,15 +222,15 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
           </View>
 
           <View style={styles.filterRow}>
-            <FilterPill label="All" active={filter === 'all'} onPress={() => setFilter('all')} styles={styles} />
+            <FilterPill label={t('quran.filterAll')} active={filter === 'all'} onPress={() => setFilter('all')} styles={styles} />
             <FilterPill
-              label="Makkan"
+              label={t('quran.filterMakkan')}
               active={filter === 'makkan'}
               onPress={() => setFilter('makkan')}
               styles={styles}
             />
             <FilterPill
-              label="Madinan"
+              label={t('quran.filterMadinan')}
               active={filter === 'madinan'}
               onPress={() => setFilter('madinan')}
               styles={styles}
@@ -239,7 +243,7 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
               hitSlop={6}
             >
               <Text style={styles.modeToggleText}>
-                {viewMode === 'list' ? 'Mushaf' : 'List'}
+                {viewMode === 'list' ? t('quran.mushaf') : t('quran.list')}
               </Text>
             </Pressable>
           </View>
@@ -288,11 +292,12 @@ function SearchField({
   palette: QuranPalette;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const { t } = useTranslation();
   return (
     <TextInput
       value={value}
       onChangeText={onChange}
-      placeholder="Search"
+      placeholder={t('quran.search')}
       placeholderTextColor={palette.mutedInk}
       style={styles.search}
     />
@@ -300,12 +305,14 @@ function SearchField({
 }
 
 function SurahRow({ surah, onPress, styles }: { surah: Surah; onPress: () => void; styles: ReturnType<typeof makeStyles> }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   return (
     <Pressable onPress={onPress} style={styles.row}>
       <View style={styles.badge}>
         <Text style={styles.badgeText}>{surah.surah_number}</Text>
       </View>
-      <View style={{ flex: 1, marginLeft: 12 }}>
+      <View style={{ flex: 1, marginStart: 12 }}>
         <Text style={styles.arabicName} numberOfLines={1}>
           {surah.name_arabic}
         </Text>
@@ -313,8 +320,8 @@ function SurahRow({ surah, onPress, styles }: { surah: Surah; onPress: () => voi
           {surah.name_simple}
         </Text>
       </View>
-      <Text style={styles.ayahCount}>{surah.verses_count} ayahs</Text>
-      <Text style={styles.chevron}>›</Text>
+      <Text style={styles.ayahCount}>{t('quran.ayahs', { count: surah.verses_count })}</Text>
+      <Text style={styles.chevron}>{isRTL ? '‹' : '›'}</Text>
     </Pressable>
   );
 }
@@ -377,7 +384,7 @@ function makeStyles(p: QuranPalette) {
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: p.closeBtnBorder,
       marginTop: 4,
-      marginLeft: 8,
+      marginStart: 8,
     },
     closeBtnText: {
       fontSize: 14,
@@ -483,6 +490,7 @@ function makeStyles(p: QuranPalette) {
       fontSize: 16,
       color: p.brandDark,
       textAlign: 'left',
+      writingDirection: 'rtl',
     },
     simpleName: {
       fontSize: 11,
@@ -492,12 +500,12 @@ function makeStyles(p: QuranPalette) {
     ayahCount: {
       fontSize: 11,
       color: p.mutedInk,
-      marginRight: 6,
+      marginEnd: 6,
     },
     chevron: {
       fontSize: 18,
       color: p.mutedInk,
-      marginLeft: 2,
+      marginStart: 2,
     },
     separator: {
       height: StyleSheet.hairlineWidth,

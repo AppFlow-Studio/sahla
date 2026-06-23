@@ -1,14 +1,20 @@
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Icon } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 type Props = {
     onPress: () => void;
 }
 
 export default function PersonalizedCard({ onPress }: Props) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const fg = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const fg40 = `rgba(${colors.foreground.replace(/ /g, ",")},0.4)`;
   const accent = `rgb(${colors.accent.replace(/ /g, ",")})`;
@@ -20,35 +26,35 @@ export default function PersonalizedCard({ onPress }: Props) {
         <View className="flex-row items-center gap-1">
             {/* Themed vector (was a baked-in gold PNG) so it follows the masjid palette. */}
             <Icon name="fingerprint" size={21} color={accent} />
-            <View className="flex-col ml-2">
+            <View className="flex-col ms-2">
                 <Text
                 className="text-foreground"
                 style = {{
-                    fontFamily: Platform.select({ android: "Roboto", default: undefined }),
+                    fontFamily: fonts.bodySemibold,
                     fontWeight: "600",
                     fontSize: 11,
                     lineHeight: 18,
                     letterSpacing: 0,
                 }}
                 >
-                Personalize Preferences
+                {t('profile.personalizePreferences')}
                 </Text>
                 <Text
                 className="text-foreground/60"
                 style = {{
-                    fontFamily: Platform.select({ android: "Roboto", default: undefined }),
+                    fontFamily: fonts.body,
                     fontWeight: "400",
                     fontSize: 10,
                     lineHeight: 18,
                     letterSpacing: 0,
                 }}
                 >
-                    Get your content recommended just for you
+                    {t('profile.personalizeSubtitle')}
                 </Text>
             </View>
         </View>
 
-        <Icon name="chevron-right" size={14} color={fg40} />
+        <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={fg40} />
     </Pressable>
   )
 }

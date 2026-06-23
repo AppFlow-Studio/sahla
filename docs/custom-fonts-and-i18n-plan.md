@@ -1,8 +1,67 @@
 # Plan: Per-Masjid Custom Fonts + User Language Selection (i18n + RTL)
 
-**Status:** Proposed / not started
+**Status:** Fonts FEATURE COMPLETE (2026-06-21) — foundation + sweep + admin UI all done · i18n not started
 **Author:** drafted with Claude Code
-**Last updated:** 2026-06-14
+**Last updated:** 2026-06-21
+
+> ## Fonts — what's built (2026-06-21)
+> Decisions locked: **3 themes** (`classic`/`modern`/`elegant`), **masjid-only**
+> (no user override), foundation-first. The plumbing is in place and type-clean;
+> nothing is visible yet because the screen sweep (step 1.5) hasn't run.
+>
+> | Piece | File | Status |
+> |---|---|---|
+> | Font themes (single source of truth) | `src/theme/fonts.ts` | ✅ new |
+> | Weights registered at startup | `app/_layout.tsx` (added Inter 400/500/600, Cormorant 500) | ✅ |
+> | `fontTheme` on config type | `src/config/types.ts` | ✅ |
+> | Default = `classic` | `src/config/default.ts` | ✅ |
+> | Merge through resolver | `src/config/resolver.ts` | ✅ |
+> | Fetch `font_theme` from `mosques` | `src/providers/config-provider.tsx` | ✅ |
+> | Inject `--font-display` / `--font-body` | `src/components/theme-root.tsx` | ✅ |
+> | Tailwind `font-display` / `font-body` | `tailwind.config.js` | ✅ |
+> | `mosques.font_theme` column | sahla-web migration `20260621155915_add_font_theme_to_mosques.sql`, **applied to staging** (`rpepxdgdiqeirdqsazuc`) | ✅ |
+> | `database.types.ts` regenerated | `font_theme` added to mosques Row/Insert/Update | ✅ |
+>
+> **Screen sweep — DONE (2026-06-21).** Converted **49 inline-style files** (~99
+> refs) to read fonts from a runtime hook `useFontFamily()` (`src/hooks/use-font-family.ts`),
+> which resolves the active theme. This is now the standard for imperative
+> `style={{ fontFamily }}` code; `font-display`/`font-body*` Tailwind classes
+> remain for className-based code (both read the same `FONT_THEMES`).
+> - The token set was expanded to preserve weight hierarchy (RN custom fonts are
+>   fixed-weight, so `fontWeight` is ignored once a custom family is set):
+>   `display`, `displayRegular`, `body`, `bodyMedium`, `bodySemibold`. Mapping:
+>   serif/title → display(+Regular for 400); UI/body → body / bodyMedium (500) /
+>   bodySemibold (600+) by the adjacent `fontWeight`.
+> - **Excluded: the 4 Quran screens** (`QuranScreen`, `QuranTrackerScreen`,
+>   `SurahScreen`, `MushafPageScreen`) — they use `StyleSheet.create` (can't take
+>   the hook value at module scope) and mostly the locked `UthmanicHafs`. Their
+>   handful of `PlayfairDisplay_500Medium` chrome refs are still hardcoded — a
+>   minor optional follow-up (needs a dynamic-StyleSheet or className approach).
+> - Locked Arabic (`UthmanicHafs`, `Amiri_400Regular`, `ARABIC`) left untouched.
+> - Verified: type-clean (no new tsc errors), no `rules-of-hooks` violations.
+>
+> **Admin UI — DONE (2026-06-21, sahla-web).** Font picker with real-font live
+> preview, in BOTH onboarding and the CRM, writing `mosques.font_theme`:
+> - Shared `components/FontThemePicker.tsx` (3 cards, each previewing the pairing
+>   in self-hosted Playfair / Cormorant / Inter via `next/font`) + server-safe
+>   metadata `lib/font-themes.ts` (keys mirror the app's `FONT_THEMES`).
+> - Onboarding: `app/(masjid)/[taskId]/panels/AppBrandingPanel.tsx` (+ `font_theme`
+>   in `app/(masjid)/data.ts` select).
+> - CRM: `app/(crm)/setup/theme/ThemeClient.tsx` (+ `fontTheme` on `MosqueProfile`
+>   in `app/(crm)/_lib/getCurrentMosque.ts`).
+> - API: `font_theme` added to `ALLOWED_FIELDS` and the `theme_updated` activity
+>   log in `app/api/mosques/[id]/route.ts`. (Admin Supabase client is untyped, so
+>   no generated-types regen needed.)
+> - Verified: type-clean + lint-clean on all changed files.
+>
+> **Fonts feature is functionally complete.** Remaining optional polish:
+> - Quran-screen StyleSheet chrome refs (4 files) still hardcoded `PlayfairDisplay`.
+> - Onboarding phone preview (`OnboardingPhonePreview`) doesn't yet reflect the
+>   font choice (the picker has its own per-card preview, so this is cosmetic).
+>
+> _Correction to original draft: the sweep was **49 files**, not ~70. Inter &
+> Amiri were installed but not loaded — Inter weights are now registered; Amiri
+> still only used for the locked Arabic refs._
 
 This doc covers two related features and the strategy for building them together:
 

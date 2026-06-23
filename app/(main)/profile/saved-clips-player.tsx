@@ -10,8 +10,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { ReelItem } from '@/app/(main)/watch';
 import {
   filterSavedReels,
@@ -30,6 +32,8 @@ import {
 const VALID_FILTERS: SavedClipsFilter[] = ['all', 'today', 'week', 'month'];
 
 export default function SavedClipsPlayerScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { index, filter } = useLocalSearchParams<{ index?: string; filter?: string }>();
   // Floor + clamp the param so a malformed value can't break initialScrollIndex.
   const initialIndex = Math.max(0, Math.floor(Number(index ?? 0)) || 0);
@@ -82,7 +86,7 @@ export default function SavedClipsPlayerScreen() {
   if (!reels.length) {
     return (
       <View className="flex-1 bg-black items-center justify-center px-8">
-        <Text style={{ color: '#fffbf2' }}>No saved clips</Text>
+        <Text style={{ color: '#fffbf2' }}>{t('profile.noSavedClips')}</Text>
       </View>
     );
   }
@@ -128,7 +132,7 @@ export default function SavedClipsPlayerScreen() {
             justifyContent: 'center',
           }}
         >
-          <Icon name="chevron-back" size={22} color="#ffffff" />
+          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color="#ffffff" />
         </Pressable>
       </SafeAreaView>
     </View>

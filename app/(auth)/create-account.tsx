@@ -3,16 +3,16 @@ import { useSSO } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 // Warm up the browser on Android for faster OAuth redirects.
 if (Platform.OS === 'android') {
@@ -62,9 +62,11 @@ function AuthButton({ label, variant, icon, onPress, loading }: AuthButtonProps)
 
 export default function CreateAccountScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { isSignedIn, signOut } = useAuth();
   const clerk = useClerk();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
   const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
 
@@ -79,12 +81,12 @@ export default function CreateAccountScreen() {
       if (!orgId) return;
       const result = await joinOrgDirect(userId, orgId);
       if (result === 'error') {
-        setError('Failed to join organization. Please try again.');
+        setError(t('auth.joinOrgFailed'));
         return;
       }
       await clerk.setActive({ organization: orgId });
     },
-    [clerk, config.clerkOrgId],
+    [clerk, config.clerkOrgId, t],
   );
 
   const activateOAuthSession = useCallback(
@@ -154,7 +156,7 @@ export default function CreateAccountScreen() {
 
       if (!sessionId || !setActive) {
         console.warn('[Auth] OAuth flow did not produce a session.');
-        setError('Sign-in could not be completed. Please try again.');
+        setError(t('auth.signInCouldNotComplete'));
         return;
       }
 
@@ -162,7 +164,7 @@ export default function CreateAccountScreen() {
       const userId = clerk.user?.id;
       if (userId) await joinAndActivateOrg(userId);
     },
-    [clerk, joinAndActivateOrg],
+    [clerk, joinAndActivateOrg, t],
   );
 
   const handleApple = useCallback(async () => {
@@ -219,14 +221,14 @@ export default function CreateAccountScreen() {
           <Text
             className="text-onboarding-surface"
             style={{
-              fontFamily: SERIF,
+              fontFamily: fonts.display,
               fontSize: 30,
               fontWeight: '500',
               textAlign: 'center',
               marginBottom: 36,
             }}
           >
-            Create Account
+            {t('auth.createAccount')}
           </Text>
 
           {error ? (
@@ -237,40 +239,40 @@ export default function CreateAccountScreen() {
 
           <View style={{ gap: 16 }}>
             <AuthButton
-              label="Continue with Apple"
+              label={t('auth.continueWithApple')}
               variant="primary"
               icon={<Ionicons name="logo-apple" size={14} color={bgHex} />}
               onPress={handleApple}
               loading={loading === 'apple'}
             />
             <AuthButton
-              label="Continue with Google ID"
+              label={t('auth.continueWithGoogleId')}
               variant="secondary"
               icon={<Ionicons name="logo-google" size={12} color={surfaceHex} />}
               onPress={handleGoogle}
               loading={loading === 'google'}
             />
             <AuthButton
-              label="Continue with Email"
+              label={t('auth.continueWithEmail')}
               variant="secondary"
               onPress={handleEmail}
             />
           </View>
 
           <View className="mt-8 items-center">
-            <Text className="text-onboarding-surface/20" style={{ fontSize: 10 }}>
-              By continuing you agree to our Terms of Service & privacy policy
+            <Text className="text-onboarding-surface/20 text-center" style={{ fontSize: 10 }}>
+              {t('auth.termsNotice')}
             </Text>
             <View className="mt-1.5 flex-row">
               <Text className="text-onboarding-surface/60" style={{ fontSize: 10 }}>
-                Already have an account?{' '}
+                {t('auth.alreadyHaveAccount')}
               </Text>
               <Link
                 href="/(auth)/sign-in"
                 className="text-onboarding-accent"
                 style={{ fontSize: 10, fontWeight: '500' }}
               >
-                Sign in
+                {t('auth.signIn')}
               </Link>
             </View>
           </View>

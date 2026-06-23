@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import type { IconName } from '@/src/components/ui/icon';
@@ -7,14 +8,15 @@ import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useDonation } from '@/src/providers/donation-provider';
 
 const QUICK_ACTIONS = [
-  { id: 'donate', icon: 'heart', label: 'DONATE' },
-  { id: 'volunteer', icon: 'account-group', label: 'VOLUNTEER' },
-  { id: 'advertise', icon: 'bullhorn', label: 'ADVERTISE' },
-  { id: 'prayers', icon: 'clock', label: 'PRAYERS' },
-  { id: 'quran', icon: 'book-open-variant', label: 'QURAN' },
+  { id: 'donate', icon: 'heart' },
+  { id: 'volunteer', icon: 'account-group' },
+  { id: 'advertise', icon: 'bullhorn' },
+  { id: 'prayers', icon: 'clock' },
+  { id: 'quran', icon: 'book-open-variant' },
 ] as const;
 
 export function QuickActions() {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const { open: openDonation } = useDonation();
   const router = useRouter();
@@ -56,7 +58,7 @@ export function QuickActions() {
             />
           </View>
           <Text className="text-[8px] font-bold uppercase tracking-[1px] text-foreground/60">
-            {action.label}
+            {t(`quickActions.${action.id}`)}
           </Text>
         </TouchableOpacity>
       ))}

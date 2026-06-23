@@ -1,10 +1,13 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useContentItems, type ContentItem } from '@/src/hooks/use-content-items';
 import { describeRecurrence, ruleFromRow } from '@/src/lib/recurrence';
 
@@ -29,13 +32,13 @@ function formatProgramDate(item: ContentItem): string {
   return '';
 }
 
-function categoryFor(item: ContentItem): string {
-  if (item.is_quran) return 'Quran Study';
-  if (item.is_kids) return 'Kids';
-  if (item.is_pace) return 'PACE';
-  if (item.is_young_professionals) return 'Young Professionals';
-  if (item.is_fourteen_plus) return 'Youth';
-  if (item.is_weekly_program) return 'Weekly Program';
+function categoryFor(item: ContentItem, t: TFunction): string {
+  if (item.is_quran) return t('home.categoryQuranStudy');
+  if (item.is_kids) return t('home.categoryKids');
+  if (item.is_pace) return t('home.categoryPace');
+  if (item.is_young_professionals) return t('home.categoryYoungProfessionals');
+  if (item.is_fourteen_plus) return t('home.categoryYouth');
+  if (item.is_weekly_program) return t('home.categoryWeeklyProgram');
   return '';
 }
 
@@ -48,6 +51,8 @@ function iconFor(item: ContentItem): IconName {
 }
 
 export function ProgramsSection() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const { items, status, error } = useContentItems();
@@ -59,24 +64,24 @@ export function ProgramsSection() {
     <View>
       <View className="flex-row items-center justify-between pb-3">
         <Text className="text-[13px] font-semibold uppercase tracking-[1px] text-foreground">
-          Programs
+          {t('home.programs')}
         </Text>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => router.push('/discover?tab=Programs')}
         >
-          <Text className="text-[10px] text-foreground/60">SEE ALL →</Text>
+          <Text className="text-[10px] text-foreground/60">{t('home.seeAll')} {isRTL ? '←' : '→'}</Text>
         </TouchableOpacity>
       </View>
       <View className="border-t border-foreground">
         {status === 'loading' && (
-          <Text className="py-4 text-[12px] text-foreground/60">Loading…</Text>
+          <Text className="py-4 text-[12px] text-foreground/60">{t('common.loading')}</Text>
         )}
         {status === 'error' && (
-          <Text className="py-4 text-[12px] text-foreground/60">Couldn’t load: {error}</Text>
+          <Text className="py-4 text-[12px] text-foreground/60">{t('home.couldNotLoad', { error })}</Text>
         )}
         {status === 'success' && programs.length === 0 && (
-          <Text className="py-4 text-[12px] text-foreground/60">No programs yet.</Text>
+          <Text className="py-4 text-[12px] text-foreground/60">{t('home.noProgramsYet')}</Text>
         )}
         {programs.map((program, index) => (
           <TouchableOpacity
@@ -87,7 +92,7 @@ export function ProgramsSection() {
               index < programs.length - 1 ? 'border-b border-foreground/10' : ''
             }`}
           >
-            <View className="mr-3 h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-[10px] bg-primary/10">
+            <View className="me-3 h-[50px] w-[50px] items-center justify-center overflow-hidden rounded-[10px] bg-primary/10">
               {program.image ? (
                 <Image
                   source={{ uri: program.image }}
@@ -104,17 +109,17 @@ export function ProgramsSection() {
             </View>
             <View className="flex-1">
               <Text className="text-[11px] font-semibold text-foreground" numberOfLines={1}>
-                {program.name ?? 'Untitled'}
+                {program.name ?? t('home.untitled')}
               </Text>
               <Text className="mt-0.5 text-[10px] text-foreground/60" numberOfLines={1}>
                 {formatProgramDate(program)}
               </Text>
               <Text className="mt-0.5 text-[10px] text-accent" numberOfLines={1}>
-                {categoryFor(program)}
+                {categoryFor(program, t)}
               </Text>
             </View>
             <Icon
-              name="chevron-right"
+              name={isRTL ? 'chevron-left' : 'chevron-right'}
               size={16}
               color={`rgba(${colors.foreground.replace(/ /g, ',')},0.4)`}
             />

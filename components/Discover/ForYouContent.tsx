@@ -1,16 +1,13 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Icon } from "@/src/components/ui/icon";
 import { Image } from "expo-image";
-import { Platform, Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Pressable, Text, View } from "react-native";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useUserPreferences } from "@/src/hooks/use-user-preferences";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 export type ForYouRowItem = {
   id: string;
@@ -36,6 +33,9 @@ function CustomizedPill({
   onPress?: () => void;
   prefState: PrefState;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -46,22 +46,22 @@ function CustomizedPill({
 
   const copy = {
     complete: {
-      action: "Edit",
-      title: "Customized for you",
-      subtitle: "Based on your preferences",
-      a11y: "Edit your preferences",
+      action: t("discover.prefCompleteAction"),
+      title: t("discover.prefCompleteTitle"),
+      subtitle: t("discover.prefCompleteSubtitle"),
+      a11y: t("discover.prefCompleteA11y"),
     },
     started: {
-      action: "Continue",
-      title: "Finish personalizing",
-      subtitle: "Pick up where you left off",
-      a11y: "Continue setting your preferences",
+      action: t("discover.prefStartedAction"),
+      title: t("discover.prefStartedTitle"),
+      subtitle: t("discover.prefStartedSubtitle"),
+      a11y: t("discover.prefStartedA11y"),
     },
     none: {
-      action: "Get started",
-      title: "Personalize your feed",
-      subtitle: "Tell us what you're interested in",
-      a11y: "Set your preferences",
+      action: t("discover.prefNoneAction"),
+      title: t("discover.prefNoneTitle"),
+      subtitle: t("discover.prefNoneSubtitle"),
+      a11y: t("discover.prefNoneA11y"),
     },
   }[prefState];
 
@@ -76,10 +76,10 @@ function CustomizedPill({
       style={{ backgroundColor: pillBg }}
     >
       <Icon name="fingerprint" size={18} color={accentRgb} />
-      <View className="ml-3 flex-1">
+      <View className="ms-3 flex-1">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 12,
             fontWeight: "600",
             color: fgRgb,
@@ -90,7 +90,7 @@ function CustomizedPill({
         </Text>
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 11,
             color: mutedFgRgb,
             lineHeight: 14,
@@ -102,20 +102,25 @@ function CustomizedPill({
       </View>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.body,
           fontSize: 12,
           color: accentRgb,
-          marginRight: 4,
+          marginEnd: 4,
         }}
       >
         {actionLabel}
       </Text>
-      <AntDesign name="right" size={10} color={accentRgb} />
+      <AntDesign
+        name={isRTL ? "left" : "right"}
+        size={10}
+        color={accentRgb}
+      />
     </Pressable>
   );
 }
 
 function SectionHeading({ label }: { label: string }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -123,7 +128,7 @@ function SectionHeading({ label }: { label: string }) {
     <View className="px-6">
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "700",
           letterSpacing: 0.6,
@@ -148,6 +153,8 @@ function Row({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -183,11 +190,11 @@ function Row({
           ) : null}
         </View>
 
-        <View className="ml-3 flex-1">
+        <View className="ms-3 flex-1">
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
@@ -199,7 +206,7 @@ function Row({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.body,
               fontSize: 11,
               lineHeight: 16,
               marginTop: 2,
@@ -219,7 +226,11 @@ function Row({
           </Text>
         </View>
 
-        <AntDesign name="right" size={12} color={mutedFgRgb} />
+        <AntDesign
+          name={isRTL ? "left" : "right"}
+          size={12}
+          color={mutedFgRgb}
+        />
       </Pressable>
 
       {showDivider ? (
@@ -241,6 +252,7 @@ export default function ForYouContent({
   onPressItem,
   onPressEdit,
 }: Props) {
+  const { t } = useTranslation();
   const { preferences } = useUserPreferences();
 
   // Three states for the banner:
@@ -272,7 +284,7 @@ export default function ForYouContent({
 
       {events.length > 0 ? (
         <View className="mt-7">
-          <SectionHeading label="Events for you" />
+          <SectionHeading label={t("discover.eventsForYou")} />
           <View className="mt-2">
             {events.map((item, idx) => (
               <Row
@@ -288,7 +300,7 @@ export default function ForYouContent({
 
       {programs.length > 0 ? (
         <View className="mt-7">
-          <SectionHeading label="Programs for you" />
+          <SectionHeading label={t("discover.programsForYou")} />
           <View className="mt-2">
             {programs.map((item, idx) => (
               <Row

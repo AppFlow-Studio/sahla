@@ -1,6 +1,7 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
@@ -17,9 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import Mosque from '@/assets/onboarding/mosque.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
-const SERIF = 'PlayfairDisplay_500Medium';
 const ARABIC = 'Amiri_400Regular';
 
 const triplet = (t: string) => `rgb(${t.replace(/ /g, ',')})`;
@@ -52,7 +53,9 @@ function Halo({
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const { signOut, isSignedIn } = useAuth();
   const resetOnboarding = useOnboardingStore((s) => s.reset);
 
@@ -123,10 +126,10 @@ export default function WelcomeScreen() {
             <Text
               onPress={() => {
                 console.log('[DEV] Logout pressed, isSignedIn:', isSignedIn);
-                Alert.alert('Dev Logout', `Signed in: ${isSignedIn}`, [
-                  { text: 'Cancel' },
+                Alert.alert(t('auth.devLogoutTitle'), t('auth.devLogoutMessage', { signedIn: isSignedIn }), [
+                  { text: t('common.cancel') },
                   {
-                    text: 'Sign out & reset',
+                    text: t('auth.devSignOutAndReset'),
                     style: 'destructive',
                     onPress: async () => {
                       console.log('[DEV] Signing out...');
@@ -149,7 +152,7 @@ export default function WelcomeScreen() {
                 padding: 8,
               }}
             >
-              [DEV] Sign out &amp; reset
+              {t('auth.devSignOutReset')}
             </Text>
           )}
           <Text
@@ -160,9 +163,9 @@ export default function WelcomeScreen() {
           </Text>
           <Text
             className="text-onboarding-surface"
-            style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginTop: 6 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginTop: 6 }}
           >
-            Welcome
+            {t('auth.welcome')}
           </Text>
           <Text
             className="text-onboarding-accent"
@@ -180,19 +183,19 @@ export default function WelcomeScreen() {
             className="h-[38px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90"
           >
             <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
-              Get Started
+              {t('auth.getStarted')}
             </Text>
           </Pressable>
           <View className="mt-4 flex-row justify-center">
             <Text className="text-onboarding-surface/50" style={{ fontSize: 12 }}>
-              Already a member?{' '}
+              {t('auth.alreadyMember')}
             </Text>
             <Link
               href="/(auth)/sign-in"
               className="text-onboarding-accent"
               style={{ fontSize: 12, fontWeight: '500' }}
             >
-              Sign In
+              {t('auth.signIn')}
             </Link>
           </View>
         </Animated.View>

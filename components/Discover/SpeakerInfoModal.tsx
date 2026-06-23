@@ -1,11 +1,11 @@
 import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Dimensions,
   Modal,
-  Platform,
   Pressable,
   Text,
   View,
@@ -18,19 +18,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useSupabase } from "@/src/hooks/use-supabase";
-
-const platformTitleFont = Platform.select({
-  ios: "SF Pro Display",
-  android: "Roboto",
-  default: "system-ui",
-});
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 function splitIntoSentences(text: string): string[] {
   return text
@@ -58,6 +48,8 @@ export default function SpeakerInfoModal({
   mosqueUuid,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -195,12 +187,12 @@ export default function SpeakerInfoModal({
                 onPress={animateClose}
                 hitSlop={12}
                 accessibilityRole="button"
-                accessibilityLabel="Close speaker info"
+                accessibilityLabel={t("content.closeSpeakerInfo")}
                 style={{ padding: 4 }}
               >
                 <Text
                   style={{
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.body,
                     fontSize: 22,
                     fontWeight: "400",
                     color: fgRgb,
@@ -214,7 +206,7 @@ export default function SpeakerInfoModal({
 
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.bodySemibold,
                 fontSize: 12,
                 fontWeight: "700",
                 letterSpacing: 1.5,
@@ -222,7 +214,7 @@ export default function SpeakerInfoModal({
                 marginTop: 14,
               }}
             >
-              SPEAKER
+              {t("content.speaker")}
             </Text>
             <View
               style={{
@@ -275,7 +267,7 @@ export default function SpeakerInfoModal({
                   <Text
                     style={{
                       flex: 1,
-                      fontFamily: platformTitleFont,
+                      fontFamily: fonts.display,
                       fontSize: 18,
                       lineHeight: 24,
                       fontWeight: "700",
@@ -295,7 +287,7 @@ export default function SpeakerInfoModal({
                           flexDirection: "row",
                           alignItems: "flex-start",
                           marginBottom: idx === credentials.length - 1 ? 0 : 14,
-                          paddingRight: 4,
+                          paddingEnd: 4,
                         }}
                       >
                         <View
@@ -305,13 +297,13 @@ export default function SpeakerInfoModal({
                             borderRadius: 3,
                             backgroundColor: accentRgb,
                             marginTop: 7,
-                            marginRight: 12,
+                            marginEnd: 12,
                           }}
                         />
                         <Text
                           style={{
                             flex: 1,
-                            fontFamily: platformUiFont,
+                            fontFamily: fonts.body,
                             fontSize: 14,
                             lineHeight: 21,
                             fontWeight: "400",
@@ -326,13 +318,13 @@ export default function SpeakerInfoModal({
                 ) : (
                   <Text
                     style={{
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                       fontSize: 14,
                       lineHeight: 22,
                       color: sublabelColor,
                     }}
                   >
-                    No credentials available.
+                    {t("content.noCredentials")}
                   </Text>
                 )}
               </>

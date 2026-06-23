@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -19,6 +18,7 @@ import Animated, {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useToggleSave } from '@/src/hooks/use-saved-content';
@@ -44,26 +44,11 @@ const INK_MUTED = 'rgba(10,38,30,0.6)';
 const GOLD = '#B8922A';
 const DIVIDER = 'rgba(10,38,30,0.1)';
 
-const SF_MEDIUM = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
-const SF_SEMIBOLD = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
-const SF_REGULAR = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
-
 type Tab = 'events' | 'programs';
 
 export default function Saved_Events() {
   const [tab, setTab] = useState<Tab>('events');
+  const fonts = useFontFamily();
   const { userId, isLoaded } = useAuth();
   const supabase = useSupabase();
   const supabaseRef = useRef(supabase);
@@ -170,7 +155,7 @@ export default function Saved_Events() {
             </Pressable>
             <Text
               style={{
-                fontFamily: 'PlayfairDisplay_500Medium',
+                fontFamily: fonts.display,
                 fontSize: 30,
                 lineHeight: 52,
                 color: INK,
@@ -254,6 +239,7 @@ function StatsCard({
   events: number;
   programs: number;
 }) {
+  const fonts = useFontFamily();
   return (
     <View className="mt-2 px-5">
       <View
@@ -275,7 +261,7 @@ function StatsCard({
             style={{
               color: GOLD,
               textAlign: 'center',
-              fontFamily: 'Inter',
+              fontFamily: fonts.body,
               fontSize: 20,
               fontWeight: '400',
             }}
@@ -298,11 +284,12 @@ function StatsCard({
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
+  const fonts = useFontFamily();
   return (
     <View className="items-center">
       <Text
         style={{
-          fontFamily: SF_SEMIBOLD,
+          fontFamily: fonts.bodySemibold,
           fontWeight: '600',
           fontSize: 10,
           lineHeight: 14,
@@ -314,7 +301,7 @@ function Stat({ label, value }: { label: string; value: number }) {
       </Text>
       <Text
         style={{
-          fontFamily: 'PlayfairDisplay_500Medium',
+          fontFamily: fonts.display,
           fontSize: 20,
           lineHeight: 24,
           color: INK,
@@ -364,6 +351,7 @@ function SegmentButton({
   active: boolean;
   onPress: () => void;
 }) {
+  const fonts = useFontFamily();
   return (
     <Pressable
       onPress={onPress}
@@ -376,7 +364,7 @@ function SegmentButton({
     >
       <Text
         style={{
-          fontFamily: SF_MEDIUM,
+          fontFamily: fonts.bodyMedium,
           fontWeight: '500',
           fontSize: 11,
           color: active ? '#FFFBF2' : INK_MUTED,
@@ -389,6 +377,7 @@ function SegmentButton({
 }
 
 function EmptyState({ label }: { label: string }) {
+  const fonts = useFontFamily();
   return (
     <View
       className="px-5"
@@ -396,7 +385,7 @@ function EmptyState({ label }: { label: string }) {
     >
       <Text
         style={{
-          fontFamily: SF_REGULAR,
+          fontFamily: fonts.body,
           fontSize: 13,
           lineHeight: 18,
           color: INK_MUTED,
@@ -488,6 +477,7 @@ function SavedRow({
   mosqueId: string | null;
   onRemove: (contentId: string) => void;
 }) {
+  const fonts = useFontFamily();
   const subtitle = item.subtitle_override ?? formatSavedDate(item.start_date);
   const toggleSave = useToggleSave(item.content_id, mosqueId);
   // Demo placeholder rows have no real saved_content row to remove.
@@ -507,7 +497,7 @@ function SavedRow({
         style={{ paddingVertical: 14 }}
       >
         <View
-          className="mr-4 overflow-hidden rounded-[10px]"
+          className="me-4 overflow-hidden rounded-[10px]"
           style={{ width: 50, height: 50, backgroundColor: '#CFE0EA' }}
         >
           <Image
@@ -525,7 +515,7 @@ function SavedRow({
         <View className="flex-1">
           <Text
             style={{
-              fontFamily: SF_SEMIBOLD,
+              fontFamily: fonts.bodySemibold,
               fontWeight: '600',
               fontSize: 11,
               lineHeight: 18,
@@ -537,7 +527,7 @@ function SavedRow({
           </Text>
           <Text
             style={{
-              fontFamily: SF_REGULAR,
+              fontFamily: fonts.body,
               fontSize: 10,
               lineHeight: 18,
               color: INK_MUTED,
@@ -553,14 +543,14 @@ function SavedRow({
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Remove ${item.name ?? 'item'} from saved`}
-          className="ml-2 items-center justify-center active:opacity-60"
+          className="ms-2 items-center justify-center active:opacity-60"
           style={{ width: 36, height: 40 }}
         >
           <Text
             style={{
               color: GOLD,
               textAlign: 'center',
-              fontFamily: 'Inter',
+              fontFamily: fonts.body,
               fontSize: 20,
               fontWeight: '400',
             }}

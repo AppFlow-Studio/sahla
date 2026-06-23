@@ -13,6 +13,7 @@ import {
 import { Icon } from '@/src/components/ui/icon';
 import type { IconName } from '@/src/components/ui/icon';
 import { type CommunityPartner } from '@/src/hooks/use-community-partners';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 /** Theme colors so the carousel works on light (Home) and dark (Prayer) surfaces. */
 export type PartnerColors = {
@@ -113,6 +114,7 @@ export function CommunityPartnersCarousel({
 }
 
 function PartnerCard({ partner, colors }: { partner: CommunityPartner; colors: PartnerColors }) {
+  const fonts = useFontFamily();
   return (
     <View style={{ borderRadius: 16, overflow: 'hidden', backgroundColor: colors.cardBg }}>
       <View style={{ height: 189, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.fallbackBg }}>
@@ -123,7 +125,7 @@ function PartnerCard({ partner, colors }: { partner: CommunityPartner; colors: P
             <Icon name="storefront-outline" size={64} color={colors.text} />
             {partner.name ? (
               <Text
-                style={{ marginTop: 8, paddingHorizontal: 16, textAlign: 'center', fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Georgia' }}
+                style={{ marginTop: 8, paddingHorizontal: 16, textAlign: 'center', fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: fonts.displayRegular }}
               >
                 {partner.name}
               </Text>
@@ -134,7 +136,7 @@ function PartnerCard({ partner, colors }: { partner: CommunityPartner; colors: P
 
       <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
         {partner.flyerImg && partner.name ? (
-          <Text style={{ marginBottom: 6, fontSize: 16, fontWeight: '700', color: colors.text, fontFamily: 'Georgia' }}>
+          <Text style={{ marginBottom: 6, fontSize: 16, fontWeight: '700', color: colors.text, fontFamily: fonts.displayRegular }}>
             {partner.name}
           </Text>
         ) : null}

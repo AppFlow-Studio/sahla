@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
+import { useTranslation } from 'react-i18next';
 
 import { NotificationPermissionPrompt } from '@/src/components/notifications/permission-prompt';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
@@ -12,6 +13,7 @@ import { useRegisterPushToken } from '@/src/hooks/use-register-push-token';
 export default function TabLayout() {
   // Register/refresh push token on mount + every foreground event
   useRegisterPushToken();
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   // `accent` (gold marigold) is the app's highlight color — used for the donate
   // button, prayer chips, dates, etc. `primary` is a near-black green, too dark
@@ -22,7 +24,7 @@ export default function TabLayout() {
       <NotificationPermissionPrompt />
       <NativeTabs tintColor={accentRgb}>
         <NativeTabs.Trigger name="index">
-          <Label>Home</Label>
+          <Label>{t('tabs.home')}</Label>
           <Icon
             src={{
               default: <VectorIcon family={Ionicons} name="home-outline" />,
@@ -31,7 +33,7 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="discover">
-          <Label>Discover</Label>
+          <Label>{t('tabs.discover')}</Label>
           <Icon
             src={{
               default: <VectorIcon family={Ionicons} name="compass-outline" />,
@@ -40,7 +42,7 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="watch">
-          <Label>Watch</Label>
+          <Label>{t('tabs.watch')}</Label>
           <Icon
             src={{
               default: <VectorIcon family={Ionicons} name="play-circle-outline" />,
@@ -49,7 +51,7 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="prayer">
-          <Label>Prayer</Label>
+          <Label>{t('tabs.prayer')}</Label>
           <Icon
             src={{
               default: <VectorIcon family={Ionicons} name="time-outline" />,
@@ -58,7 +60,7 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="profile">
-          <Label>Profile</Label>
+          <Label>{t('tabs.profile')}</Label>
           <Icon
             src={{
               default: <VectorIcon family={Ionicons} name="person-outline" />,

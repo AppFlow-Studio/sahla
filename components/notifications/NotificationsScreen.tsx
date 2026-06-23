@@ -2,9 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useConfigStore } from '@/src/stores/config-store';
 
 import { NotificationTabs } from './NotificationTabs';
@@ -25,11 +26,6 @@ const TAB_TO_CATEGORY: Record<NotificationTab, NotificationCategory | null> = {
 const INK = '#0A261E';
 const SURFACE = '#FFFBF2';
 
-const PLAYFAIR = Platform.select({
-  ios: 'PlayfairDisplay-Medium',
-  default: 'PlayfairDisplay_500Medium',
-});
-
 export const NOTIFICATION_TABS = ['All', 'Prayer', 'Events', 'Updates'] as const;
 export type NotificationTab = (typeof NOTIFICATION_TABS)[number];
 
@@ -41,6 +37,7 @@ type Props = {
 
 export function NotificationsScreen({ items = [], initialTab, onPressSettings }: Props) {
   const insets = useSafeAreaInsets();
+  const fonts = useFontFamily();
   const masjidName = useConfigStore((s) => s.config.displayName);
   const [activeTab, setActiveTab] = useState<NotificationTab>(initialTab ?? 'All');
 
@@ -83,7 +80,7 @@ export function NotificationsScreen({ items = [], initialTab, onPressSettings }:
         </Pressable>
         <Text
           style={{
-            fontFamily: PLAYFAIR,
+            fontFamily: fonts.display,
             fontWeight: '500',
             fontSize: 30,
             lineHeight: 38,

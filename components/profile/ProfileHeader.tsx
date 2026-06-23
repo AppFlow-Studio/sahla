@@ -1,6 +1,7 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import Pattern from '@/assets/onboarding/pattern.svg';
@@ -8,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/src/components/ui/icon';
 import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useUploadProfilePhoto } from '@/src/hooks/use-upload-profile-photo';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
@@ -20,9 +22,11 @@ import {
 } from '@expo-google-fonts/cormorant-garamond';
 
 export default function ProfileHeader() {
+  const { t } = useTranslation();
   const { profile, status, error } = useProfile();
   const { user } = useUser();
   const { clerkOrgId, colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const insets = useSafeAreaInsets();
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
@@ -42,12 +46,12 @@ export default function ProfileHeader() {
         return result;
       } catch (e) {
         Alert.alert(
-          'Could not update photo',
-          e instanceof Error ? e.message : 'Unknown error',
+          t('profile.couldNotUpdatePhoto'),
+          e instanceof Error ? e.message : t('profile.unknownError'),
         );
       }
     },
-    [takePhoto, chooseFromGallery],
+    [takePhoto, chooseFromGallery, t],
   );
 
   const [fontsLoaded] = useFonts({
@@ -83,7 +87,7 @@ export default function ProfileHeader() {
   const firstName =
     profile?.first_name ?? metaFirstName ?? (storedFirstName.trim() || null) ?? user?.firstName;
   const lastName = profile?.last_name ?? user?.lastName;
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (user?.primaryEmailAddress?.emailAddress ?? 'Unknown');
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (user?.primaryEmailAddress?.emailAddress ?? t('profile.unknownName'));
   const createdYear = profile?.created_at
     ? new Date(profile.created_at).getFullYear()
     : user?.createdAt
@@ -139,7 +143,7 @@ export default function ProfileHeader() {
               <Text
                 className="text-5xl text-primary-foreground text-center "
                 style={{
-                  fontFamily: 'CormorantGaramond_500Medium',
+                  fontFamily: fonts.display,
                   lineHeight: 48,
                 }}
               >
@@ -160,7 +164,7 @@ export default function ProfileHeader() {
           <Text
             className="mt-3 text-center text-primary-foreground"
             style={{
-              fontFamily: 'CormorantGaramond_600SemiBold',
+              fontFamily: fonts.display,
               fontSize: 21,
             }}
           >
@@ -172,15 +176,12 @@ export default function ProfileHeader() {
             <Text
               className="text-center text-primary-foreground/60"
               style={{
-                fontFamily: Platform.select({
-                  android: 'Roboto',
-                  default: undefined,
-                }),
+                fontFamily: fonts.body,
                 fontWeight: '400',
                 fontSize: 10,
               }}
             >
-              Member Since {createdYear}
+              {t('profile.memberSince', { year: createdYear })}
             </Text>
           )}
 
@@ -195,12 +196,12 @@ export default function ProfileHeader() {
                   paddingVertical: 4,
                 }}
               >
-                <View className="mr-1 items-center justify-center">
+                <View className="me-1 items-center justify-center">
                   <View className="absolute h-2.5 w-2.5 rounded-full bg-accent opacity-20" />
                   <View className="rounded-full bg-accent" style={{ width: 4, height: 4 }} />
                 </View>
                 <Text className="text-accent" style={{ fontSize: 9, fontWeight: '500' }}>
-                  Complete Profile
+                  {t('profile.completeProfile')}
                 </Text>
               </Pressable>
             )}
@@ -214,7 +215,7 @@ export default function ProfileHeader() {
               }}
             >
               <Text className="text-primary-foreground" style={{ fontSize: 9, fontWeight: '500' }}>
-                Edit Profile
+                {t('profile.editProfile')}
               </Text>
             </Pressable>
           </View>

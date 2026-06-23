@@ -1910,6 +1910,7 @@ export type Database = {
           apple_merchant_id: string | null
           apple_team_id: string | null
           brand_color: string | null
+          font_theme: string
           bundle_id: string | null
           calculation_method: number | null
           city: string | null
@@ -1961,6 +1962,7 @@ export type Database = {
           apple_merchant_id?: string | null
           apple_team_id?: string | null
           brand_color?: string | null
+          font_theme?: string
           bundle_id?: string | null
           calculation_method?: number | null
           city?: string | null
@@ -2012,6 +2014,7 @@ export type Database = {
           apple_merchant_id?: string | null
           apple_team_id?: string | null
           brand_color?: string | null
+          font_theme?: string
           bundle_id?: string | null
           calculation_method?: number | null
           city?: string | null

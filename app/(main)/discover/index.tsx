@@ -4,6 +4,8 @@ import {
 } from "@expo-google-fonts/playfair-display";
 import { router, useLocalSearchParams } from "expo-router";
 
+import { useTranslation } from "react-i18next";
+
 import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Haptics from "expo-haptics";
@@ -112,6 +114,7 @@ const TAB_INDEX: Record<DiscoverTab, number> = {
 };
 
 export default function DiscoverScreen() {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -211,7 +214,7 @@ export default function DiscoverScreen() {
   const programFilters = useMemo<BrowseFilter[] | undefined>(() => {
     if (programCategories.length === 0) return undefined;
     return [
-      { key: "All", label: "All" },
+      { key: "All", label: t("common.all") },
       ...programCategories.map((c) => ({ key: c.id, label: c.title })),
     ];
   }, [programCategories]);
@@ -295,7 +298,7 @@ export default function DiscoverScreen() {
     () =>
       filteredRecommendations.map((r) => ({
         id: r.content_id,
-        title: toTitleCase(r.name ?? "Untitled"),
+        title: toTitleCase(r.name ?? t("discover.untitled")),
         category: r.type ?? "",
         image: r.image ? { uri: r.image } : undefined,
       })),
@@ -313,13 +316,14 @@ export default function DiscoverScreen() {
   ): string | null => {
     if (!item) return null;
     const labels: string[] = [];
-    if (item.is_kids) labels.push("Kids");
-    if (item.is_fourteen_plus) labels.push("Youth");
-    if (item.is_young_professionals) labels.push("Young Professionals");
-    if (item.is_pace) labels.push("PACE");
-    if (item.is_quran) labels.push("Quran");
-    if (labels.length === 0) return "For All";
-    return labels.slice(0, 2).join(" & ");
+    if (item.is_kids) labels.push(t("discover.categoryKids"));
+    if (item.is_fourteen_plus) labels.push(t("discover.categoryYouth"));
+    if (item.is_young_professionals)
+      labels.push(t("discover.categoryYoungProfessionals"));
+    if (item.is_pace) labels.push(t("discover.categoryPace"));
+    if (item.is_quran) labels.push(t("discover.categoryQuran"));
+    if (labels.length === 0) return t("discover.categoryForAll");
+    return labels.slice(0, 2).join(t("discover.categoryJoiner"));
   };
 
   const upcomingItems: EventItem[] = useMemo(() => {
@@ -336,7 +340,7 @@ export default function DiscoverScreen() {
     });
     return future.slice(0, 3).map((r) => ({
       id: r.content_id,
-      title: toTitleCase(r.name ?? "Untitled"),
+      title: toTitleCase(r.name ?? t("discover.untitled")),
       dateLabel: formatCardDate(r),
       category: deriveCategory(r),
       thumbnail: r.image ? { uri: r.image } : undefined,
@@ -349,7 +353,7 @@ export default function DiscoverScreen() {
       const matched = itemsById.get(r.content_id);
       return {
         id: r.content_id,
-        title: toTitleCase(r.name ?? "Untitled"),
+        title: toTitleCase(r.name ?? t("discover.untitled")),
         speaker: matched?.speakers?.[0] ?? null,
         category: deriveCategory(matched),
         image: r.image ? { uri: r.image } : undefined,
@@ -383,7 +387,7 @@ export default function DiscoverScreen() {
         .filter((r) => r.type === kind)
         .map((r) => ({
           id: r.content_id,
-          title: toTitleCase(r.name ?? "Untitled"),
+          title: toTitleCase(r.name ?? t("discover.untitled")),
           dateLabel: formatCardDate(r),
           image: r.image ? { uri: r.image } : undefined,
           isKids: r.is_kids === true,
@@ -459,12 +463,12 @@ export default function DiscoverScreen() {
         <DiscoverHeader
           title={
             activeTab === "For You"
-              ? "For you"
+              ? t("discover.titleForYou")
               : activeTab === "Events"
-                ? "Events"
+                ? t("discover.titleEvents")
                 : activeTab === "Programs"
-                  ? "Programs"
-                  : "Discover"
+                  ? t("discover.titlePrograms")
+                  : t("discover.titleDiscover")
           }
           active={activeTab}
           onSelect={handleHeaderSelect}
@@ -475,7 +479,7 @@ export default function DiscoverScreen() {
         {status === "error" ? (
           <View className="mx-6 mt-4 rounded-lg bg-[#FDECEC] p-3">
             <Text className="text-xs text-[#7A1F1F]">
-              Couldn&apos;t load content: {error}
+              {t("discover.errorLoadContent", { error })}
             </Text>
           </View>
         ) : null}
@@ -483,7 +487,7 @@ export default function DiscoverScreen() {
         {recStatus === "error" ? (
           <View className="mx-6 mt-4 rounded-lg bg-[#FDECEC] p-3">
             <Text className="text-xs text-[#7A1F1F]">
-              Couldn&apos;t load recommendations: {recError}
+              {t("discover.errorLoadRecommendations", { error: recError })}
             </Text>
           </View>
         ) : null}

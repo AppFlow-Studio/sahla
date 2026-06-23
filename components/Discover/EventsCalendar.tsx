@@ -1,7 +1,9 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+import { Pressable, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -14,38 +16,48 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
+// Mon-first single-letter weekday headers (calendar grid starts on Monday).
+const WEEKDAY_LABEL_KEYS = [
+  "weekdayShortMon",
+  "weekdayShortTue",
+  "weekdayShortWed",
+  "weekdayShortThu",
+  "weekdayShortFri",
+  "weekdayShortSat",
+  "weekdayShortSun",
+] as const;
+const MONTH_KEYS = [
+  "monthJanuary",
+  "monthFebruary",
+  "monthMarch",
+  "monthApril",
+  "monthMay",
+  "monthJune",
+  "monthJuly",
+  "monthAugust",
+  "monthSeptember",
+  "monthOctober",
+  "monthNovember",
+  "monthDecember",
+] as const;
+// Sun-indexed to match Date.getDay().
+const WEEKDAY_KEYS = [
+  "weekdaySunday",
+  "weekdayMonday",
+  "weekdayTuesday",
+  "weekdayWednesday",
+  "weekdayThursday",
+  "weekdayFriday",
+  "weekdaySaturday",
+] as const;
 
-const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"] as const;
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const WEEKDAY_NAMES = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
+const monthName = (t: TFunction, i: number) => t(`discover.${MONTH_KEYS[i]}`);
+const weekdayName = (t: TFunction, i: number) =>
+  t(`discover.${WEEKDAY_KEYS[i]}`);
 
 export type EventCalendarItem = {
   id: string;
@@ -117,6 +129,9 @@ function MonthHeader({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -125,7 +140,7 @@ function MonthHeader({
       <Text
         style={{
           flex: 1,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "700",
           letterSpacing: 0.6,
@@ -133,24 +148,24 @@ function MonthHeader({
           color: fgRgb,
         }}
       >
-        {MONTH_NAMES[viewMonth.getMonth()]}
+        {monthName(t, viewMonth.getMonth())}
       </Text>
       <Pressable
         onPress={onPrev}
         hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel="Previous month"
-        style={{ marginRight: 22 }}
+        accessibilityLabel={t("discover.previousMonth")}
+        style={{ marginEnd: 22 }}
       >
-        <AntDesign name="left" size={12} color={fgRgb} />
+        <AntDesign name={isRTL ? "right" : "left"} size={12} color={fgRgb} />
       </Pressable>
       <Pressable
         onPress={onNext}
         hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel="Next month"
+        accessibilityLabel={t("discover.nextMonth")}
       >
-        <AntDesign name="right" size={12} color={fgRgb} />
+        <AntDesign name={isRTL ? "left" : "right"} size={12} color={fgRgb} />
       </Pressable>
     </View>
   );
@@ -169,6 +184,7 @@ function DayCell({
   hasEvent: boolean;
   onPress: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
@@ -199,7 +215,7 @@ function DayCell({
       >
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 12,
             textAlign: "center",
             color: selected ? bgRgb : fgRgb,
@@ -233,6 +249,8 @@ function CalendarGrid({
   eventDates: Set<string>;
   onSelect: (d: Date) => void;
 }) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
 
@@ -243,19 +261,19 @@ function CalendarGrid({
   return (
     <View className="px-6" style={{ marginTop: 14 }}>
       <View className="flex-row">
-        {WEEKDAY_LABELS.map((w, i) => (
+        {WEEKDAY_LABEL_KEYS.map((key, i) => (
           <View
-            key={`${w}-${i}`}
+            key={`${key}-${i}`}
             style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}
           >
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 11,
                 color: mutedFgRgb,
               }}
             >
-              {w}
+              {t(`discover.${key}`)}
             </Text>
           </View>
         ))}
@@ -285,11 +303,15 @@ function ModeToggle({
   mode: Mode;
   onChange: (m: Mode) => void;
 }) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
   const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
   const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+  const modeLabel = (m: Mode) =>
+    m === "Today" ? t("discover.modeToday") : t("discover.modeUpcoming");
 
   return (
     <View className="px-6" style={{ marginTop: 18 }}>
@@ -314,17 +336,17 @@ function ModeToggle({
                 backgroundColor: isActive ? primaryRgb : "transparent",
               }}
               accessibilityRole="button"
-              accessibilityLabel={m}
+              accessibilityLabel={modeLabel(m)}
             >
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                   fontSize: 12,
                   fontWeight: "600",
                   color: isActive ? bgRgb : mutedFgRgb,
                 }}
               >
-                {m}
+                {modeLabel(m)}
               </Text>
             </Pressable>
           );
@@ -343,6 +365,8 @@ function EventRow({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -379,11 +403,11 @@ function EventRow({
           ) : null}
         </View>
 
-        <View className="ml-3 flex-1">
+        <View className="ms-3 flex-1">
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
@@ -396,7 +420,7 @@ function EventRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 11,
                 lineHeight: 16,
                 marginTop: 2,
@@ -415,7 +439,11 @@ function EventRow({
           ) : null}
         </View>
 
-        <AntDesign name="right" size={12} color={mutedFgRgb} />
+        <AntDesign
+          name={isRTL ? "left" : "right"}
+          size={12}
+          color={mutedFgRgb}
+        />
       </Pressable>
 
       {showDivider ? (
@@ -432,17 +460,21 @@ function EventRow({
 }
 
 function DayHeading({ date }: { date: Date }) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
-  const label = `${WEEKDAY_NAMES[date.getDay()]}, ${
-    MONTH_NAMES[date.getMonth()]
-  } ${date.getDate()}`;
+  const label = t("discover.dayHeading", {
+    weekday: weekdayName(t, date.getDay()),
+    month: monthName(t, date.getMonth()),
+    day: date.getDate(),
+  });
   return (
     <View className="px-6" style={{ marginTop: 22 }}>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "700",
           letterSpacing: 0.6,
@@ -459,6 +491,8 @@ function DayHeading({ date }: { date: Date }) {
 }
 
 export default function EventsCalendar({ items, onPressItem }: Props) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
 
@@ -576,12 +610,12 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
                 <View className="px-6" style={{ paddingVertical: 24 }}>
                   <Text
                     style={{
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                       fontSize: 12,
                       color: mutedFgRgb,
                     }}
                   >
-                    No events on this day.
+                    {t("discover.noEventsOnDay")}
                   </Text>
                 </View>
               ) : (
@@ -609,12 +643,12 @@ export default function EventsCalendar({ items, onPressItem }: Props) {
               >
                 <Text
                   style={{
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.body,
                     fontSize: 12,
                     color: mutedFgRgb,
                   }}
                 >
-                  No upcoming events.
+                  {t("discover.noUpcomingEvents")}
                 </Text>
               </View>
             ) : (

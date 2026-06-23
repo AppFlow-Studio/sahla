@@ -2,9 +2,9 @@ import { useAuth } from "@clerk/clerk-expo";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dimensions,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -31,8 +31,10 @@ import {
 import { useContentNotifSettings } from "@/src/hooks/use-content-notification-settings";
 import { useIsSaved, useToggleSave } from "@/src/hooks/use-saved-content";
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useConfigStore } from "@/src/stores/config-store";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 
 const SHEET_RADIUS = 40;
 
@@ -43,17 +45,6 @@ const SHEET_RADIUS = 40;
 const rgb = (triplet: string) => `rgb(${triplet.replace(/ /g, ",")})`;
 const rgba = (triplet: string, alpha: number) =>
   `rgba(${triplet.replace(/ /g, ",")},${alpha})`;
-
-const platformTitleFont = Platform.select({
-  ios: "SF Pro Display",
-  android: "Roboto",
-  default: "system-ui",
-});
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 type Detail = {
   content_id: string;
@@ -138,11 +129,14 @@ function CircleButton({
 }
 
 export default function ContentDetailScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { id } = useLocalSearchParams<{ id: string }>();
   const supabase = useSupabase();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const toastBg = rgb(colors.foreground);
   const toastText = rgb(colors.background);
@@ -261,12 +255,14 @@ export default function ContentDetailScreen() {
   // Toast copy reflects the actual reminder timing: the user's custom offsets
   // when set, otherwise the masjid default (which the client doesn't know the
   // exact value of, so we stay generic instead of hardcoding "30 minutes").
-  const reminderEventName = detail?.name ?? "this event";
+  const reminderEventName = detail?.name ?? t("content.thisEvent");
   const reminderMessage = hasCustomTimings
-    ? `We'll remind you ${(notifSettings ?? [])
-        .map((o) => (o === "At start time" ? "at start time" : o.toLowerCase()))
-        .join(" and ")} · ${reminderEventName}`
-    : `We'll remind you before ${reminderEventName} starts`;
+    ? `${t("content.remindYou", {
+        timing: (notifSettings ?? [])
+          .map((o) => (o === "At start time" ? "at start time" : o.toLowerCase()))
+          .join(` ${t("content.and")} `),
+      })} · ${reminderEventName}`
+    : t("content.remindYouBefore", { event: reminderEventName });
 
   useEffect(() => {
     let cancelled = false;
@@ -293,7 +289,7 @@ export default function ContentDetailScreen() {
         return;
       }
       if (!data?.row) {
-        setError("Content not found");
+        setError(t("content.contentNotFound"));
         setStatus("error");
         return;
       }
@@ -304,7 +300,7 @@ export default function ContentDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, supabase]);
+  }, [id, supabase, t]);
 
   const firstSpeaker = detail?.speakers?.[0];
   const screenHeight = Dimensions.get("window").height;
@@ -370,7 +366,7 @@ export default function ContentDetailScreen() {
       <Pressable
         onPress={dismiss}
         className="absolute inset-0"
-        accessibilityLabel="Close"
+        accessibilityLabel={t("common.close")}
       />
 
       <Animated.View
@@ -390,7 +386,7 @@ export default function ContentDetailScreen() {
           <ContentSkeleton cardBg={CARD_BG} pulseColor={rgba(colors.foreground, 0.1)} />
         ) : status === "error" || !detail ? (
           <View className="flex-1 items-center justify-center px-6">
-            <Text style={{ color: BUSH }}>{error ?? "Not found"}</Text>
+            <Text style={{ color: BUSH }}>{error ?? t("content.notFound")}</Text>
           </View>
         ) : (
           <>
@@ -430,7 +426,7 @@ export default function ContentDetailScreen() {
                 >
                   <CircleButton
                     onPress={dismiss}
-                    accessibilityLabel="Close"
+                    accessibilityLabel={t("common.close")}
                   >
                     <Icon name="close" size={16} color="#1A1A1A" />
                   </CircleButton>
@@ -445,17 +441,17 @@ export default function ContentDetailScreen() {
                           height: 28,
                         }}
                         accessibilityRole="button"
-                        accessibilityLabel="Customize reminder timing"
+                        accessibilityLabel={t("content.customizeReminderTiming")}
                       >
                         <Text
                           style={{
-                            fontFamily: platformUiFont,
+                            fontFamily: fonts.bodySemibold,
                             fontSize: 12,
                             fontWeight: "600",
                             color: BUSH,
                           }}
                         >
-                          Customize
+                          {t("content.customize")}
                         </Text>
                       </Pressable>
                     ) : null}
@@ -466,7 +462,9 @@ export default function ContentDetailScreen() {
                           onPress={notifDisabled ? undefined : handleToggleNotif}
                           disabled={notifDisabled}
                           accessibilityLabel={
-                            isNotifOptedIn ? "Turn off reminders" : "Turn on reminders"
+                            isNotifOptedIn
+                              ? t("content.turnOffReminders")
+                              : t("content.turnOnReminders")
                           }
                         >
                           <Icon
@@ -502,29 +500,29 @@ export default function ContentDetailScreen() {
               <View className="px-5 pt-6">
                 <Text
                   style={{
-                    fontFamily: platformTitleFont,
+                    fontFamily: fonts.display,
                     fontSize: 19,
                     lineHeight: 24,
                     fontWeight: "700",
                     color: BUSH,
                   }}
                 >
-                  {detail.name ?? "Untitled"}
+                  {detail.name ?? t("content.untitled")}
                 </Text>
 
                 {firstSpeaker ? (
                   <Pressable
                     onPress={() => setSpeakerModalOpen(true)}
                     accessibilityRole="button"
-                    accessibilityLabel={`View bio for ${firstSpeaker}`}
+                    accessibilityLabel={t("content.viewBioFor", { name: firstSpeaker })}
                     className="mt-4 flex-row items-center self-start rounded-full px-4 py-2"
                     style={{ backgroundColor: CHIP_BG }}
                   >
                     <Icon name="user" size={14} color={CHIP_TEXT} />
                     <Text
                       style={{
-                        marginLeft: 8,
-                        fontFamily: platformUiFont,
+                        marginStart: 8,
+                        fontFamily: fonts.bodySemibold,
                         fontSize: 13,
                         fontWeight: "700",
                         color: CHIP_TEXT,
@@ -533,10 +531,10 @@ export default function ContentDetailScreen() {
                       {firstSpeaker}
                     </Text>
                     <Icon
-                      name="right"
+                      name={isRTL ? "chevron-back" : "right"}
                       size={12}
                       color={CHIP_TEXT}
-                      style={{ marginLeft: 6 }}
+                      style={{ marginStart: 6 }}
                     />
                   </Pressable>
                 ) : null}
@@ -547,10 +545,10 @@ export default function ContentDetailScreen() {
                       marginTop: 12,
                       fontSize: 13,
                       color: MUTED,
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                     }}
                   >
-                    This already happened
+                    {t("content.alreadyHappened")}
                   </Text>
                 ) : null}
 
@@ -561,7 +559,7 @@ export default function ContentDetailScreen() {
                   >
                     <Text
                       style={{
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.bodySemibold,
                         fontSize: 11,
                         fontWeight: "700",
                         letterSpacing: 1.4,
@@ -569,12 +567,12 @@ export default function ContentDetailScreen() {
                         color: MUTED,
                       }}
                     >
-                      About
+                      {t("content.about")}
                     </Text>
                     <Text
                       style={{
                         marginTop: 10,
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.body,
                         fontSize: 12,
                         lineHeight: 18,
                         color: BUSH,
@@ -604,7 +602,7 @@ export default function ContentDetailScreen() {
                 style={{ backgroundColor: CARD_BG, opacity: saveDisabled ? 0.6 : 1 }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSaved, disabled: saveDisabled }}
-                accessibilityLabel={isSaved ? "Remove from Library" : "Save to Library"}
+                accessibilityLabel={isSaved ? t("content.removeFromLibrary") : t("content.saveToLibrary")}
               >
                 <Icon
                   name={isSaved ? "heart" : "heart-outline"}
@@ -614,14 +612,14 @@ export default function ContentDetailScreen() {
                 />
                 <Text
                   style={{
-                    marginLeft: 8,
-                    fontFamily: platformUiFont,
+                    marginStart: 8,
+                    fontFamily: fonts.bodySemibold,
                     fontSize: 16,
                     fontWeight: "700",
                     color: BUSH,
                   }}
                 >
-                  {isSaved ? "Saved to Library" : "Save to Library"}
+                  {isSaved ? t("content.savedToLibrary") : t("content.saveToLibrary")}
                 </Text>
               </Pressable>
             </View>
@@ -652,28 +650,28 @@ export default function ContentDetailScreen() {
           <Pressable
             onPress={handleOpenReminders}
             accessibilityRole="button"
-            accessibilityLabel="Reminder set. View your reminders."
+            accessibilityLabel={t("content.reminderSetA11y")}
             className="flex-row items-center active:opacity-80"
             style={{ paddingVertical: 14, paddingHorizontal: 16 }}
           >
             <Icon name="checkmark-circle" size={20} color={toastText} />
-            <View style={{ flex: 1, marginLeft: 10, marginRight: 8 }}>
+            <View style={{ flex: 1, marginStart: 10, marginEnd: 8 }}>
               <Text
                 style={{
                   color: toastText,
                   fontSize: 14,
                   fontWeight: "700",
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                 }}
               >
-                Reminder set
+                {t("content.reminderSet")}
               </Text>
               <Text
                 style={{
                   color: toastText,
                   opacity: 0.75,
                   fontSize: 12,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   marginTop: 1,
                 }}
               >
@@ -681,7 +679,7 @@ export default function ContentDetailScreen() {
               </Text>
             </View>
             <Icon
-              name="chevron-forward"
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={16}
               color={toastText}
               style={{ opacity: 0.7 }}
@@ -713,36 +711,36 @@ export default function ContentDetailScreen() {
           <Pressable
             onPress={handleOpenLibrary}
             accessibilityRole="button"
-            accessibilityLabel="Saved to library. View your library."
+            accessibilityLabel={t("content.savedToLibraryA11y")}
             className="flex-row items-center active:opacity-80"
             style={{ paddingVertical: 14, paddingHorizontal: 16 }}
           >
             <Icon name="heart" size={20} color={toastText} fill={toastText} />
-            <View style={{ flex: 1, marginLeft: 10, marginRight: 8 }}>
+            <View style={{ flex: 1, marginStart: 10, marginEnd: 8 }}>
               <Text
                 style={{
                   color: toastText,
                   fontSize: 14,
                   fontWeight: "700",
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                 }}
               >
-                Saved to library
+                {t("content.savedToLibraryToast")}
               </Text>
               <Text
                 style={{
                   color: toastText,
                   opacity: 0.75,
                   fontSize: 12,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   marginTop: 1,
                 }}
               >
-                {detail?.name ?? "This"} is in your library
+                {t("content.itemInLibrary", { item: detail?.name ?? t("content.thisItem") })}
               </Text>
             </View>
             <Icon
-              name="chevron-forward"
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={16}
               color={toastText}
               style={{ opacity: 0.7 }}

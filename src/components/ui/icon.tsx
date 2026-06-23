@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
   Baby,
   Ban,
   BatteryFull,
@@ -36,6 +37,7 @@ import {
   Goal,
   FileText,
   Funnel,
+  Globe,
   GraduationCap,
   Heart,
   Image as ImageIcon,
@@ -136,6 +138,7 @@ const ICONS: Record<string, ComponentType<LucideProps>> = {
 
   // navigation
   'arrow-back': ArrowLeft,
+  'arrow-forward': ArrowRight,
   'chevron-back': ChevronLeft,
   'chevron-forward': ChevronRight,
   'chevron-left': ChevronLeft,
@@ -223,6 +226,7 @@ const ICONS: Record<string, ComponentType<LucideProps>> = {
   shield: Shield,
   settings: Settings,
   clapperboard: Clapperboard,
+  globe: Globe,
   'graduation-cap': GraduationCap,
   'calendar-heart': CalendarHeart,
   fingerprint: Fingerprint,

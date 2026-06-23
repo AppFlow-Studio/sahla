@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MasjidLogo from '@/assets/masjid-logo.svg';
 import { Icon } from '@/src/components/ui/icon';
 import type { MasjidConfig } from '@/src/config/types';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { requestAndRegisterToken } from '@/src/hooks/use-register-push-token';
 import { useSupabase } from '@/src/hooks/use-supabase';
@@ -24,7 +25,6 @@ import { useConfigStore } from '@/src/stores/config-store';
 
 /** Set once the user has seen (allowed or dismissed) the soft prompt. */
 const SHOWN_KEY = 'notifications.prompt.v1';
-const SERIF = 'PlayfairDisplay_500Medium';
 
 /** "10 38 30" -> "rgb(10, 38, 30)" */
 function rgb(triplet: string) {
@@ -306,6 +306,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
  */
 export function NotificationPermissionPrompt() {
   const { userId } = useAuth();
+  const fonts = useFontFamily();
   const supabase = useSupabase();
   const mosqueId = useConfigStore((s) => s.mosqueUuid);
   const config = useMasjidConfig();
@@ -388,7 +389,7 @@ export function NotificationPermissionPrompt() {
         >
           <Text
             style={{
-              fontFamily: SERIF,
+              fontFamily: fonts.display,
               fontSize: 28,
               lineHeight: 36,
               textAlign: 'center',

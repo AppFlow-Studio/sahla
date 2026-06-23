@@ -5,15 +5,17 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   Pressable,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import {
   filterSavedReels,
   useSavedReels,
@@ -27,13 +29,6 @@ const GAP = 2; // YouTube Shorts has thin gaps between cells
 // Reuses the app's text-on-cream palette (dark green primary).
 const INK = '#0a261e';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
-
-// Same UI font Discover uses for its tab labels — keep the two screens aligned.
-const platformUiFont = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
 
 /**
  * Cell preview — when there's a real `thumbnail_url` we use that; otherwise we
@@ -58,14 +53,17 @@ function ReelThumb({ url }: { url: string }) {
   );
 }
 
-const FILTERS: { value: SavedClipsFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This week' },
-  { value: 'month', label: 'This month' },
+const FILTERS: { value: SavedClipsFilter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'common.all' },
+  { value: 'today', labelKey: 'profile.filterToday' },
+  { value: 'week', labelKey: 'profile.filterThisWeek' },
+  { value: 'month', labelKey: 'profile.filterThisMonth' },
 ];
 
 export default function SavedClipsScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { data, isPending, isError, refetch } = useSavedReels();
   const { width } = useWindowDimensions();
   const [filter, setFilter] = useState<SavedClipsFilter>('all');
@@ -122,9 +120,9 @@ export default function SavedClipsScreen() {
           onPress={() => router.back()}
           hitSlop={10}
           className="active:opacity-60"
-          style={{ position: 'absolute', left: 12, padding: 4 }}
+          style={{ position: 'absolute', [isRTL ? 'right' : 'left']: 12, padding: 4 }}
         >
-          <Icon name="chevron-back" size={26} color={INK} />
+          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={26} color={INK} />
         </Pressable>
         <Text
           style={{
@@ -133,7 +131,7 @@ export default function SavedClipsScreen() {
             fontWeight: '600',
           }}
         >
-          Saved Clips
+          {t('profile.savedClips')}
         </Text>
       </View>
 
@@ -147,13 +145,13 @@ export default function SavedClipsScreen() {
             <Pressable key={f.value} onPress={() => setFilter(f.value)} hitSlop={6}>
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: active ? fonts.bodySemibold : fonts.bodyMedium,
                   fontSize: 12,
                   fontWeight: active ? '600' : '500',
                   color: active ? INK : INK_MUTED,
                 }}
               >
-                {f.label}
+                {t(f.labelKey)}
               </Text>
               {active ? (
                 <View
@@ -181,7 +179,7 @@ export default function SavedClipsScreen() {
               fontSize: 14,
             }}
           >
-            Couldn&apos;t load your saved clips.
+            {t('profile.couldNotLoadClips')}
           </Text>
           <Pressable
             onPress={() => refetch()}
@@ -195,7 +193,7 @@ export default function SavedClipsScreen() {
             }}
           >
             <Text style={{ color: INK, fontSize: 13, fontWeight: '600' }}>
-              Try again
+              {t('profile.tryAgain')}
             </Text>
           </Pressable>
         </View>
@@ -214,7 +212,7 @@ export default function SavedClipsScreen() {
               marginTop: 12,
             }}
           >
-            {allReels.length === 0 ? 'No saved clips yet' : 'Nothing in this window'}
+            {allReels.length === 0 ? t('profile.noSavedClipsYet') : t('profile.nothingInThisWindow')}
           </Text>
           <Text
             style={{
@@ -226,8 +224,8 @@ export default function SavedClipsScreen() {
             }}
           >
             {allReels.length === 0
-              ? `Tap the bookmark on any reel in\nWatch to save it here.`
-              : `No clips saved in the selected\nwindow — try "All".`}
+              ? t('profile.noSavedClipsBody')
+              : t('profile.nothingInWindowBody')}
           </Text>
         </View>
       ) : (

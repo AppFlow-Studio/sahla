@@ -1,10 +1,12 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useRecommendation } from '@/src/hooks/use-Recommendation';
 
 const ICON_BY_TYPE: Record<string, IconName> = {
@@ -14,6 +16,8 @@ const ICON_BY_TYPE: Record<string, IconName> = {
 };
 
 export function RecommendedForYou() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
   const { recommendations, status, error } = useRecommendation();
   const primary = colors.primary.replace(/ /g, ',');
@@ -25,21 +29,21 @@ export function RecommendedForYou() {
     <View>
       <View className="flex-row items-center justify-between pb-3">
         <Text className="text-[13px] font-semibold uppercase tracking-[1px] text-foreground">
-          Recommended for you
+          {t('home.recommendedForYou')}
         </Text>
         <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/discover?tab=For You')}>
-          <Text className="text-[10px] text-foreground/60">SEE ALL →</Text>
+          <Text className="text-[10px] text-foreground/60">{t('home.seeAll')} {isRTL ? '←' : '→'}</Text>
         </TouchableOpacity>
       </View>
       <View className="border-t border-foreground pt-4">
         {status === 'loading' && (
-          <Text className="text-[12px] text-foreground/60">Loading…</Text>
+          <Text className="text-[12px] text-foreground/60">{t('common.loading')}</Text>
         )}
         {status === 'error' && (
-          <Text className="text-[12px] text-foreground/60">Couldn’t load: {error}</Text>
+          <Text className="text-[12px] text-foreground/60">{t('home.couldNotLoad', { error })}</Text>
         )}
         {status === 'success' && recommendations.length === 0 && (
-          <Text className="text-[12px] text-foreground/60">No recommendations yet.</Text>
+          <Text className="text-[12px] text-foreground/60">{t('home.noRecommendationsYet')}</Text>
         )}
         <ScrollView
           horizontal
@@ -71,7 +75,7 @@ export function RecommendedForYou() {
                 )}
               </View>
               <Text className="w-[220px] text-[13px] font-semibold text-foreground" numberOfLines={1}>
-                {item.name ?? 'Untitled'}
+                {item.name ?? t('home.untitled')}
               </Text>
               <Text className="w-[220px] text-[11px] text-foreground/60" numberOfLines={1}>
                 {item.type ?? ''}

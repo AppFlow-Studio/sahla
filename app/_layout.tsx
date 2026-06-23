@@ -25,7 +25,20 @@ if (Platform.OS !== 'web') {
 
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
-import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
+import {
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium,
+} from '@expo-google-fonts/cormorant-garamond';
+import {
+  IBMPlexSansArabic_400Regular,
+  IBMPlexSansArabic_500Medium,
+  IBMPlexSansArabic_600SemiBold,
+} from '@expo-google-fonts/ibm-plex-sans-arabic';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_500Medium,
@@ -43,6 +56,7 @@ const StripeProvider =
     ? require('@stripe/stripe-react-native').StripeProvider
     : ({ children }: { children: React.ReactNode }) => children;
 
+import { bootDirectionChanged } from '@/src/i18n';
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
@@ -167,15 +181,34 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
+    // All weights referenced by any FONT_THEME in src/theme/fonts.ts must be
+    // registered here so a masjid's chosen theme renders without a fallback.
     PlayfairDisplay_400Regular,
     PlayfairDisplay_500Medium,
     CormorantGaramond_400Regular,
+    CormorantGaramond_500Medium,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    // Latin+Arabic family used for the whole UI when the language is RTL.
+    IBMPlexSansArabic_400Regular,
+    IBMPlexSansArabic_500Medium,
+    IBMPlexSansArabic_600SemiBold,
     UthmanicHafs: require('../assets/fonts/UthmanicHafs_V22.ttf'),
   });
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  // If the boot language flipped the layout direction (e.g. first launch on an
+  // Arabic device), RN needs a reload for the forced direction to apply.
+  useEffect(() => {
+    if (bootDirectionChanged) {
+      const Updates = require('expo-updates') as typeof import('expo-updates');
+      Updates.reloadAsync().catch(() => {});
+    }
+  }, []);
 
   console.log('[boot] RootLayout', { fontsLoaded, clerkKey: env.CLERK_PUBLISHABLE_KEY?.slice(0, 11) });
 

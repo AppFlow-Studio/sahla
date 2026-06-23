@@ -8,6 +8,17 @@ module.exports = {
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
+      fontFamily: {
+        // Resolved at runtime from the masjid's font theme — see
+        // src/components/theme-root.tsx and src/theme/fonts.ts. RN custom fonts
+        // are fixed-weight files (fontWeight is ignored once a custom family is
+        // set), so weight emphasis is expressed via separate families here.
+        display: 'var(--font-display)',
+        'display-regular': 'var(--font-display-regular)',
+        body: 'var(--font-body)',
+        'body-medium': 'var(--font-body-medium)',
+        'body-semibold': 'var(--font-body-semibold)',
+      },
       colors: {
         primary: 'rgb(var(--color-primary) / <alpha-value>)',
         'primary-foreground': 'rgb(var(--color-primary-foreground) / <alpha-value>)',

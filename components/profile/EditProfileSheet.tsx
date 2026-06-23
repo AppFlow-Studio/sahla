@@ -13,6 +13,8 @@ import {
   View,
 } from 'react-native';
 
+import { useTranslation } from 'react-i18next';
+
 import { DatePicker } from '@/src/components/admin/date-picker';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile, useUpdateProfile } from '@/src/hooks/use-profile';
@@ -83,6 +85,7 @@ function Field({
 }
 
 export default function EditProfileSheet({ visible, onClose }: Props) {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const { profile } = useProfile();
   const updateProfile = useUpdateProfile();
@@ -225,17 +228,17 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
                 textTransform: 'uppercase',
               }}
             >
-              Edit Profile
+              {t('profile.editProfile')}
             </Text>
           </View>
 
           {/* Fields */}
           <View className="px-6">
             <Field
-              label="First Name"
+              label={t('profile.firstName')}
               value={firstName}
               onChangeText={setFirstName}
-              placeholder="Enter first name"
+              placeholder={t('profile.enterFirstName')}
               autoCapitalize="words"
               labelColor={labelColor}
               textColor={fgRgb}
@@ -243,10 +246,10 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               placeholderColor={placeholderColor}
             />
             <Field
-              label="Last Name"
+              label={t('profile.lastName')}
               value={lastName}
               onChangeText={setLastName}
-              placeholder="Enter last name"
+              placeholder={t('profile.enterLastName')}
               autoCapitalize="words"
               labelColor={labelColor}
               textColor={fgRgb}
@@ -254,10 +257,10 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               placeholderColor={placeholderColor}
             />
             <Field
-              label="Email"
+              label={t('profile.email')}
               value={email}
               onChangeText={setEmail}
-              placeholder="Enter email"
+              placeholder={t('profile.enterEmail')}
               keyboardType="email-address"
               autoCapitalize="none"
               labelColor={labelColor}
@@ -266,10 +269,10 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               placeholderColor={placeholderColor}
             />
             <Field
-              label="Phone"
+              label={t('profile.phone')}
               value={phone}
               onChangeText={setPhone}
-              placeholder="Enter phone number"
+              placeholder={t('profile.enterPhoneNumber')}
               keyboardType="phone-pad"
               labelColor={labelColor}
               textColor={fgRgb}
@@ -289,7 +292,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
                   marginBottom: 6,
                 }}
               >
-                Date of Birth
+                {t('profile.dateOfBirth')}
               </Text>
               <DatePicker
                 value={dob}
@@ -317,13 +320,13 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               }}
             >
               <Text className="text-[14px] font-semibold text-primary-foreground">
-                {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
+                {updateProfile.isPending ? t('profile.saving') : t('profile.saveChanges')}
               </Text>
             </TouchableOpacity>
 
             {updateProfile.isError && (
               <Text className="mt-2 text-center text-[11px] text-red-500">
-                {updateProfile.error?.message ?? 'Failed to save'}
+                {updateProfile.error?.message ?? t('profile.failedToSave')}
               </Text>
             )}
           </View>

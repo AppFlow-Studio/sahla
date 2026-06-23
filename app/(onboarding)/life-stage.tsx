@@ -1,23 +1,25 @@
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
 import { useOnboardingDraft } from '@/src/contexts/onboarding-draft-context';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
-const TILES: { key: string; label: string }[] = [
-  { key: 'student', label: 'Student' },
-  { key: 'single_working', label: 'Single, working' },
-  { key: 'newly_married', label: 'Newly married' },
-  { key: 'parent_young_kids', label: 'Parent of young kids' },
-  { key: 'parent_teens', label: 'Parent of teens' },
-  { key: 'empty_nester', label: 'Empty nester' },
-  { key: 'retired', label: 'Retired' },
-  { key: 'new_to_islam', label: 'New to Islam' },
+const TILES: { key: string; labelKey: string }[] = [
+  { key: 'student', labelKey: 'lifeStageStudent' },
+  { key: 'single_working', labelKey: 'lifeStageSingleWorking' },
+  { key: 'newly_married', labelKey: 'lifeStageNewlyMarried' },
+  { key: 'parent_young_kids', labelKey: 'lifeStageParentYoungKids' },
+  { key: 'parent_teens', labelKey: 'lifeStageParentTeens' },
+  { key: 'empty_nester', labelKey: 'lifeStageEmptyNester' },
+  { key: 'retired', labelKey: 'lifeStageRetired' },
+  { key: 'new_to_islam', labelKey: 'lifeStageNewToIslam' },
 ];
 
 export default function LifeStageScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { lifeStages, toggleLifeStage } = useOnboardingDraft();
   const { colors } = useMasjidConfig();
 
@@ -33,9 +35,9 @@ export default function LifeStageScreen() {
   return (
     <OnboardingScaffold
       step={1}
-      title="Which describes you best right now?"
-      body="Select all that apply."
-      primaryLabel="Continue"
+      title={t('onboarding.lifeStageTitle')}
+      body={t('onboarding.selectAllThatApply')}
+      primaryLabel={t('onboarding.continue')}
       onPrimary={handleContinue}
       primaryDisabled={lifeStages.length === 0}
       scrollable
@@ -65,7 +67,7 @@ export default function LifeStageScreen() {
                 className={isSelected ? 'text-onboarding-accent' : 'text-onboarding-surface'}
                 style={{ fontSize: 13, fontWeight: isSelected ? '600' : '500', textAlign: 'center' }}
               >
-                {tile.label}
+                {t(`onboarding.${tile.labelKey}`)}
               </Text>
             </Pressable>
           );

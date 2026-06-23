@@ -64,6 +64,11 @@ export type MasjidConfig = {
   prayerCalculationMethod?: string;
   /** Clerk Organization ID for this mosque — fetched from Supabase `mosques` row. */
   clerkOrgId?: string;
+  /**
+   * Font theme key — one of the keys in `src/theme/fonts.ts` (FONT_THEMES).
+   * Set by the masjid admin; defaults to "classic" when absent/unknown.
+   */
+  fontTheme?: string;
 };
 
 /**
