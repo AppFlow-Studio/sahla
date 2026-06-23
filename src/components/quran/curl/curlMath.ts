@@ -31,6 +31,7 @@ export function computeFold(
   originY: number,
   touchX: number,
   touchY: number,
+  curlLen?: number,
 ): FoldFrame {
   'worklet';
   const dx = originX - touchX;
@@ -49,10 +50,15 @@ export function computeFold(
   }
   const nx = dx / len;
   const ny = dy / len;
-  // Fold passes through the touch point so the visible fold edge tracks the
-  // finger 1:1. Radius is len/π so a half-cylinder wrap (θ = π at the leading
-  // corner) lands the lifted corner exactly under the finger in the XY
-  // plane — no lateral lag.
+  // Fold passes through the touch point so the visible fold edge tracks
+  // the finger 1:1. The DIRECTION of the perpendicular bisector still
+  // comes from the (origin → touch) angle (so a corner anchor gives a
+  // diagonal corner peel). But the AMOUNT of curl is taken from
+  // `curlLen` if the caller passed one — this lets the forward gesture
+  // anchor at a real page corner without inheriting the
+  // anchor-to-finger distance as a giant starting R. Backward (and any
+  // other caller that omits curlLen) keeps the original R = len/π.
+  const r = curlLen != null ? curlLen : len;
   return {
     midX: touchX,
     midY: touchY,
@@ -60,7 +66,7 @@ export function computeFold(
     dirY: nx,
     normalX: nx,
     normalY: ny,
-    R: len / Math.PI,
+    R: r / Math.PI,
   };
 }
 
@@ -116,25 +122,29 @@ export function project(
 }
 
 /**
- * The point on the leading edge that the curl emanates from. X is fixed to
- * the leading edge of the page; Y tracks the finger's start Y so the fold
- * stays small at gesture-start and grows as the finger drags toward the
- * spine.
+ * The point on the leading edge that the curl emanates from. X is on
+ * the leading edge of the page; Y snaps to whichever real page corner
+ * the gesture started nearer — top half → top corner (y = 0), bottom
+ * half → bottom corner (y = pageH). Anchoring at a real corner makes
+ * the lift read as a diagonal dog-ear (Revealed parity) rather than a
+ * vertical band down the page.
  *
- * Note: the corner-edge stroke uses a separate, corner-snapped pivot
- * computed inline in PageTurnView — this function intentionally does NOT
- * snap, because that would change how the mesh swipe feels.
+ * The well-known pitfall — that snapping the anchor makes
+ * |origin − touch| huge at gesture start and pops a full curl in
+ * immediately — is handled at the call site by passing a separate
+ * `curlLen` (horizontal drag) to `computeFold`, so R can grow from ~0
+ * even while the anchor sits far from the finger's Y.
  */
 export function originCorner(
   startY: number,
   pageW: number,
-  // pageH retained for signature stability but unused now.
-  _pageH: number,
+  pageH: number,
   direction: 'rtl' | 'ltr',
 ): { x: number; y: number } {
   'worklet';
   const x = direction === 'rtl' ? 0 : pageW;
-  return { x, y: startY };
+  const y = startY < pageH / 2 ? 0 : pageH;
+  return { x, y };
 }
 
 /**

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import {
   PageTurnView,
   type PageTurnViewRef,
 } from '../components/quran/PageTurnView';
+import { IOSPageCurlView } from 'ios-page-curl';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -53,6 +55,23 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
   // the page→surah hook can correct it when the pager settles.
   const [surahOverride, setSurahOverride] = useState<Surah | null>(null);
 
+  // Apple-Books-style chrome toggle. Tap the page → hide back button +
+  // bottom sheet so the user can read distraction-free. Tap again →
+  // they come back.
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const chromeProgress = useSharedValue(1);
+  useEffect(() => {
+    chromeProgress.value = withTiming(chromeVisible ? 1 : 0, { duration: 220 });
+  }, [chromeVisible, chromeProgress]);
+  const toolbarAnimStyle = useAnimatedStyle(() => ({
+    opacity: chromeProgress.value,
+    transform: [{ translateY: (1 - chromeProgress.value) * -40 }],
+  }));
+  const footerAnimStyle = useAnimatedStyle(() => ({
+    opacity: chromeProgress.value,
+    transform: [{ translateY: (1 - chromeProgress.value) * 60 }],
+  }));
+
   const resolvedSurah = useSurahForPage(currentPage, surahs);
   const currentSurah = surahOverride ?? resolvedSurah;
 
@@ -84,21 +103,41 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
     <View style={styles.root}>
       {/* Mushaf fills the entire screen — no dark header band. */}
       <View style={{ flex: 1, backgroundColor: palette.cream }}>
-        <PageTurnView
-          ref={pageTurnRef}
-          pageNumber={currentPage}
-          totalPages={TOTAL_MUSHAF_PAGES}
-          direction="rtl"
-          onPageChange={setCurrentPage}
-          pageBackgroundColor={palette.cream}
-          renderPage={(p) => <MushafPage pageNumber={p} />}
-        />
+        {Platform.OS === 'ios' ? (
+          // iOS: Apple-native UIPageViewController with the .pageCurl
+          // transition style — the iBooks / Apple Books curl. iOS only;
+          // Android falls through to the Skia implementation below.
+          <IOSPageCurlView
+            pageNumber={currentPage}
+            totalPages={TOTAL_MUSHAF_PAGES}
+            direction="rtl"
+            onPageChange={setCurrentPage}
+            pageBackgroundColor={palette.cream}
+            renderPage={(p) => <MushafPage pageNumber={p} />}
+            onTap={() => setChromeVisible((v) => !v)}
+          />
+        ) : (
+          <PageTurnView
+            ref={pageTurnRef}
+            pageNumber={currentPage}
+            totalPages={TOTAL_MUSHAF_PAGES}
+            direction="rtl"
+            onPageChange={setCurrentPage}
+            pageBackgroundColor={palette.cream}
+            renderPage={(p) => <MushafPage pageNumber={p} />}
+          />
+        )}
       </View>
 
-      {/* Floating toolbar over the mushaf — back button + page counter. */}
-      <View
-        pointerEvents="box-none"
-        style={[styles.toolbar, { paddingTop: insets.top + 8 }]}
+      {/* Floating toolbar — back button + page counter. Hidden when
+          the user taps the page (Apple Books style). */}
+      <Animated.View
+        pointerEvents={chromeVisible ? 'box-none' : 'none'}
+        style={[
+          styles.toolbar,
+          { paddingTop: insets.top + 8 },
+          toolbarAnimStyle,
+        ]}
       >
         <Pressable onPress={onBack} hitSlop={10} style={styles.backCircle}>
           <Text style={styles.backArrow}>←</Text>
@@ -107,18 +146,23 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
         <Text style={styles.pageCounter}>
           {currentPage} / {TOTAL_MUSHAF_PAGES}
         </Text>
-      </View>
+      </Animated.View>
 
-      {/* Morphing footer → sheet */}
-      <MorphingFooter
-        expanded={pickerOpen}
-        onExpand={() => setPickerOpen(true)}
-        onCollapse={() => setPickerOpen(false)}
-        currentPage={currentPage}
-        currentSurah={currentSurah}
-        surahs={surahs}
-        onSelectSurah={jumpToSurah}
-      />
+      {/* Morphing footer → sheet. Same chrome toggle as the toolbar. */}
+      <Animated.View
+        pointerEvents={chromeVisible ? 'box-none' : 'none'}
+        style={[StyleSheet.absoluteFill, footerAnimStyle]}
+      >
+        <MorphingFooter
+          expanded={pickerOpen}
+          onExpand={() => setPickerOpen(true)}
+          onCollapse={() => setPickerOpen(false)}
+          currentPage={currentPage}
+          currentSurah={currentSurah}
+          surahs={surahs}
+          onSelectSurah={jumpToSurah}
+        />
+      </Animated.View>
     </View>
   );
 }
