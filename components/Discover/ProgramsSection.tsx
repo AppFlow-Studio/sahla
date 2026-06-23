@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import type { ImageSourcePropType } from "react-native";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
@@ -73,11 +74,12 @@ export default function ProgramsSection({
   onPressItem,
   onPressSeeAll,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <View>
       <SectionTitle
-        title="Programs"
-        actionLabel="See all"
+        title={t("discover.programsTitle")}
+        actionLabel={t("discover.seeAll")}
         onPressAction={onPressSeeAll}
       />
       <ScrollView

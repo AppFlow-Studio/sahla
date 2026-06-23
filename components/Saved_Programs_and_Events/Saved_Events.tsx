@@ -497,7 +497,7 @@ function SavedRow({
         style={{ paddingVertical: 14 }}
       >
         <View
-          className="mr-4 overflow-hidden rounded-[10px]"
+          className="me-4 overflow-hidden rounded-[10px]"
           style={{ width: 50, height: 50, backgroundColor: '#CFE0EA' }}
         >
           <Image
@@ -543,7 +543,7 @@ function SavedRow({
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Remove ${item.name ?? 'item'} from saved`}
-          className="ml-2 items-center justify-center active:opacity-60"
+          className="ms-2 items-center justify-center active:opacity-60"
           style={{ width: 36, height: 40 }}
         >
           <Text

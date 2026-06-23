@@ -10,8 +10,10 @@ import { useUpdatesActions } from "@/src/providers/updates-provider";
 import { useAuth } from "@clerk/clerk-expo";
 import { router, type Href } from "expo-router";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, Platform, Pressable, Share, Text, View } from "react-native";
 import DonateCard from "./DonateCard";
+import LanguageRow from "./LanguageRow";
 import Notifications from "./Notifications";
 import PersonalizedCard from "./PersonalizedCard";
 import RowItem from "./RowItem";
@@ -45,6 +47,7 @@ function SectionRule() {
 }
 
 function SignOutButton() {
+  const { t } = useTranslation();
   const { signOut } = useAuth();
   const resetOnboarding = useOnboardingStore((s) => s.reset);
 
@@ -61,13 +64,14 @@ function SignOutButton() {
       className="rounded-full border border-red-500/30 px-8 py-3 active:opacity-70"
     >
       <Text className="text-red-500" style={{ fontSize: 14, fontWeight: '600' }}>
-        Sign Out
+        {t('profile.signOut')}
       </Text>
     </Pressable>
   );
 }
 
 function DeleteAccountButton() {
+  const { t } = useTranslation();
   const { signOut } = useAuth();
   const supabase = useSupabase();
   const resetOnboarding = useOnboardingStore((s) => s.reset);
@@ -75,12 +79,12 @@ function DeleteAccountButton() {
 
   const confirmDelete = useCallback(() => {
     Alert.alert(
-      "Delete Account",
-      "This permanently deletes your Sahla account and all your data — saved items, preferences, notifications, and history. This can't be undone.",
+      t('profile.deleteAccount'),
+      t('profile.deleteAccountConfirm'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('profile.delete'),
           style: "destructive",
           onPress: async () => {
             setDeleting(true);
@@ -96,15 +100,15 @@ function DeleteAccountButton() {
             } catch (err: any) {
               setDeleting(false);
               Alert.alert(
-                "Couldn't delete account",
-                err?.message || "Something went wrong. Please try again or contact support.",
+                t('profile.deleteAccountError'),
+                err?.message || t('profile.deleteAccountErrorBody'),
               );
             }
           },
         },
       ],
     );
-  }, [supabase, resetOnboarding, signOut]);
+  }, [supabase, resetOnboarding, signOut, t]);
 
   return (
     <Pressable
@@ -113,9 +117,9 @@ function DeleteAccountButton() {
       className="mt-4 flex-row items-center active:opacity-70"
       style={{ opacity: deleting ? 0.5 : 1 }}
     >
-      {deleting && <ActivityIndicator size="small" color="#9ca3af" style={{ marginRight: 8 }} />}
+      {deleting && <ActivityIndicator size="small" color="#9ca3af" style={{ marginEnd: 8 }} />}
       <Text className="text-foreground/40" style={{ fontSize: 13, fontWeight: '500' }}>
-        {deleting ? "Deleting…" : "Delete Account"}
+        {deleting ? t('profile.deleting') : t('profile.deleteAccount')}
       </Text>
     </Pressable>
   );
@@ -125,6 +129,7 @@ export default function ProfileBody({
   onPressPersonalized,
   onPressNotifications,
 }: Props) {
+  const { t } = useTranslation();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const config = useMasjidConfig();
   const fonts = useFontFamily();
@@ -136,13 +141,16 @@ export default function ProfileBody({
   const handleInviteFriends = useCallback(async () => {
     try {
       await Share.share({
-        message: `Join me at ${config.displayName} on Sahla — ${APP_STORE_URL}`,
+        message: t('profile.inviteShareMessage', {
+          masjid: config.displayName,
+          url: APP_STORE_URL,
+        }),
         url: APP_STORE_URL,
       });
     } catch {
       // User dismissed or platform error — nothing actionable to show.
     }
-  }, [config.displayName]);
+  }, [config.displayName, t]);
 
   return (
     <View
@@ -157,7 +165,7 @@ export default function ProfileBody({
 
       {/* COMMUNITY */}
       <View className="flex-col">
-        <SectionHeader title="COMMUNITY" />
+        <SectionHeader title={t('profile.sectionCommunity')} />
         <View
           style={{
             borderWidth: 0.5,
@@ -168,7 +176,7 @@ export default function ProfileBody({
         >
           <RowItem
             icon={COMMUNITY_ICON}
-            title="Invite friends"
+            title={t('profile.inviteFriends')}
             onPress={handleInviteFriends}
           />
         </View>
@@ -176,26 +184,26 @@ export default function ProfileBody({
 
       {/* MY ACTIVITY */}
       <View className="flex-col">
-        <SectionHeader title="MY ACTIVITY" />
+        <SectionHeader title={t('profile.sectionMyActivity')} />
         <View>
           <RowItem
             icon={SAVED_PROGRAMS_AND_EVENTS_ICON}
-            title="Saved Programs & Events"
+            title={t('profile.savedProgramsEvents')}
             onPress={() => router.push("/profile/saved-events" as Href)}
           />
           <RowItem
             icon={SAVED_CLIPS_ICON}
-            title="Saved Clips"
+            title={t('profile.savedClips')}
             onPress={() => router.push("/profile/saved-clips" as Href)}
           />
           <RowItem
             icon={PAYMENT_HISTORY_ICON}
-            title="Payment History"
+            title={t('profile.paymentHistory')}
             onPress={() => router.push('/profile/payment-history')}
           />
           <RowItem
             icon={PAYMENT_METHODS_ICON}
-            title="Payment Methods"
+            title={t('profile.paymentMethods')}
             onPress={() => router.push('/profile/payment-methods')}
           />
         </View>
@@ -208,24 +216,24 @@ export default function ProfileBody({
 
       {/* NOTIFICATIONS */}
       <View className="flex-col gap-2">
-        <SectionHeader title="NOTIFICATIONS" />
+        <SectionHeader title={t('profile.sectionNotifications')} />
         <Notifications onEnablePress={onPressNotifications} />
         <View className="flex-col">
           <RowItem
             icon={PRAYER_ALERTS_ICON}
-            title="Prayer Alerts"
+            title={t('profile.prayerAlerts')}
             onPress={() => router.push("/profile/notification-center" as Href)}
           />
           <RowItem
             icon={PROGRAMS_ICON}
-            title="Programs"
+            title={t('profile.programs')}
             onPress={() =>
               router.push("/profile/notification-center?tab=Programs" as Href)
             }
           />
           <RowItem
             icon={EVENTS_ICON}
-            title="Events"
+            title={t('profile.events')}
             onPress={() =>
               router.push("/profile/notification-center?tab=Events" as Href)
             }
@@ -236,12 +244,13 @@ export default function ProfileBody({
 
       {/* APP */}
       <View className="flex-col">
-        <SectionHeader title="APP" />
+        <SectionHeader title={t('profile.sectionApp')} />
         <View>
+          <LanguageRow />
           {updates.isReady ? (
             <RowItem
               icon={APPLICATION_ICON}
-              title="Restart to apply update"
+              title={t('profile.restartToApplyUpdate')}
               onPress={() => {
                 updates.reloadNow().catch(() => {});
               }}
@@ -249,7 +258,7 @@ export default function ProfileBody({
           ) : (
             <RowItem
               icon={CHECK_STATUS_ICON}
-              title={updates.isDownloading ? "Downloading update…" : "Check for Updates"}
+              title={updates.isDownloading ? t('profile.downloadingUpdate') : t('profile.checkForUpdates')}
               onPress={() => {
                 if (updates.isChecking || updates.isDownloading) return;
                 checkAndNotify();
@@ -266,7 +275,7 @@ export default function ProfileBody({
               lineHeight: 16,
             }}
           >
-            {`App version ${appVersion}`}
+            {t('profile.appVersion', { version: appVersion })}
             {__DEV__ && updates.channel ? ` · ${updates.channel}` : ''}
           </Text>
         </View>
@@ -275,11 +284,11 @@ export default function ProfileBody({
 
       {/* MAS SHOP */}
       <View className="flex-col">
-        <SectionHeader title="SHOP" />
+        <SectionHeader title={t('profile.sectionShop')} />
         <View>
           <RowItem
             icon={MAS_BAG_ICON}
-            title="Programs / Events Shop"
+            title={t('profile.programsEventsShop')}
             onPress={() => {}}
           />
         </View>
@@ -288,21 +297,21 @@ export default function ProfileBody({
 
       {/* BUSINESS ADS */}
       <View className="flex-col">
-        <SectionHeader title="BUSINESS ADS" />
+        <SectionHeader title={t('profile.sectionBusinessAds')} />
         <View>
           <RowItem
             icon={APPLICATION_ICON}
-            title="Start an Application"
+            title={t('profile.startAnApplication')}
             onPress={() => router.push("/advertise" as Href)}
           />
           <RowItem
             icon={CHECK_STATUS_ICON}
-            title="Check the Status"
+            title={t('profile.checkTheStatus')}
             onPress={() => router.push("/advertise-status" as Href)}
           />
           <RowItem
             icon={MANAGE_SUBS_ICON}
-            title="Manage Subscriptions"
+            title={t('profile.manageSubscriptions')}
             onPress={() => router.push("/advertise-status" as Href)}
           />
         </View>
@@ -311,11 +320,11 @@ export default function ProfileBody({
 
       {/* LEAVE A COMMENT */}
       <View className="flex-col">
-        <SectionHeader title="LEAVE A COMMENT" />
+        <SectionHeader title={t('profile.sectionLeaveAComment')} />
         <View>
           <RowItem
             icon={FEEDBACK_ICON}
-            title="Send Feedback"
+            title={t('profile.sendFeedback')}
             onPress={() => setFeedbackOpen(true)}
           />
         </View>
@@ -325,11 +334,11 @@ export default function ProfileBody({
       {/* ADMIN */}
       {isAdmin && (
         <View className="flex-col">
-          <SectionHeader title="ADMIN" />
+          <SectionHeader title={t('profile.sectionAdmin')} />
           <View>
             <RowItem
               icon={ADMIN_ICON}
-              title="Admin Portal"
+              title={t('profile.adminPortal')}
               onPress={() => router.push("/profile/admin" as Href)}
             />
           </View>

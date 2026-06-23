@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
@@ -32,6 +33,7 @@ export function ProfilePhotoModal({
   onChooseFromGallery,
   isUploading = false,
 }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ',');
@@ -117,11 +119,11 @@ export function ProfilePhotoModal({
             >
               <Icon name="close" size={18} color={`rgba(${fg},0.55)`} />
             </Pressable>
-            <Text style={styles.title}>Profile Photo</Text>
+            <Text style={styles.title}>{t('profile.profilePhoto')}</Text>
             <View style={styles.closeButtonSpacer} />
           </View>
 
-          <Text style={styles.heading}>Add a Profile Photo</Text>
+          <Text style={styles.heading}>{t('profile.addAProfilePhoto')}</Text>
 
           <Pressable
             onPress={onChooseFromGallery}
@@ -134,7 +136,7 @@ export function ProfilePhotoModal({
             ) : (
               <>
                 <Icon name="camera-outline" size={32} color={accentRgb} />
-                <Text style={styles.tapToAddLabel}>Tap to add</Text>
+                <Text style={styles.tapToAddLabel}>{t('profile.tapToAdd')}</Text>
               </>
             )}
           </Pressable>
@@ -145,7 +147,7 @@ export function ProfilePhotoModal({
             style={[styles.actionButton, isUploading && styles.actionDisabled]}
           >
             <Icon name="camera-outline" size={18} color={fgRgb} style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>Take Photo</Text>
+            <Text style={styles.actionLabel}>{t('profile.takePhoto')}</Text>
           </Pressable>
 
           <Pressable
@@ -154,7 +156,7 @@ export function ProfilePhotoModal({
             style={[styles.actionButton, isUploading && styles.actionDisabled]}
           >
             <Icon name="images-outline" size={18} color={fgRgb} style={styles.actionIcon} />
-            <Text style={styles.actionLabel}>Choose from Gallery</Text>
+            <Text style={styles.actionLabel}>{t('profile.chooseFromGallery')}</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -257,7 +259,7 @@ const makeStyles = (c: {
       marginBottom: 10,
     },
     actionIcon: {
-      marginRight: 8,
+      marginEnd: 8,
     },
     actionLabel: {
       color: c.fgRgb,

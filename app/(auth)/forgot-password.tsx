@@ -2,11 +2,13 @@ import { useSignIn } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { Icon } from '@/src/components/ui/icon';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
 type Step = 'email' | 'code' | 'new-password';
@@ -14,6 +16,8 @@ type Step = 'email' | 'code' | 'new-password';
 export default function ForgotPasswordScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
@@ -31,9 +35,9 @@ export default function ForgotPasswordScreen() {
   const clerkError = (err: unknown) => {
     if (err && typeof err === 'object' && 'errors' in err) {
       // @ts-expect-error Clerk error shape
-      return err.errors?.[0]?.message ?? 'Something went wrong';
+      return err.errors?.[0]?.message ?? t('auth.somethingWentWrong');
     }
-    return 'Something went wrong';
+    return t('auth.somethingWentWrong');
   };
 
   const onSendCode = useCallback(async () => {
@@ -51,7 +55,7 @@ export default function ForgotPasswordScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, submitting]);
+  }, [isLoaded, signIn, email, submitting, t]);
 
   const onVerifyCode = useCallback(async () => {
     if (!isLoaded || submitting) return;
@@ -65,19 +69,19 @@ export default function ForgotPasswordScreen() {
       if (attempt.status === 'needs_new_password') {
         setStep('new-password');
       } else {
-        setError(`Unexpected status: ${attempt.status}`);
+        setError(t('auth.unexpectedStatus', { status: attempt.status }));
       }
     } catch (err) {
       setError(clerkError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, code, submitting]);
+  }, [isLoaded, signIn, code, submitting, t]);
 
   const onResetPassword = useCallback(async () => {
     if (!isLoaded || submitting) return;
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('auth.passwordMinLength'));
       return;
     }
     setError(null);
@@ -88,19 +92,19 @@ export default function ForgotPasswordScreen() {
         await setActive({ session: result.createdSessionId });
         router.replace('/(auth)/sign-in');
       } else {
-        setError(`Unexpected status: ${result.status}`);
+        setError(t('auth.unexpectedStatus', { status: result.status }));
       }
     } catch (err) {
       setError(clerkError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, password, setActive, submitting, router]);
+  }, [isLoaded, signIn, password, setActive, submitting, router, t]);
 
   const titles: Record<Step, string> = {
-    email: 'Reset your\npassword',
-    code: 'Check your\nemail',
-    'new-password': 'Set a new\npassword',
+    email: t('auth.resetTitle'),
+    code: t('auth.checkEmailTitle'),
+    'new-password': t('auth.setNewPasswordTitle'),
   };
 
   return (
@@ -116,7 +120,12 @@ export default function ForgotPasswordScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Icon name="arrow-back" size={20} color={surfaceAlpha60} />
+            <Icon
+              name="arrow-back"
+              size={20}
+              color={surfaceAlpha60}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </Pressable>
         </View>
 
@@ -136,18 +145,18 @@ export default function ForgotPasswordScreen() {
           {step === 'email' && (
             <>
               <Text className="text-onboarding-surface/80 mb-6" style={{ fontSize: 11 }}>
-                Enter your email and we&apos;ll send you a reset code.
+                {t('auth.resetEmailHint')}
               </Text>
               <Text
                 className="text-onboarding-surface/40 mb-2"
                 style={{ fontSize: 10, letterSpacing: 1.5 }}
               >
-                EMAIL
+                {t('auth.email')}
               </Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 placeholderTextColor={surfaceAlpha25}
                 autoCapitalize="none"
                 autoComplete="email"
@@ -161,18 +170,18 @@ export default function ForgotPasswordScreen() {
           {step === 'code' && (
             <>
               <Text className="text-onboarding-surface/80 mb-6" style={{ fontSize: 11 }}>
-                Enter the 6-digit code we sent to {email}
+                {t('auth.enterCodeSentTo', { email })}
               </Text>
               <Text
                 className="text-onboarding-surface/40 mb-2"
                 style={{ fontSize: 10, letterSpacing: 1.5 }}
               >
-                VERIFICATION CODE
+                {t('auth.verificationCode')}
               </Text>
               <TextInput
                 value={code}
                 onChangeText={setCode}
-                placeholder="123456"
+                placeholder={t('auth.codePlaceholder')}
                 placeholderTextColor={surfaceAlpha25}
                 keyboardType="number-pad"
                 className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
@@ -184,18 +193,18 @@ export default function ForgotPasswordScreen() {
           {step === 'new-password' && (
             <>
               <Text className="text-onboarding-surface/80 mb-6" style={{ fontSize: 11 }}>
-                Choose a new password (at least 8 characters).
+                {t('auth.newPasswordHint')}
               </Text>
               <Text
                 className="text-onboarding-surface/40 mb-2"
                 style={{ fontSize: 10, letterSpacing: 1.5 }}
               >
-                NEW PASSWORD
+                {t('auth.newPassword')}
               </Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                placeholder="At least 8 characters"
+                placeholder={t('auth.passwordPlaceholderMin')}
                 placeholderTextColor={surfaceAlpha25}
                 secureTextEntry
                 autoComplete="new-password"
@@ -231,10 +240,10 @@ export default function ForgotPasswordScreen() {
                   style={{ fontSize: 14, fontWeight: '600' }}
                 >
                   {step === 'email'
-                    ? 'Send reset code'
+                    ? t('auth.sendResetCode')
                     : step === 'code'
-                      ? 'Verify code'
-                      : 'Reset password'}
+                      ? t('auth.verifyCode')
+                      : t('auth.resetPassword')}
                 </Text>
               )}
             </Pressable>

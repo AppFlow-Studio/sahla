@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
 type OnboardingScaffoldProps = {
@@ -33,13 +35,16 @@ export function OnboardingScaffold({
   primaryDisabled = false,
   secondaryLabel,
   onSecondary,
-  footerNote = 'By continuing you agree to our Terms of Service',
+  footerNote,
   scrollable = false,
 }: OnboardingScaffoldProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
   const surfaceRgb = `rgba(${config.colors.onboardingSurface.replace(/ /g, ',')}, 0.6)`;
+  const resolvedFooterNote = footerNote ?? t('onboarding.footerTerms');
 
   const content = (
     <>
@@ -74,7 +79,8 @@ export function OnboardingScaffold({
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
-            className="mr-3 h-6 w-6 items-center justify-center"
+            className="me-3 h-6 w-6 items-center justify-center"
+            style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
           >
             <Icon name="arrow-back" size={20} color={surfaceRgb} />
           </Pressable>
@@ -87,8 +93,8 @@ export function OnboardingScaffold({
               />
             ))}
           </View>
-          <Text className="text-onboarding-surface/40 ml-3" style={{ fontSize: 8 }}>
-            STEP {step} OF {totalSteps}
+          <Text className="text-onboarding-surface/40 ms-3" style={{ fontSize: 8 }}>
+            {t('onboarding.stepOf', { step, total: totalSteps })}
           </Text>
         </View>
 
@@ -129,7 +135,7 @@ export function OnboardingScaffold({
             className="text-onboarding-surface/20 mt-6 text-center"
             style={{ fontSize: 10 }}
           >
-            {footerNote}
+            {resolvedFooterNote}
           </Text>
         </View>
       </SafeAreaView>

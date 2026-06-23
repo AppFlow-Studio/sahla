@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -74,6 +75,7 @@ export function FilterButton({
   insetsTop,
   active,
 }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const progress = useSharedValue(0);
 
@@ -112,7 +114,7 @@ export function FilterButton({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Filter"
+          accessibilityLabel={t('admin.filter')}
           onPress={() => setOpen(true)}
           style={styles.discHit}
         >

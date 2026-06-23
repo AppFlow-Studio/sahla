@@ -1,5 +1,6 @@
 import { useUser } from '@clerk/clerk-expo';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ import { PrayerTimesBar } from './prayer-times-bar';
 const patternSource = require('@/assets/islamic-pattern-tall.png');
 
 export function HomeHeader() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const fonts = useFontFamily();
   const { colors, clerkOrgId } = useMasjidConfig();
@@ -81,7 +83,7 @@ export function HomeHeader() {
             textTransform: 'uppercase',
           }}
         >
-          Assalamu Alaikum{firstName ? ` ${firstName}` : ''}!
+          {t('home.greeting')}{firstName ? ` ${firstName}` : ''}!
         </Text>
 
         <Text
@@ -112,7 +114,10 @@ export function HomeHeader() {
               <Text className="text-primary-foreground/50">{nextPrayer.name}</Text>
               <Text className="text-primary-foreground/80">
                 {' '}
-                {nextPrayer.type} in {nextPrayer.timeRemaining}
+                {t('home.prayerTypeIn', {
+                  type: nextPrayer.type,
+                  time: nextPrayer.timeRemaining,
+                })}
               </Text>
             </Text>
           </View>

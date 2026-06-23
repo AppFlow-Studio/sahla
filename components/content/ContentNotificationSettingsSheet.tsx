@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import {
   Gesture,
@@ -40,6 +41,7 @@ export function ContentNotificationSettingsSheet({
   mosqueId,
   initialOffsets,
 }: Props) {
+  const { t } = useTranslation();
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ',');
@@ -177,7 +179,7 @@ export function ContentNotificationSettingsSheet({
                     color: BUSH,
                   }}
                 >
-                  Reminder timing
+                  {t('content.reminderTiming')}
                 </Text>
                 <Text
                   style={{
@@ -187,7 +189,7 @@ export function ContentNotificationSettingsSheet({
                     color: MUTED,
                   }}
                 >
-                  Pick when you want to be reminded. Clear all to use this masjid&rsquo;s default.
+                  {t('content.reminderTimingHint')}
                 </Text>
               </View>
 
@@ -219,7 +221,7 @@ export function ContentNotificationSettingsSheet({
                           backgroundColor: isOn ? ACCENT : 'transparent',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          marginRight: 12,
+                          marginEnd: 12,
                         }}
                       >
                         {isOn ? (
@@ -271,7 +273,7 @@ export function ContentNotificationSettingsSheet({
                       color: BUSH,
                     }}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -298,7 +300,7 @@ export function ContentNotificationSettingsSheet({
                         color: SURFACE,
                       }}
                     >
-                      Save
+                      {t('common.save')}
                     </Text>
                   )}
                 </Pressable>

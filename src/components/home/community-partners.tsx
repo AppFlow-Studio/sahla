@@ -1,10 +1,12 @@
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useCommunityPartners } from '@/src/hooks/use-community-partners';
 import { CommunityPartnersCarousel } from '@/src/components/community-partners-carousel';
 
 export function CommunityPartners() {
+  const { t } = useTranslation();
   const { data } = useCommunityPartners();
   const { colors } = useMasjidConfig();
   const partners = data ?? [];
@@ -18,7 +20,7 @@ export function CommunityPartners() {
     <View>
       <View className="pb-3">
         <Text className="text-[13px] font-semibold uppercase tracking-[1px] text-foreground">
-          Community partners
+          {t('home.communityPartners')}
         </Text>
       </View>
 

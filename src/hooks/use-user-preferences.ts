@@ -5,7 +5,7 @@ import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
 
 const COLUMNS =
-  'id, user_id, mosque_id, attendance_reasons, programs_for, attendance_windows, additional_preferences, gender, birth_year, has_children, children_ages, is_revert, islamic_knowledge_level, preferred_days, preferred_times, personalization_completed_at' as const;
+  'id, user_id, mosque_id, attendance_reasons, programs_for, attendance_windows, additional_preferences, gender, birth_year, has_children, children_ages, is_revert, islamic_knowledge_level, preferred_days, preferred_times, preferred_language, personalization_completed_at' as const;
 
 export type UserPreferencesRow = {
   id: number;
@@ -23,6 +23,8 @@ export type UserPreferencesRow = {
   islamic_knowledge_level: string | null;
   preferred_days: string[] | null;
   preferred_times: string[] | null;
+  /** Free-text language name collected at onboarding (e.g. "English", "Arabic"). */
+  preferred_language: string | null;
   personalization_completed_at: string | null;
 };
 

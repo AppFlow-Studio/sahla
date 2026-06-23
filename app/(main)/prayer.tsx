@@ -2,7 +2,10 @@ import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect } from 'expo-router';
 
+import { useTranslation } from 'react-i18next';
+
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -54,13 +57,14 @@ type PrayerRow = {
 
 function buildPrayerRows(
   items: { name: string; athan: string; iqamah: string; status: Status }[],
-  nextPrayer: { name: string; timeRemaining: string } | null
+  nextPrayer: { name: string; timeRemaining: string } | null,
+  t: (key: string, opts?: Record<string, unknown>) => string
 ): PrayerRow[] {
   return items.map((p) => {
     let statusLabel = '';
-    if (p.status === 'passed') statusLabel = 'Passed';
+    if (p.status === 'passed') statusLabel = t('prayer.passed');
     if (p.status === 'next' && nextPrayer)
-      statusLabel = `Next in ${nextPrayer.timeRemaining}`;
+      statusLabel = t('prayer.nextIn', { time: nextPrayer.timeRemaining });
     return {
       name: p.name,
       athan: p.athan,
@@ -422,13 +426,14 @@ function ProgressRing({
   );
 }
 
-const PERIOD_OPTIONS: { key: Period; short: string; long: string }[] = [
-  { key: 'day', short: 'Daily', long: 'today' },
-  { key: 'month', short: 'Monthly', long: 'this month' },
-  { key: 'year', short: 'Yearly', long: 'this year' },
+const PERIOD_OPTIONS: { key: Period; shortKey: string; longKey: string }[] = [
+  { key: 'day', shortKey: 'periodDaily', longKey: 'periodToday' },
+  { key: 'month', shortKey: 'periodMonthly', longKey: 'periodThisMonth' },
+  { key: 'year', shortKey: 'periodYearly', longKey: 'periodThisYear' },
 ];
 
 function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueReading?: () => void }) {
+  const { t } = useTranslation();
   const fonts = useFontFamily();
   const [period, setPeriod] = useState<Period>('day');
   const version = useTrackerVersion();
@@ -441,9 +446,9 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
       pages: p,
       goal: g,
       percent: Math.min(1, p / g),
-      periodLabel: PERIOD_OPTIONS.find((o) => o.key === period)!.long,
+      periodLabel: t(`prayer.${PERIOD_OPTIONS.find((o) => o.key === period)!.longKey}`),
     };
-  }, [period, version]);
+  }, [period, version, t]);
 
   const remaining = Math.max(0, goal - pages);
   const ringSize = 64;
@@ -471,14 +476,14 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
             borderRadius: 17,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: 12,
+            marginEnd: 12,
             overflow: 'hidden',
           }}
         >
           <Icon name="book-open-page-variant" size={16} color={c.gold} />
         </GlassView>
         <Text style={{ color: c.text, fontSize: 24, fontFamily: fonts.displayRegular, fontWeight: '400' }}>
-          Quran Goal
+          {t('prayer.quranGoal')}
         </Text>
       </View>
 
@@ -491,14 +496,14 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: c.text, fontSize: 20, fontWeight: '700' }}>
-            {pages} / {goal} pages
+            {t('prayer.pagesProgress', { pages, goal })}
           </Text>
           <Text style={{ color: c.muted, fontSize: 12, marginTop: 6 }}>
             {remaining === 0 ? (
-              <Text style={{ color: c.gold }}>Goal reached {periodLabel}</Text>
+              <Text style={{ color: c.gold }}>{t('prayer.goalReached', { period: periodLabel })}</Text>
             ) : (
               <>
-                {periodLabel} <Text style={{ color: c.gold }}>• {remaining} left</Text>
+                {periodLabel} <Text style={{ color: c.gold }}>{t('prayer.pagesLeft', { count: remaining })}</Text>
               </>
             )}
           </Text>
@@ -516,7 +521,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
               }}
             >
               <Text style={{ color: c.text, fontSize: 12, fontWeight: '500' }}>
-                {hasRead ? 'Continue Reading' : 'Start Reading'}
+                {hasRead ? t('prayer.continueReading') : t('prayer.startReading')}
               </Text>
             </GlassView>
           </Pressable>
@@ -575,6 +580,7 @@ function PeriodToggle({
   value: Period;
   onChange: (p: Period) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -607,7 +613,7 @@ function PeriodToggle({
                 letterSpacing: 0.5,
               }}
             >
-              {opt.short}
+              {t(`prayer.${opt.shortKey}`)}
             </Text>
           </Pressable>
         );
@@ -617,7 +623,9 @@ function PeriodToggle({
 }
 
 function RemembrancesSection({ c }: { c: Palette }) {
+  const { t } = useTranslation();
   const fonts = useFontFamily();
+  const meta = t('prayer.athkarMeta', { count: 42, minutes: 12 });
   return (
     <View style={{ marginTop: 18, marginBottom: 16 }}>
       <Text
@@ -629,15 +637,15 @@ function RemembrancesSection({ c }: { c: Palette }) {
           marginBottom: 22,
         }}
       >
-        Remembrances
+        {t('prayer.remembrances')}
       </Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <RemembranceItem
           c={c}
           icon="weather-sunny"
-          title="Morning Athkar"
-          meta="42 Prayers • 12m"
+          title={t('prayer.morningAthkar')}
+          meta={meta}
         />
         <View
           style={{
@@ -650,8 +658,8 @@ function RemembrancesSection({ c }: { c: Palette }) {
         <RemembranceItem
           c={c}
           icon="moon-waning-crescent"
-          title="Evening Athkar"
-          meta="42 Prayers • 12m"
+          title={t('prayer.eveningAthkar')}
+          meta={meta}
         />
       </View>
     </View>
@@ -671,7 +679,7 @@ function RemembranceItem({
 }) {
   return (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-      <Icon name={icon} size={18} color={c.gold} style={{ marginRight: 10 }} />
+      <Icon name={icon} size={18} color={c.gold} style={{ marginEnd: 10 }} />
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.text, fontSize: 13, fontWeight: '600' }}>{title}</Text>
         <Text style={{ color: c.muted, fontSize: 11, marginTop: 2 }}>{meta}</Text>
@@ -681,6 +689,7 @@ function RemembranceItem({
 }
 
 function CommunityPartnersSection({ c }: { c: Palette }) {
+  const { t } = useTranslation();
   const { data } = useCommunityPartners();
   const partners = data ?? [];
 
@@ -700,7 +709,7 @@ function CommunityPartnersSection({ c }: { c: Palette }) {
         }}
       >
         <Text style={{ color: c.text, fontSize: 12, fontWeight: '700', letterSpacing: 2 }}>
-          COMMUNITY PARTNERS
+          {t('prayer.communityPartners')}
         </Text>
       </View>
 
@@ -718,6 +727,8 @@ function CommunityPartnersSection({ c }: { c: Palette }) {
 }
 
 function SupportMasjidCard({ c }: { c: Palette }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { open } = useDonation();
   return (
     <View
@@ -747,9 +758,9 @@ function SupportMasjidCard({ c }: { c: Palette }) {
         </View>
         <View>
           <Text style={{ color: c.text, fontSize: 14, fontWeight: '700' }}>
-            Support Your Masjid
+            {t('prayer.supportYourMasjid')}
           </Text>
-          <Text style={{ color: c.muted, fontSize: 11, marginTop: 1 }}>Donate</Text>
+          <Text style={{ color: c.muted, fontSize: 11, marginTop: 1 }}>{t('prayer.donate')}</Text>
         </View>
       </View>
 
@@ -763,12 +774,29 @@ function SupportMasjidCard({ c }: { c: Palette }) {
           }}
         >
           <Text style={{ color: c.gold, fontSize: 11, fontWeight: '800' }}>
-            DONATE →
+            {t('prayer.donateCta')} {isRTL ? '←' : '→'}
           </Text>
         </View>
       </Pressable>
     </View>
   );
+}
+
+// Map a raw prayer name (DB-derived, title-cased) to its i18n key suffix so it
+// can be translated. Falls back to the original name when unrecognized.
+function prayerNameKey(name: string): string | null {
+  const n = name.toLowerCase();
+  if (n.includes('fajr')) return 'fajr';
+  if (n.includes('sunrise') || n.includes('shuru') || n.includes('shorooq'))
+    return 'sunrise';
+  if (n.includes('dhuhr') || n.includes('zuhr') || n.includes('duhr'))
+    return 'dhuhr';
+  if (n.includes('asr')) return 'asr';
+  if (n.includes('maghrib')) return 'maghrib';
+  if (n.includes('isha')) return 'isha';
+  if (n.includes('jummah') || n.includes('jumah') || n.includes('juma'))
+    return 'jummah';
+  return null;
 }
 
 // Icon per prayer, matching the time of day it falls in.
@@ -800,9 +828,12 @@ function PrayerRowItem({
   hasNotifications: boolean;
   onBellPress: () => void;
 }) {
+  const { t } = useTranslation();
   const isNext = row.status === 'next';
   const isPassed = row.status === 'passed';
   const bellActive = hasNotifications || isNext;
+  const nameKey = prayerNameKey(row.name);
+  const displayName = nameKey ? t(`prayer.${nameKey}`) : row.name;
 
   return (
     <View
@@ -818,7 +849,7 @@ function PrayerRowItem({
         borderBottomColor: c.divider10,
       }}
     >
-      <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
+      <View style={{ width: 40, alignItems: 'center', marginEnd: 12 }}>
         <Icon
           name={prayerIcon(row.name)}
           size={22}
@@ -834,7 +865,7 @@ function PrayerRowItem({
             fontWeight: '600',
           }}
         >
-          {row.name}
+          {displayName}
         </Text>
         {row.statusLabel ? (
           <Text style={{ color: isNext ? c.gold : c.muted, fontSize: 11, marginTop: 2 }}>
@@ -913,7 +944,7 @@ function SkeletonRow({ c, index }: { c: Palette; index: number }) {
         alignItems: 'center',
       }}
     >
-      <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
+      <View style={{ width: 40, alignItems: 'center', marginEnd: 12 }}>
         <Animated.View style={[{ width: 22, height: 22, borderRadius: 11, backgroundColor: c.text }, shimmer]} />
       </View>
       <View style={{ flex: 1.1 }}>
@@ -964,6 +995,8 @@ function DateBarSkeleton({ c }: { c: Palette }) {
 const SKELETON_PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
 export default function PrayerScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const c = usePalette();
   const fonts = useFontFamily();
   const [now, setNow] = useState(new Date());
@@ -1022,8 +1055,8 @@ export default function PrayerScreen() {
     applyToAll,
   } = usePrayerAlerts();
   const prayerRows = useMemo(
-    () => buildPrayerRows(prayerItems, isToday ? nextPrayer : null),
-    [prayerItems, nextPrayer, isToday]
+    () => buildPrayerRows(prayerItems, isToday ? nextPrayer : null, t),
+    [prayerItems, nextPrayer, isToday, t]
   );
 
   const goBack = useCallback(() => setDayOffset((d) => Math.max(d - 1, 0)), []);
@@ -1154,7 +1187,14 @@ export default function PrayerScreen() {
                       marginBottom: 4,
                     }}
                   >
-                    {nextPrayer ? `${nextPrayer.name.toUpperCase()} IN` : ''}
+                    {nextPrayer
+                      ? t('prayer.countdownLabel', {
+                          name: (() => {
+                            const k = prayerNameKey(nextPrayer.name);
+                            return (k ? t(`prayer.${k}`) : nextPrayer.name).toUpperCase();
+                          })(),
+                        })
+                      : ''}
                   </Text>
                   <Text
                     style={{
@@ -1177,7 +1217,7 @@ export default function PrayerScreen() {
                     }}
                   >
                     <Text style={{ color: c.gold, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
-                      {currentTime} CURRENT
+                      {t('prayer.currentTime', { time: currentTime })}
                     </Text>
                   </GlassView>
                 </View>
@@ -1194,7 +1234,7 @@ export default function PrayerScreen() {
                 fontFamily: fonts.displayRegular,
               }}
             >
-              Prayer Times
+              {t('prayer.title')}
             </Text>
           </View>
 
@@ -1214,7 +1254,7 @@ export default function PrayerScreen() {
                 }}
               >
                 <Pressable hitSlop={12} onPress={goBack} style={{ opacity: dayOffset > 0 ? 1 : 0.3 }}>
-                  <Icon name="chevron-left" size={22} color={c.muted} />
+                  <Icon name={isRTL ? 'chevron-right' : 'chevron-left'} size={22} color={c.muted} />
                 </Pressable>
                 <Pressable onPress={() => setDayOffset(0)} hitSlop={8}>
                   <View style={{ alignItems: 'center' }}>
@@ -1223,13 +1263,13 @@ export default function PrayerScreen() {
                     </Text>
                     {!isToday && (
                       <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
-                        TAP TO RETURN TO TODAY
+                        {t('prayer.tapToReturnToday')}
                       </Text>
                     )}
                   </View>
                 </Pressable>
                 <Pressable hitSlop={12} onPress={goForward} style={{ opacity: dayOffset < 7 ? 1 : 0.3 }}>
-                  <Icon name="chevron-right" size={22} color={c.muted} />
+                  <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={22} color={c.muted} />
                 </Pressable>
               </View>
             )}
@@ -1243,17 +1283,17 @@ export default function PrayerScreen() {
                 paddingHorizontal: 14,
               }}
             >
-              <View style={{ width: 40, marginRight: 12 }} />
-              <Text style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 1.1 }}>PRAYER</Text>
+              <View style={{ width: 40, marginEnd: 12 }} />
+              <Text style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 1.1 }}>{t('prayer.colPrayer')}</Text>
               <Text
                 style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 0.9, textAlign: 'center' }}
               >
-                ATHAN
+                {t('prayer.colAthan')}
               </Text>
               <Text
                 style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 0.9, textAlign: 'center' }}
               >
-                IQAMAH
+                {t('prayer.colIqamah')}
               </Text>
               <View style={{ width: 20 }} />
             </View>

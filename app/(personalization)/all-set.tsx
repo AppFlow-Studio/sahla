@@ -1,6 +1,7 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -46,6 +47,7 @@ export default function AllSetScreen() {
   const router = useRouter();
   const { user } = useUser();
   const fonts = useFontFamily();
+  const { t } = useTranslation();
   const { markPersonalizationComplete } = useUserPreferences();
 
   // Reaching this screen means the personalization flow is finished — stamp it
@@ -57,7 +59,9 @@ export default function AllSetScreen() {
 
   const storedName = useOnboardingStore((s) => s.firstName);
   const firstName =
-    user?.firstName?.trim() || storedName.trim().split(/\s+/)[0] || 'Friend';
+    user?.firstName?.trim() ||
+    storedName.trim().split(/\s+/)[0] ||
+    t('personalization.allSetDefaultName');
 
   // Mandala rotates continuously — 60s per revolution, linear, infinite. Slow
   // enough to feel meditative rather than busy.
@@ -129,7 +133,7 @@ export default function AllSetScreen() {
                   className="text-onboarding-bg"
                   style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28 }}
                 >
-                  You&rsquo;re all set
+                  {t('personalization.allSetTitle')}
                 </Text>
                 <Text
                   className="text-onboarding-bg mt-1"
@@ -147,14 +151,14 @@ export default function AllSetScreen() {
             className="text-onboarding-bg/60 mb-5 text-center"
             style={{ fontSize: 12, lineHeight: 16 }}
           >
-            We&rsquo;ll use your preferences to show you the most relevant programs and events
+            {t('personalization.allSetSubtitle')}
           </Text>
           <Pressable
             onPress={() => router.replace('/(main)/discover')}
             className="h-[43px] items-center justify-center rounded-full bg-onboarding-bg active:opacity-90"
           >
             <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '600' }}>
-              Explore
+              {t('personalization.allSetExplore')}
             </Text>
           </Pressable>
         </Animated.View>

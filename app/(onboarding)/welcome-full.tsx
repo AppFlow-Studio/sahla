@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
@@ -35,10 +36,11 @@ function GoldHalo() {
 
 export default function WelcomeFullScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
   const storedName = useOnboardingStore((s) => s.firstName);
-  const firstName = storedName.trim().split(/\s+/)[0] || 'Friend';
+  const firstName = storedName.trim().split(/\s+/)[0] || t('onboarding.friendFallback');
 
   const surfaceRgb = `rgba(${config.colors.onboardingSurface.replace(/ /g, ',')}, 0.5)`;
   const bgRgb = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
@@ -73,7 +75,7 @@ export default function WelcomeFullScreen() {
 
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 12, color: surfaceRgb }}>
-                  You&rsquo;re all set
+                  {t('onboarding.allSet')}
                 </Text>
 
                 <View style={{ marginTop: 18, alignItems: 'center' }}>
@@ -81,7 +83,7 @@ export default function WelcomeFullScreen() {
                     className="text-onboarding-surface"
                     style={{ fontFamily: fonts.displayRegular, fontSize: 30, lineHeight: 35 }}
                   >
-                    Welcome
+                    {t('onboarding.welcome')}
                   </Text>
                   <Text
                     className="text-onboarding-surface"
@@ -111,7 +113,7 @@ export default function WelcomeFullScreen() {
               className="text-onboarding-bg"
               style={{ fontSize: 14, fontWeight: '600' }}
             >
-              Enter
+              {t('onboarding.enter')}
             </Text>
           </Pressable>
         </View>

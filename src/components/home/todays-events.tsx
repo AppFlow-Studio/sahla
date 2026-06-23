@@ -1,5 +1,7 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 import { useContentItems, type ContentItem } from '@/src/hooks/use-content-items';
 
@@ -34,16 +36,17 @@ function formatTime12(time: string | null): string {
   return `${h12}:${minute} ${period}`;
 }
 
-function categoryFor(item: ContentItem): string {
-  if (item.is_quran) return 'Quran Study';
-  if (item.is_kids) return 'Kids';
-  if (item.is_pace) return 'PACE';
-  if (item.is_young_professionals) return 'Young Professionals';
-  if (item.is_fourteen_plus) return 'Youth';
+function categoryFor(item: ContentItem, t: TFunction): string {
+  if (item.is_quran) return t('home.categoryQuranStudy');
+  if (item.is_kids) return t('home.categoryKids');
+  if (item.is_pace) return t('home.categoryPace');
+  if (item.is_young_professionals) return t('home.categoryYoungProfessionals');
+  if (item.is_fourteen_plus) return t('home.categoryYouth');
   return '';
 }
 
 export function TodaysEvents() {
+  const { t } = useTranslation();
   const today = todayIso();
   const { items, status, error } = useContentItems();
   const events = items
@@ -54,7 +57,7 @@ export function TodaysEvents() {
     <View>
       <View className="flex-row items-end justify-between pb-2">
         <Text className="text-[13px] font-semibold uppercase tracking-[1px] text-foreground">
-          Today&apos;s Events
+          {t('home.todaysEvents')}
         </Text>
         <Text className="text-[11px] font-semibold text-accent">
           {formatHeaderDate(today)}
@@ -63,13 +66,13 @@ export function TodaysEvents() {
 
       <View className="border-t border-foreground">
         {status === 'loading' && (
-          <Text className="py-4 text-[12px] text-foreground/60">Loading…</Text>
+          <Text className="py-4 text-[12px] text-foreground/60">{t('common.loading')}</Text>
         )}
         {status === 'error' && (
-          <Text className="py-4 text-[12px] text-foreground/60">Couldn’t load: {error}</Text>
+          <Text className="py-4 text-[12px] text-foreground/60">{t('home.couldNotLoad', { error })}</Text>
         )}
         {status === 'success' && events.length === 0 && (
-          <Text className="py-4 text-[12px] text-foreground/60">No events today.</Text>
+          <Text className="py-4 text-[12px] text-foreground/60">{t('home.noEventsToday')}</Text>
         )}
         {events.map((event, index) => (
           <TouchableOpacity
@@ -87,8 +90,8 @@ export function TodaysEvents() {
                 width: 64,
                 fontSize: 12,
                 fontWeight: '500',
-                textAlign: 'right',
-                marginRight: 20,
+                textAlign: 'auto',
+                marginEnd: 20,
               }}
             >
               {formatTime12(event.start_time)}
@@ -98,10 +101,10 @@ export function TodaysEvents() {
               style={{ fontSize: 12, fontWeight: '500' }}
               numberOfLines={1}
             >
-              {event.name ?? 'Untitled'}
+              {event.name ?? t('home.untitled')}
             </Text>
             <Text className="text-[9px] text-accent" numberOfLines={1}>
-              {categoryFor(event)}
+              {categoryFor(event, t)}
             </Text>
           </TouchableOpacity>
         ))}

@@ -81,6 +81,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-router",
+    "expo-localization",
     "expo-sqlite",
     "expo-asset",
     "expo-apple-authentication",

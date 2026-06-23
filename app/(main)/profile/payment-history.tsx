@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   RefreshControl,
   ScrollView,
@@ -23,6 +25,7 @@ import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useConfigStore } from '@/src/stores/config-store';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -76,33 +79,34 @@ const withAlpha = (rgbStr: string, alpha: number): string =>
 
 const getStatusDisplay = (
   status: string,
-  t: { accent: string; mutedFg: string; muted: string },
+  c: { accent: string; mutedFg: string; muted: string },
+  t: TFunction,
 ) => {
   switch (status) {
     case 'succeeded':
-      return { badge: 'COMPLETED', color: '#16a34a', bg: 'rgba(22,163,74,0.12)', icon: 'checkmark-circle' as const };
+      return { badge: t('profile.statusCompleted'), color: '#16a34a', bg: 'rgba(22,163,74,0.12)', icon: 'checkmark-circle' as const };
     case 'requires_payment_method':
     case 'requires_action':
-      return { badge: 'PENDING', color: '#ca8a04', bg: 'rgba(202,138,4,0.12)', icon: 'time' as const };
+      return { badge: t('profile.statusPending'), color: '#ca8a04', bg: 'rgba(202,138,4,0.12)', icon: 'time' as const };
     case 'refunded':
-      return { badge: 'REFUNDED', color: t.mutedFg, bg: withAlpha(t.mutedFg, 0.1), icon: 'arrow-undo-circle' as const };
+      return { badge: t('profile.statusRefunded'), color: c.mutedFg, bg: withAlpha(c.mutedFg, 0.1), icon: 'arrow-undo-circle' as const };
     case 'partially_refunded':
-      return { badge: 'PARTIAL REFUND', color: t.mutedFg, bg: withAlpha(t.mutedFg, 0.1), icon: 'arrow-undo-circle' as const };
+      return { badge: t('profile.statusPartialRefund'), color: c.mutedFg, bg: withAlpha(c.mutedFg, 0.1), icon: 'arrow-undo-circle' as const };
     case 'canceled':
-      return { badge: 'CANCELED', color: t.mutedFg, bg: withAlpha(t.mutedFg, 0.08), icon: 'close-circle' as const };
+      return { badge: t('profile.statusCanceled'), color: c.mutedFg, bg: withAlpha(c.mutedFg, 0.08), icon: 'close-circle' as const };
     default:
-      return { badge: 'FAILED', color: '#dc2626', bg: 'rgba(220,38,38,0.12)', icon: 'alert-circle' as const };
+      return { badge: t('profile.statusFailed'), color: '#dc2626', bg: 'rgba(220,38,38,0.12)', icon: 'alert-circle' as const };
   }
 };
 
-const getPaymentMethodDisplay = (pm: PaymentMethod | null): string => {
-  if (!pm) return 'Card';
+const getPaymentMethodDisplay = (pm: PaymentMethod | null, t: TFunction): string => {
+  if (!pm) return t('profile.card');
   if (pm.type === 'apple_pay' || (pm.brand && pm.type === 'card' && pm.brand === 'apple_pay'))
-    return 'Apple Pay';
+    return t('profile.applePay');
   if (pm.brand && pm.last4) {
     return `${pm.brand.charAt(0).toUpperCase() + pm.brand.slice(1)} ••••${pm.last4}`;
   }
-  return 'Card';
+  return t('profile.card');
 };
 
 const groupPaymentsByMonth = (payments: Payment[]): GroupedPayments[] => {
@@ -143,7 +147,7 @@ function PaymentHistorySkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: stri
     <View style={{ flex: 1, backgroundColor: bgRgb }}>
       {/* Header skeleton */}
       <View style={{ paddingTop: insets.top + 8, paddingBottom: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
-        <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: shimmerColor, marginRight: 16 }} />
+        <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: shimmerColor, marginEnd: 16 }} />
         <SkeletonBox width={130} height={18} style={{ backgroundColor: shimmerColor }} />
       </View>
 
@@ -156,12 +160,12 @@ function PaymentHistorySkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: stri
         </View>
 
         {/* Section label */}
-        <SkeletonBox width={80} height={10} style={{ backgroundColor: shimmerColor, marginBottom: 12, marginLeft: 4 }} />
+        <SkeletonBox width={80} height={10} style={{ backgroundColor: shimmerColor, marginBottom: 12, marginStart: 4 }} />
 
         {/* Payment card skeletons */}
         {[0, 1, 2, 3].map((i) => (
           <View key={i} style={{ backgroundColor: cardRgb, borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: `${fgRgb}05` }}>
-            <SkeletonBox width={40} height={40} borderRadius={12} style={{ backgroundColor: shimmerColor, marginRight: 12 }} />
+            <SkeletonBox width={40} height={40} borderRadius={12} style={{ backgroundColor: shimmerColor, marginEnd: 12 }} />
             <View style={{ flex: 1 }}>
               <SkeletonBox width={90} height={14} style={{ backgroundColor: shimmerColor, marginBottom: 6 }} />
               <SkeletonBox width={60} height={11} style={{ backgroundColor: shimmerColor, marginBottom: 4 }} />
@@ -181,6 +185,7 @@ function PaymentHistorySkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: stri
 // ── Components ─────────────────────────────────────────
 
 function EmptyState({ fgRgb, accentRgb, cardRgb }: { fgRgb: string; accentRgb: string; cardRgb: string }) {
+  const { t } = useTranslation();
   return (
     <View style={{ flex: 1, alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 }}>
       <Animated.View entering={FadeIn.duration(400)} style={{ width: '100%' }}>
@@ -206,10 +211,10 @@ function EmptyState({ fgRgb, accentRgb, cardRgb }: { fgRgb: string; accentRgb: s
             <Icon name="receipt-outline" size={36} color={accentRgb} />
           </View>
           <Text style={{ fontSize: 20, fontWeight: '700', color: fgRgb, textAlign: 'center', marginBottom: 8 }}>
-            No Payments Yet
+            {t('profile.noPaymentsYet')}
           </Text>
           <Text style={{ fontSize: 14, color: withAlpha(fgRgb, 0.6), textAlign: 'center', lineHeight: 20 }}>
-            Your donation and payment history will appear here once you make your first transaction.
+            {t('profile.noPaymentsBody')}
           </Text>
         </View>
       </Animated.View>
@@ -234,7 +239,8 @@ function PaymentCard({
   mutedFgRgb: string;
   mutedRgb: string;
 }) {
-  const status = getStatusDisplay(payment.status, { accent: accentRgb, mutedFg: mutedFgRgb, muted: mutedRgb });
+  const { t } = useTranslation();
+  const status = getStatusDisplay(payment.status, { accent: accentRgb, mutedFg: mutedFgRgb, muted: mutedRgb }, t);
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 40).duration(250)}>
@@ -259,7 +265,7 @@ function PaymentCard({
                 backgroundColor: status.bg,
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginRight: 12,
+                marginEnd: 12,
               }}
             >
               <Icon name={status.icon} size={20} color={status.color} />
@@ -269,17 +275,17 @@ function PaymentCard({
                 {formatAmount(payment.amount, payment.currency)}
               </Text>
               <Text style={{ fontSize: 12, fontWeight: '500', color: withAlpha(fgRgb, 0.6), marginTop: 2 }}>
-                {payment.label || 'Donation'}
+                {payment.label || t('profile.donation')}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 <Icon name="card-outline" size={12} color={withAlpha(fgRgb, 0.25)} />
-                <Text style={{ fontSize: 11, color: withAlpha(fgRgb, 0.25), marginLeft: 4 }}>
-                  {getPaymentMethodDisplay(payment.paymentMethod)}
+                <Text style={{ fontSize: 11, color: withAlpha(fgRgb, 0.25), marginStart: 4 }}>
+                  {getPaymentMethodDisplay(payment.paymentMethod, t)}
                 </Text>
               </View>
               {(payment.amount_refunded ?? 0) > 0 && (
                 <Text style={{ fontSize: 11, color: mutedFgRgb, fontWeight: '500', marginTop: 3 }}>
-                  Refunded {formatAmount(payment.amount_refunded!, payment.currency)}
+                  {t('profile.refundedAmount', { amount: formatAmount(payment.amount_refunded!, payment.currency) })}
                 </Text>
               )}
             </View>
@@ -302,6 +308,8 @@ function PaymentCard({
 // ── Screen ─────────────────────────────────────────────
 
 export default function PaymentHistoryScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const supabase = useSupabase();
@@ -385,10 +393,10 @@ export default function PaymentHistoryScreen() {
           alignItems: 'center',
         }}
       >
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={{ marginRight: 16 }}>
-          <Icon name="chevron-back" size={24} color={fgRgb} />
+        <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={{ marginEnd: 16 }}>
+          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={fgRgb} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>Payment History</Text>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>{t('profile.paymentHistory')}</Text>
       </View>
 
       {payments.length === 0 ? (
@@ -416,26 +424,26 @@ export default function PaymentHistoryScreen() {
               }}
             >
               <Text style={{ fontSize: 10, fontWeight: '700', color: withAlpha(pfgRgb, 0.5), letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 4 }}>
-                TOTAL DONATED
+                {t('profile.totalDonated')}
               </Text>
               <Text style={{ fontSize: 32, fontWeight: '800', color: pfgRgb, marginBottom: 8 }}>
                 {formatAmount(totalDonated, 'usd')}
               </Text>
               <Text style={{ fontSize: 12, color: withAlpha(pfgRgb, 0.45) }}>
-                {donationPayments.length} donation{donationPayments.length !== 1 ? 's' : ''}
+                {t('profile.donationCount', { count: donationPayments.length })}
               </Text>
             </LinearGradient>
           </Animated.View>
 
           {/* Donations */}
           {donationPayments.length > 0 && (
-            <Text style={{ fontSize: 10, fontWeight: '700', color: withAlpha(fgRgb, 0.6), letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4 }}>
-              DONATIONS
+            <Text style={{ fontSize: 10, fontWeight: '700', color: withAlpha(fgRgb, 0.6), letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 10, marginStart: 4 }}>
+              {t('profile.donations')}
             </Text>
           )}
           {groupedDonations.map((group) => (
             <View key={`donation-${group.title}`} style={{ marginBottom: 16 }}>
-              <Text style={{ fontSize: 11, fontWeight: '600', color: withAlpha(fgRgb, 0.37), letterSpacing: 0.5, marginBottom: 8, marginLeft: 4 }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: withAlpha(fgRgb, 0.37), letterSpacing: 0.5, marginBottom: 8, marginStart: 4 }}>
                 {group.title}
               </Text>
               {group.data.map((payment, index) => (
@@ -447,12 +455,12 @@ export default function PaymentHistoryScreen() {
           {/* Business Ads */}
           {businessAdPayments.length > 0 && (
             <>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: withAlpha(fgRgb, 0.6), letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4, marginTop: 8 }}>
-                BUSINESS ADS
+              <Text style={{ fontSize: 10, fontWeight: '700', color: withAlpha(fgRgb, 0.6), letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 10, marginStart: 4, marginTop: 8 }}>
+                {t('profile.businessAds')}
               </Text>
               {groupedBusinessAds.map((group) => (
                 <View key={`business-${group.title}`} style={{ marginBottom: 16 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: withAlpha(fgRgb, 0.37), letterSpacing: 0.5, marginBottom: 8, marginLeft: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: withAlpha(fgRgb, 0.37), letterSpacing: 0.5, marginBottom: 8, marginStart: 4 }}>
                     {group.title}
                   </Text>
                   {group.data.map((payment, index) => (
@@ -482,11 +490,11 @@ export default function PaymentHistoryScreen() {
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: withAlpha(mutedFgRgb, 0.08), justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: withAlpha(mutedFgRgb, 0.08), justifyContent: 'center', alignItems: 'center', marginEnd: 10 }}>
                     <Icon name="alert-circle-outline" size={18} color={mutedFgRgb} />
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: fgRgb }}>Incomplete Payments</Text>
-                  <View style={{ backgroundColor: withAlpha(mutedFgRgb, 0.08), borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: fgRgb }}>{t('profile.incompletePayments')}</Text>
+                  <View style={{ backgroundColor: withAlpha(mutedFgRgb, 0.08), borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginStart: 8 }}>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: mutedFgRgb }}>{incompletePayments.length}</Text>
                   </View>
                 </View>

@@ -2,10 +2,12 @@ import { useClerk, useSignIn } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { Icon } from '@/src/components/ui/icon';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
@@ -13,6 +15,8 @@ export default function TwoFactorScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const clerk = useClerk();
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
@@ -36,10 +40,10 @@ export default function TwoFactorScreen() {
       .prepareSecondFactor({ strategy: 'email_code' } as any)
       .then(() => setCodeSent(true))
       .catch((err: any) => {
-        const msg = err?.errors?.[0]?.message ?? 'Failed to send verification email';
+        const msg = err?.errors?.[0]?.message ?? t('auth.failedToSendEmail');
         setError(msg);
       });
-  }, [isLoaded, signIn]);
+  }, [isLoaded, signIn, t]);
 
   const joinAndActivateOrg = useCallback(
     async (userId: string) => {
@@ -47,12 +51,12 @@ export default function TwoFactorScreen() {
       if (!orgId) return;
       const result = await joinOrgDirect(userId, orgId);
       if (result === 'error') {
-        setError('Failed to join organization. Please try again.');
+        setError(t('auth.joinOrgFailed'));
         return;
       }
       await clerk.setActive({ organization: orgId });
     },
-    [clerk, config.clerkOrgId],
+    [clerk, config.clerkOrgId, t],
   );
 
   const onSubmit = useCallback(async () => {
@@ -70,19 +74,19 @@ export default function TwoFactorScreen() {
         const userId = clerk.user?.id;
         if (userId) await joinAndActivateOrg(userId);
       } else {
-        setError(`Unexpected status: ${attempt.status}`);
+        setError(t('auth.unexpectedStatus', { status: attempt.status }));
       }
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'errors' in err
           ? // @ts-expect-error Clerk error shape
-            (err.errors?.[0]?.message ?? 'Verification failed')
-          : 'Verification failed';
+            (err.errors?.[0]?.message ?? t('auth.verificationFailed'))
+          : t('auth.verificationFailed');
       setError(message);
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, code, submitting, setActive, joinAndActivateOrg, clerk]);
+  }, [isLoaded, signIn, code, submitting, setActive, joinAndActivateOrg, clerk, t]);
 
   const resendCode = useCallback(async () => {
     if (!isLoaded || !signIn || resending) return;
@@ -92,12 +96,12 @@ export default function TwoFactorScreen() {
       await signIn.prepareSecondFactor({ strategy: 'email_code' } as any);
       setCodeSent(true);
     } catch (err: any) {
-      const msg = err?.errors?.[0]?.message ?? 'Failed to resend code';
+      const msg = err?.errors?.[0]?.message ?? t('auth.failedToResendCode');
       setError(msg);
     } finally {
       setResending(false);
     }
-  }, [isLoaded, signIn, resending]);
+  }, [isLoaded, signIn, resending, t]);
 
   return (
     <View className="flex-1 bg-onboarding-bg">
@@ -110,7 +114,12 @@ export default function TwoFactorScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Icon name="arrow-back" size={20} color={surfaceAlpha60} />
+            <Icon
+              name="arrow-back"
+              size={20}
+              color={surfaceAlpha60}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </Pressable>
         </View>
 
@@ -119,24 +128,22 @@ export default function TwoFactorScreen() {
             className="text-onboarding-surface"
             style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
           >
-            Check your email
+            {t('auth.checkEmailHeading')}
           </Text>
           <Text className="text-onboarding-surface/60 mb-8" style={{ fontSize: 13 }}>
-            {codeSent
-              ? 'We sent a verification code to your email. Enter it below to sign in.'
-              : 'Sending verification code...'}
+            {codeSent ? t('auth.codeSentBody') : t('auth.sendingCode')}
           </Text>
 
           <Text
             className="text-onboarding-surface/40 mb-2"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            VERIFICATION CODE
+            {t('auth.verificationCode')}
           </Text>
           <TextInput
             value={code}
             onChangeText={setCode}
-            placeholder="000000"
+            placeholder={t('auth.codePlaceholderZeros')}
             placeholderTextColor={surfaceAlpha25}
             autoCapitalize="none"
             autoComplete="one-time-code"
@@ -149,7 +156,7 @@ export default function TwoFactorScreen() {
 
           <Pressable onPress={resendCode} disabled={resending} className="mb-4 self-end">
             <Text className="text-onboarding-accent" style={{ fontSize: 11, fontWeight: '500' }}>
-              {resending ? 'Sending...' : 'Resend code'}
+              {resending ? t('auth.sending') : t('auth.resendCode')}
             </Text>
           </Pressable>
 
@@ -169,7 +176,7 @@ export default function TwoFactorScreen() {
                 <ActivityIndicator size="small" color={bgHex} />
               ) : (
                 <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
-                  Verify
+                  {t('auth.verify')}
                 </Text>
               )}
             </Pressable>

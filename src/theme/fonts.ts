@@ -55,6 +55,23 @@ export type FontThemeKey = keyof typeof FONT_THEMES;
 
 export const DEFAULT_FONT_THEME: FontThemeKey = 'classic';
 
+/**
+ * Arabic UI font theme. The per-masjid Latin themes (Playfair/Cormorant/Inter)
+ * have no Arabic glyphs, so when the UI language is RTL we override *all* roles
+ * with a single Latin+Arabic family (IBM Plex Sans Arabic). This is the
+ * "one font for all languages" decision — see `docs/i18n-rtl-plan.md`.
+ *
+ * Every family below MUST be registered in the `useFonts` call in
+ * `app/_layout.tsx`. The Quran font (UthmanicHafs) is separate and unaffected.
+ */
+export const ARABIC_FONT_THEME: FontTheme = {
+  display: 'IBMPlexSansArabic_600SemiBold',
+  displayRegular: 'IBMPlexSansArabic_500Medium',
+  body: 'IBMPlexSansArabic_400Regular',
+  bodyMedium: 'IBMPlexSansArabic_500Medium',
+  bodySemibold: 'IBMPlexSansArabic_600SemiBold',
+};
+
 /** Quran/Arabic font — locked, never themable. */
 export const QURAN_FONT = 'UthmanicHafs';
 
@@ -65,8 +82,17 @@ export const FONT_THEME_OPTIONS: { key: FontThemeKey; label: string }[] = [
   { key: 'elegant', label: 'Elegant' },
 ];
 
-/** Resolve a (possibly unknown / undefined) key to a concrete theme. */
-export function resolveFontTheme(key: string | undefined | null): FontTheme {
+/**
+ * Resolve a (possibly unknown / undefined) key to a concrete theme.
+ *
+ * When `isRTL` is true the masjid's Latin theme is ignored and the Arabic
+ * font theme is returned, so non-Latin glyphs always render.
+ */
+export function resolveFontTheme(
+  key: string | undefined | null,
+  isRTL = false,
+): FontTheme {
+  if (isRTL) return ARABIC_FONT_THEME;
   if (key && key in FONT_THEMES) {
     return FONT_THEMES[key as FontThemeKey];
   }

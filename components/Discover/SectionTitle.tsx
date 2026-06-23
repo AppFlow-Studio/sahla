@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 
 import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 type Props = {
@@ -16,6 +17,7 @@ export default function SectionTitle({
   actionLeading,
   onPressAction,
 }: Props) {
+  const isRTL = useIsRTL();
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
@@ -51,7 +53,9 @@ export default function SectionTitle({
                 textTransform: "uppercase",
               }}
             >
-              {actionLeading ? actionLabel : `${actionLabel} \u2192`}
+              {actionLeading
+                ? actionLabel
+                : `${actionLabel} ${isRTL ? "\u2190" : "\u2192"}`}
             </Text>
           </Pressable>
         ) : null}

@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useTranslation } from 'react-i18next';
 
 import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
@@ -51,6 +52,7 @@ import {
   type ReelReportReason,
 } from '@/src/hooks/use-report-reel';
 import { useConfigStore } from '@/src/stores/config-store';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 
 
@@ -146,6 +148,7 @@ function ReelMenu({
   onNotInterested: () => void;
   onReport: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -166,8 +169,8 @@ function ReelMenu({
         style={{ paddingHorizontal: 14, paddingVertical: 12 }}
       >
         <Icon name="ban-outline" size={14} color="#0A261E" />
-        <Text style={{ marginLeft: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
-          Not interested
+        <Text style={{ marginStart: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
+          {t('watch.notInterested')}
         </Text>
       </Pressable>
       <View style={{ height: 0.5, backgroundColor: 'rgba(10, 38, 30, 0.15)', marginHorizontal: 10 }} />
@@ -177,8 +180,8 @@ function ReelMenu({
         style={{ paddingHorizontal: 14, paddingVertical: 12 }}
       >
         <Icon name="flag-outline" size={14} color="#0A261E" />
-        <Text style={{ marginLeft: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
-          Report
+        <Text style={{ marginStart: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
+          {t('watch.report')}
         </Text>
       </Pressable>
     </View>
@@ -261,6 +264,7 @@ function BottomSheet({
 }
 
 function MasjidCard({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const masjidName = useConfigStore((s) => s.config.displayName);
 
   return (
@@ -304,12 +308,12 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
           >
             <MasjidLogo width={32} height={32} />
           </View>
-          <View style={{ marginLeft: 12, flex: 1 }}>
+          <View style={{ marginStart: 12, flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: '600', color: '#0A261E' }}>
               {masjidName}
             </Text>
             <Text style={{ fontSize: 12, color: 'rgba(10,38,30,0.6)', marginTop: 3 }}>
-              Muslim American Society
+              {t('watch.organization')}
             </Text>
             <View style={{ marginTop: 4 }} className="flex-row items-center">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -318,10 +322,10 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
                   name="star"
                   size={10}
                   color="rgba(10,38,30,0.5)"
-                  style={{ marginRight: 2 }}
+                  style={{ marginEnd: 2 }}
                 />
               ))}
-              <Text style={{ fontSize: 10, color: 'rgba(10,38,30,0.6)', marginLeft: 4 }}>4.9</Text>
+              <Text style={{ fontSize: 10, color: 'rgba(10,38,30,0.6)', marginStart: 4 }}>4.9</Text>
             </View>
           </View>
           <Pressable
@@ -334,7 +338,7 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
               borderRadius: 12,
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#ffffff' }}>GET</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#ffffff' }}>{t('watch.get')}</Text>
           </Pressable>
         </View>
       </View>
@@ -350,22 +354,21 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
             fontWeight: '600',
           }}
         >
-          ABOUT THIS APP
+          {t('watch.aboutThisApp')}
         </Text>
         <Text style={{ fontSize: 13, color: '#0A261E', marginTop: 12, lineHeight: 20 }}>
-          Your community hub for prayer times, events, programs, and staying connected with{' '}
-          {masjidName}
+          {t('watch.aboutDescription', { masjid: masjidName })}
         </Text>
       </View>
 
       <View style={{ height: 0.5, backgroundColor: 'rgba(10,38,30,0.1)' }} />
 
       <View className="flex-row" style={{ paddingVertical: 24 }}>
-        <StatColumn label="RATING" value="4.9" />
+        <StatColumn label={t('watch.statRating')} value="4.9" />
         <StatDivider />
-        <StatColumn label="AGE" value="12+" />
+        <StatColumn label={t('watch.statAge')} value="12+" />
         <StatDivider />
-        <StatColumn label="PRICE" value="Free" />
+        <StatColumn label={t('watch.statPrice')} value={t('watch.priceFree')} />
       </View>
     </View>
   );
@@ -397,6 +400,7 @@ function DescriptionPanel({
   visible: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const translateY = useSharedValue(500);
   const backdropOpacity = useSharedValue(0);
@@ -469,7 +473,7 @@ function DescriptionPanel({
 
             {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 }}>
-              <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>Description</Text>
+              <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>{t('watch.description')}</Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <Icon name="close" size={22} color="#ffffff" />
               </Pressable>
@@ -503,7 +507,7 @@ function DescriptionPanel({
               <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
                 {formatCount(reel.like_count ?? 0)}
               </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>Likes</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{t('watch.likes')}</Text>
             </View>
             <View
               style={{
@@ -517,7 +521,7 @@ function DescriptionPanel({
               <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
                 {formatCount(reel.view_count ?? 0)}
               </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>Views</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{t('watch.views')}</Text>
             </View>
           </View>
         </ScrollView>
@@ -540,6 +544,8 @@ function ReportSheet({
   onSelectReason: (reason: ReelReportReason) => void;
   onBlock: () => void;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <View
@@ -566,10 +572,10 @@ function ReportSheet({
         />
         <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 6 }}>
           <Text style={{ fontSize: 17, fontWeight: '700', color: '#0A261E' }}>
-            Report this reel
+            {t('watch.reportTitle')}
           </Text>
           <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)', marginTop: 4 }}>
-            Why are you reporting this?
+            {t('watch.reportSubtitle')}
           </Text>
         </View>
 
@@ -580,8 +586,8 @@ function ReportSheet({
             className="flex-row items-center justify-between active:opacity-60"
             style={{ paddingHorizontal: 22, paddingVertical: 14 }}
           >
-            <Text style={{ fontSize: 15, color: '#0A261E' }}>{r.label}</Text>
-            <Icon name="chevron-forward" size={16} color="rgba(10,38,30,0.4)" />
+            <Text style={{ fontSize: 15, color: '#0A261E' }}>{t(`watch.reportReason_${r.value}`)}</Text>
+            <Icon name={isRTL ? 'chevron-back' : 'chevron-forward'} size={16} color="rgba(10,38,30,0.4)" />
           </Pressable>
         ))}
 
@@ -593,8 +599,8 @@ function ReportSheet({
           style={{ paddingHorizontal: 22, paddingVertical: 16 }}
         >
           <Icon name="ban-outline" size={16} color="#B00020" />
-          <Text style={{ marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#B00020' }}>
-            Block {masjidName}
+          <Text style={{ marginStart: 10, fontSize: 15, fontWeight: '600', color: '#B00020' }}>
+            {t('watch.blockSource', { masjid: masjidName })}
           </Text>
         </Pressable>
       </View>
@@ -611,6 +617,8 @@ export function ReelItem({
   height: number;
   isActive: boolean;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const fonts = useFontFamily();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -637,11 +645,11 @@ export function ReelItem({
       {
         onSuccess: () =>
           Alert.alert(
-            'Report received',
-            "Thank you. Our team will review this content. We've also hidden it from your feed.",
+            t('watch.reportReceivedTitle'),
+            t('watch.reportReceivedBody'),
           ),
         onError: () =>
-          Alert.alert('Couldn’t submit report', 'Please check your connection and try again.'),
+          Alert.alert(t('watch.reportFailedTitle'), t('watch.connectionErrorBody')),
       },
     );
   };
@@ -649,17 +657,17 @@ export function ReelItem({
   const handleBlock = () => {
     setReportOpen(false);
     Alert.alert(
-      `Block ${masjidName}?`,
-      `You won't see reels from ${masjidName} anymore. You can’t undo this from the app.`,
+      t('watch.blockConfirmTitle', { masjid: masjidName }),
+      t('watch.blockConfirmBody', { masjid: masjidName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Block',
+          text: t('watch.block'),
           style: 'destructive',
           onPress: () =>
             blockSource.mutate(undefined, {
               onError: () =>
-                Alert.alert('Couldn’t block', 'Please check your connection and try again.'),
+                Alert.alert(t('watch.blockFailedTitle'), t('watch.connectionErrorBody')),
             }),
         },
       ],
@@ -888,7 +896,7 @@ export function ReelItem({
         </View>
 
         <View
-          style={{ position: 'absolute', right: 14, bottom: 280, gap: 28, alignItems: 'center' }}
+          style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 14, bottom: 280, gap: 28, alignItems: 'center' }}
         >
           <LikeButton
             liked={liked}
@@ -922,7 +930,7 @@ export function ReelItem({
             >
               <MasjidLogo width={28} height={28} />
             </View>
-            <View className="ml-3 flex-1">
+            <View className="ms-3 flex-1">
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#ffffff' }}>
                 {reel.title ?? masjidName}
               </Text>
@@ -941,8 +949,8 @@ export function ReelItem({
               </Text>
               {captionTruncated && (
                 <Pressable onPress={() => setDescriptionOpen(true)} hitSlop={8}>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#ffffff', marginLeft: 4 }}>
-                    more
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#ffffff', marginStart: 4 }}>
+                    {t('watch.more')}
                   </Text>
                 </Pressable>
               )}
@@ -963,7 +971,7 @@ export function ReelItem({
           onPress={() => setMenuOpen(false)}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         >
-          <View style={{ position: 'absolute', right: 54, bottom: 260 }}>
+          <View style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 54, bottom: 260 }}>
             <ReelMenu
               onNotInterested={() => {
                 setMenuOpen(false);
@@ -995,6 +1003,7 @@ export function ReelItem({
 }
 
 export default function WatchScreen() {
+  const { t } = useTranslation();
 
   const {reels, isLoading, isError, refetch} = useReels();
   const listRef = useRef<FlatList<Reel>>(null);
@@ -1067,7 +1076,7 @@ export default function WatchScreen() {
             marginBottom: 12,
           }}
         >
-          No connection
+          {t('watch.noConnection')}
         </Text>
         <Text
           style={{
@@ -1078,7 +1087,7 @@ export default function WatchScreen() {
             marginBottom: 24,
           }}
         >
-          Check your internet connection{'\n'}and try again
+          {t('watch.noConnectionBody')}
         </Text>
         <Pressable
           onPress={() => refetch()}
@@ -1092,7 +1101,7 @@ export default function WatchScreen() {
           }}
         >
           <Text style={{ color: '#fffbf2', fontSize: 13, fontWeight: '600' }}>
-            Try again
+            {t('watch.tryAgain')}
           </Text>
         </Pressable>
       </View>
@@ -1101,7 +1110,7 @@ export default function WatchScreen() {
   if (!reels.length) {
     return (
       <View className="flex-1 bg-black items-center justify-center">
-        <Text style={{ color: '#ffffff' }}>No reels yet</Text>
+        <Text style={{ color: '#ffffff' }}>{t('watch.noReels')}</Text>
       </View>
     );
   }
@@ -1153,7 +1162,7 @@ export default function WatchScreen() {
               marginBottom: 12,
             }}
           >
-            No connection
+            {t('watch.noConnection')}
           </Text>
           <Text
             style={{
@@ -1164,7 +1173,7 @@ export default function WatchScreen() {
               marginBottom: 24,
             }}
           >
-            Check your internet connection{'\n'}and try again
+            {t('watch.noConnectionBody')}
           </Text>
           <Pressable
             onPress={() => refetch()}
@@ -1178,7 +1187,7 @@ export default function WatchScreen() {
             }}
           >
             <Text style={{ color: '#fffbf2', fontSize: 13, fontWeight: '600' }}>
-              Try again
+              {t('watch.tryAgain')}
             </Text>
           </Pressable>
         </BlurView>

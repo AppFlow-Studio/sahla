@@ -30,6 +30,11 @@ import {
   CormorantGaramond_500Medium,
 } from '@expo-google-fonts/cormorant-garamond';
 import {
+  IBMPlexSansArabic_400Regular,
+  IBMPlexSansArabic_500Medium,
+  IBMPlexSansArabic_600SemiBold,
+} from '@expo-google-fonts/ibm-plex-sans-arabic';
+import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
@@ -51,6 +56,7 @@ const StripeProvider =
     ? require('@stripe/stripe-react-native').StripeProvider
     : ({ children }: { children: React.ReactNode }) => children;
 
+import { bootDirectionChanged } from '@/src/i18n';
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
@@ -184,12 +190,25 @@ export default function RootLayout() {
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
+    // Latin+Arabic family used for the whole UI when the language is RTL.
+    IBMPlexSansArabic_400Regular,
+    IBMPlexSansArabic_500Medium,
+    IBMPlexSansArabic_600SemiBold,
     UthmanicHafs: require('../assets/fonts/UthmanicHafs_V22.ttf'),
   });
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  // If the boot language flipped the layout direction (e.g. first launch on an
+  // Arabic device), RN needs a reload for the forced direction to apply.
+  useEffect(() => {
+    if (bootDirectionChanged) {
+      const Updates = require('expo-updates') as typeof import('expo-updates');
+      Updates.reloadAsync().catch(() => {});
+    }
+  }, []);
 
   console.log('[boot] RootLayout', { fontsLoaded, clerkKey: env.CLERK_PUBLISHABLE_KEY?.slice(0, 11) });
 

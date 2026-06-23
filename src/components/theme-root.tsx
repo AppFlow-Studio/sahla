@@ -1,6 +1,7 @@
 import { vars } from 'nativewind';
 import { View } from 'react-native';
 
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { resolveFontTheme } from '@/src/theme/fonts';
 
@@ -15,7 +16,8 @@ import { resolveFontTheme } from '@/src/theme/fonts';
  */
 export function ThemeRoot({ children }: { children: React.ReactNode }) {
   const config = useMasjidConfig();
-  const fonts = resolveFontTheme(config.fontTheme);
+  const isRTL = useIsRTL();
+  const fonts = resolveFontTheme(config.fontTheme, isRTL);
 
   const themeVars = vars({
     '--font-display': fonts.display,

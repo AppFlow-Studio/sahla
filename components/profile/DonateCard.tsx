@@ -1,9 +1,13 @@
 import { View, Text, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useDonation } from '@/src/providers/donation-provider';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 export default function DonateCard() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
   const { open } = useDonation();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
@@ -28,9 +32,9 @@ export default function DonateCard() {
         </View>
         <View>
           <Text className="text-[14px] font-bold text-primary-foreground">
-            Support Your Masjid
+            {t('profile.supportYourMasjid')}
           </Text>
-          <Text className="text-[11px] text-primary-foreground/55">Donate</Text>
+          <Text className="text-[11px] text-primary-foreground/55">{t('profile.donate')}</Text>
         </View>
       </View>
 
@@ -44,7 +48,7 @@ export default function DonateCard() {
           }}
         >
           <Text style={{ color: accentRgb, fontSize: 11, fontWeight: '800' }}>
-            DONATE →
+            {t('profile.donateCta')} {isRTL ? '←' : '→'}
           </Text>
         </View>
       </TouchableOpacity>

@@ -3,12 +3,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { Icon } from '@/src/components/ui/icon';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
@@ -18,6 +20,8 @@ export default function SignInScreen() {
   const { startAppleAuthenticationFlow } = useSignInWithApple();
   const clerk = useClerk();
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
 
@@ -33,12 +37,12 @@ export default function SignInScreen() {
       if (!orgId) return;
       const result = await joinOrgDirect(userId, orgId);
       if (result === 'error') {
-        setError('Failed to join organization. Please try again.');
+        setError(t('auth.joinOrgFailed'));
         return;
       }
       await clerk.setActive({ organization: orgId });
     },
-    [clerk, config.clerkOrgId],
+    [clerk, config.clerkOrgId, t],
   );
 
   const onSubmit = useCallback(async () => {
@@ -58,19 +62,19 @@ export default function SignInScreen() {
       } else if (attempt.status === 'needs_second_factor') {
         router.push('/(auth)/two-factor');
       } else {
-        setError(`Additional step required: ${attempt.status}`);
+        setError(t('auth.additionalStepRequired', { status: attempt.status }));
       }
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'errors' in err
           ? // @ts-expect-error Clerk error shape
-            (err.errors?.[0]?.message ?? 'Sign-in failed')
-          : 'Sign-in failed';
+            (err.errors?.[0]?.message ?? t('auth.signInFailed'))
+          : t('auth.signInFailed');
       setError(message);
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router]);
+  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router, t]);
 
   const activateOAuthSession = useCallback(
     async (result: any) => {
@@ -138,7 +142,7 @@ export default function SignInScreen() {
 
       if (!sessionId || !setActiveOAuth) {
         console.warn('[Auth] OAuth flow did not produce a session.');
-        setError('Sign-in could not be completed. Please try again.');
+        setError(t('auth.signInCouldNotComplete'));
         return;
       }
 
@@ -148,7 +152,7 @@ export default function SignInScreen() {
         if (userId) await joinAndActivateOrg(userId);
       }, 500);
     },
-    [clerk, joinAndActivateOrg],
+    [clerk, joinAndActivateOrg, t],
   );
 
   const handleApple = useCallback(async () => {
@@ -202,7 +206,12 @@ export default function SignInScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Icon name="arrow-back" size={20} color={surfaceAlpha60} />
+            <Icon
+              name="arrow-back"
+              size={20}
+              color={surfaceAlpha60}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </Pressable>
         </View>
 
@@ -211,7 +220,7 @@ export default function SignInScreen() {
             className="text-onboarding-surface"
             style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
           >
-            Welcome back
+            {t('auth.welcomeBack')}
           </Text>
           <Text className="text-onboarding-accent mb-8" style={{ fontSize: 12 }}>
             {config.displayName}
@@ -221,12 +230,12 @@ export default function SignInScreen() {
             className="text-onboarding-surface/40 mb-2"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            EMAIL
+            {t('auth.email')}
           </Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            placeholder={t('auth.emailPlaceholder')}
             placeholderTextColor={surfaceAlpha25}
             autoCapitalize="none"
             autoComplete="email"
@@ -238,12 +247,12 @@ export default function SignInScreen() {
             className="text-onboarding-surface/40 mb-2"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            PASSWORD
+            {t('auth.password')}
           </Text>
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="Your password"
+            placeholder={t('auth.passwordPlaceholder')}
             placeholderTextColor={surfaceAlpha25}
             secureTextEntry
             autoComplete="password"
@@ -255,7 +264,7 @@ export default function SignInScreen() {
             className="text-onboarding-accent mb-4 self-end"
             style={{ fontSize: 11, fontWeight: '500' }}
           >
-            Forgot password?
+            {t('auth.forgotPassword')}
           </Link>
 
           {error ? (
@@ -274,7 +283,7 @@ export default function SignInScreen() {
                 <ActivityIndicator size="small" color={bgHex} />
               ) : (
                 <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
-                  Sign in
+                  {t('auth.signInButton')}
                 </Text>
               )}
             </Pressable>
@@ -291,7 +300,7 @@ export default function SignInScreen() {
                 <>
                   <Ionicons name="logo-apple" size={14} color={surfaceHex} />
                   <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
-                    Continue with Apple
+                    {t('auth.continueWithApple')}
                   </Text>
                 </>
               )}
@@ -309,7 +318,7 @@ export default function SignInScreen() {
                 <>
                   <Ionicons name="logo-google" size={12} color={surfaceHex} />
                   <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
-                    Continue with Google
+                    {t('auth.continueWithGoogle')}
                   </Text>
                 </>
               )}
@@ -318,14 +327,14 @@ export default function SignInScreen() {
 
           <View className="mt-6 flex-row justify-center">
             <Text className="text-onboarding-surface/50" style={{ fontSize: 12 }}>
-              Don&apos;t have an account?{' '}
+              {t('auth.noAccount')}
             </Text>
             <Link
               href="/(auth)/create-account"
               className="text-onboarding-accent"
               style={{ fontSize: 12, fontWeight: '500' }}
             >
-              Sign up
+              {t('auth.signUp')}
             </Link>
           </View>
         </View>

@@ -1,6 +1,7 @@
 import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Dimensions,
@@ -47,6 +48,7 @@ export default function SpeakerInfoModal({
   mosqueUuid,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
@@ -185,7 +187,7 @@ export default function SpeakerInfoModal({
                 onPress={animateClose}
                 hitSlop={12}
                 accessibilityRole="button"
-                accessibilityLabel="Close speaker info"
+                accessibilityLabel={t("content.closeSpeakerInfo")}
                 style={{ padding: 4 }}
               >
                 <Text
@@ -212,7 +214,7 @@ export default function SpeakerInfoModal({
                 marginTop: 14,
               }}
             >
-              SPEAKER
+              {t("content.speaker")}
             </Text>
             <View
               style={{
@@ -285,7 +287,7 @@ export default function SpeakerInfoModal({
                           flexDirection: "row",
                           alignItems: "flex-start",
                           marginBottom: idx === credentials.length - 1 ? 0 : 14,
-                          paddingRight: 4,
+                          paddingEnd: 4,
                         }}
                       >
                         <View
@@ -295,7 +297,7 @@ export default function SpeakerInfoModal({
                             borderRadius: 3,
                             backgroundColor: accentRgb,
                             marginTop: 7,
-                            marginRight: 12,
+                            marginEnd: 12,
                           }}
                         />
                         <Text
@@ -322,7 +324,7 @@ export default function SpeakerInfoModal({
                       color: sublabelColor,
                     }}
                   >
-                    No credentials available.
+                    {t("content.noCredentials")}
                   </Text>
                 )}
               </>

@@ -9,9 +9,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { TimePicker, formatTimePreview } from '@/src/components/admin/time-picker';
 import {
   IQAMAH_PRAYERS,
@@ -41,6 +43,8 @@ const OFFSET_STEP = 5;
 export default function IqamahScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
@@ -129,10 +133,10 @@ export default function IqamahScreen() {
       {/* Header */}
       <View className="flex-row items-center px-5" style={{ height: 52 }}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Icon name="chevron-back" size={22} color={fgRgb} />
+          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={fgRgb} />
         </Pressable>
-        <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
-          Iqamah Times
+        <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
+          {t('admin.iqamahTimes')}
         </Text>
       </View>
 
@@ -147,11 +151,10 @@ export default function IqamahScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={{ color: mutedRgb, fontSize: 12, lineHeight: 18, marginBottom: 16 }}>
-            Set each prayer to a fixed time or a number of minutes after the athan.
-            Offsets adjust automatically as athan times shift through the year.
+            {t('admin.iqamahIntro')}
           </Text>
 
-          {IQAMAH_PRAYERS.map(({ key, label }) => {
+          {IQAMAH_PRAYERS.map(({ key }) => {
             const f = forms[key] ?? DEFAULTS[key];
             return (
               <View
@@ -165,11 +168,11 @@ export default function IqamahScreen() {
                 }}
               >
                 <View className="flex-row items-center justify-between" style={{ marginBottom: 12 }}>
-                  <Text style={{ color: fgRgb, fontSize: 15, fontWeight: '700' }}>{label}</Text>
+                  <Text style={{ color: fgRgb, fontSize: 15, fontWeight: '700' }}>{t(`admin.prayer.${key}`)}</Text>
                   <Text style={{ color: accentRgb, fontSize: 12, fontWeight: '600' }}>
                     {f.mode === 'fixed'
                       ? formatTimePreview(f.fixedTime, '24h')
-                      : `Athan + ${f.offsetMinutes} min`}
+                      : t('admin.athanPlusMin', { count: f.offsetMinutes })}
                   </Text>
                 </View>
 
@@ -177,8 +180,8 @@ export default function IqamahScreen() {
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
                   {(
                     [
-                      { label: 'After athan', value: 'offset' },
-                      { label: 'Fixed time', value: 'fixed' },
+                      { label: t('admin.afterAthan'), value: 'offset' },
+                      { label: t('admin.fixedTime'), value: 'fixed' },
                     ] as { label: string; value: IqamahMode }[]
                   ).map((opt) => {
                     const active = f.mode === opt.value;
@@ -210,7 +213,7 @@ export default function IqamahScreen() {
                 {f.mode === 'fixed' ? (
                   <>
                     <View className="flex-row items-center justify-between">
-                      <Text style={{ color: labelColor, fontSize: 13 }}>Iqamah at</Text>
+                      <Text style={{ color: labelColor, fontSize: 13 }}>{t('admin.iqamahAt')}</Text>
                       <TimePicker
                         value={f.fixedTime}
                         onChange={(v) => update(key, { fixedTime: v })}
@@ -222,15 +225,15 @@ export default function IqamahScreen() {
                     </View>
                     {invalidKeys.has(key) && (
                       <Text style={{ color: '#ef4444', fontSize: 11, marginTop: 8 }}>
-                        Iqamah is before today&apos;s athan (
-                        {formatTimePreview(athanByPrayer[key]?.slice(0, 5) ?? '', '24h')}). Pick a
-                        later time.
+                        {t('admin.iqamahBeforeAthan', {
+                          time: formatTimePreview(athanByPrayer[key]?.slice(0, 5) ?? '', '24h'),
+                        })}
                       </Text>
                     )}
                   </>
                 ) : (
                   <View className="flex-row items-center justify-between">
-                    <Text style={{ color: labelColor, fontSize: 13 }}>Minutes after athan</Text>
+                    <Text style={{ color: labelColor, fontSize: 13 }}>{t('admin.minutesAfterAthan')}</Text>
                     <View className="flex-row items-center" style={{ gap: 14 }}>
                       <Stepper
                         icon="remove"
@@ -275,12 +278,12 @@ export default function IqamahScreen() {
             style={{ height: 48, marginTop: 8, opacity: !dirty || save.isPending || hasInvalid ? 0.5 : 1 }}
           >
             <Text className="text-[15px] font-semibold text-primary-foreground">
-              {save.isPending ? 'Saving...' : save.isSuccess && !dirty ? 'Saved' : 'Save'}
+              {save.isPending ? t('admin.saving') : save.isSuccess && !dirty ? t('admin.saved') : t('common.save')}
             </Text>
           </TouchableOpacity>
           {save.isError && (
             <Text className="mt-2 text-center text-[11px] text-red-500">
-              {save.error?.message ?? 'Failed to save'}
+              {save.error?.message ?? t('admin.failedToSave')}
             </Text>
           )}
         </ScrollView>

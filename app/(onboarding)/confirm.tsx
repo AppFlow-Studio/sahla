@@ -1,6 +1,7 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Pressable,
@@ -15,21 +16,22 @@ import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useOnboardingSubmit } from '@/src/hooks/use-onboarding-submit';
 
-const LANGUAGES = [
-  'English',
-  'Arabic',
-  'Urdu',
-  'Bengali',
-  'Turkish',
-  'Spanish',
-  'French',
-  'Bosnian',
-  'Somali',
-  'Other',
-] as const;
+const LANGUAGES: { value: string; labelKey: string }[] = [
+  { value: 'English', labelKey: 'languageEnglish' },
+  { value: 'Arabic', labelKey: 'languageArabic' },
+  { value: 'Urdu', labelKey: 'languageUrdu' },
+  { value: 'Bengali', labelKey: 'languageBengali' },
+  { value: 'Turkish', labelKey: 'languageTurkish' },
+  { value: 'Spanish', labelKey: 'languageSpanish' },
+  { value: 'French', labelKey: 'languageFrench' },
+  { value: 'Bosnian', labelKey: 'languageBosnian' },
+  { value: 'Somali', labelKey: 'languageSomali' },
+  { value: 'Other', labelKey: 'languageOther' },
+];
 
 export default function ConfirmScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { user } = useUser();
   const fonts = useFontFamily();
   const draft = useOnboardingDraft();
@@ -85,9 +87,9 @@ export default function ConfirmScreen() {
       });
       router.push('/(onboarding)/welcome-full');
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Something went wrong. Please try again.');
+      Alert.alert(t('onboarding.errorTitle'), err?.message ?? t('onboarding.errorGeneric'));
     }
-  }, [submit, draft, firstName, lastName, phone, language, router]);
+  }, [submit, draft, firstName, lastName, phone, language, router, t]);
 
   const inputStyle = {
     fontFamily: fonts.body,
@@ -104,8 +106,8 @@ export default function ConfirmScreen() {
   return (
     <OnboardingScaffold
       step={4}
-      title="Confirm your details"
-      primaryLabel={submit.isPending ? 'Saving...' : 'Complete'}
+      title={t('onboarding.confirmTitle')}
+      primaryLabel={submit.isPending ? t('onboarding.saving') : t('onboarding.complete')}
       onPrimary={handleSubmit}
       primaryDisabled={!canSubmit || submit.isPending}
       scrollable
@@ -115,12 +117,12 @@ export default function ConfirmScreen() {
         {/* First Name */}
         <View>
           <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
-            First name
+            {t('onboarding.firstNameLabel')}
           </Text>
           <TextInput
             value={firstName}
             onChangeText={setFirstName}
-            placeholder="First name"
+            placeholder={t('onboarding.firstNamePlaceholder')}
             placeholderTextColor={placeholderColor}
             style={inputStyle}
           />
@@ -129,12 +131,12 @@ export default function ConfirmScreen() {
         {/* Last Name */}
         <View>
           <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
-            Last name
+            {t('onboarding.lastNameLabel')}
           </Text>
           <TextInput
             value={lastName}
             onChangeText={setLastName}
-            placeholder="Last name"
+            placeholder={t('onboarding.lastNamePlaceholder')}
             placeholderTextColor={placeholderColor}
             style={inputStyle}
           />
@@ -143,12 +145,12 @@ export default function ConfirmScreen() {
         {/* Phone */}
         <View>
           <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
-            Phone number
+            {t('onboarding.phoneLabel')}
           </Text>
           <TextInput
             value={phone}
             onChangeText={setPhone}
-            placeholder="+1 (555) 123-4567"
+            placeholder={t('onboarding.phonePlaceholder')}
             placeholderTextColor={placeholderColor}
             keyboardType="phone-pad"
             style={inputStyle}
@@ -158,7 +160,7 @@ export default function ConfirmScreen() {
         {/* Language */}
         <View>
           <Text style={{ fontFamily: fonts.body, fontSize: 11, color: labelColor, marginBottom: 6 }}>
-            Preferred language
+            {t('onboarding.preferredLanguageLabel')}
           </Text>
           <Pressable
             onPress={() => setShowLanguagePicker(!showLanguagePicker)}
@@ -170,7 +172,7 @@ export default function ConfirmScreen() {
             }}
           >
             <Text style={{ fontFamily: fonts.body, fontSize: 14, color: surfaceRgb }}>
-              {language}
+              {t(`onboarding.${LANGUAGES.find((l) => l.value === language)?.labelKey ?? 'languageEnglish'}`)}
             </Text>
             <Text style={{ color: labelColor, fontSize: 12 }}>
               {showLanguagePicker ? '\u25B2' : '\u25BC'}
@@ -190,28 +192,28 @@ export default function ConfirmScreen() {
             >
               {LANGUAGES.map((lang) => (
                 <Pressable
-                  key={lang}
+                  key={lang.value}
                   onPress={() => {
-                    setLanguage(lang);
+                    setLanguage(lang.value);
                     setShowLanguagePicker(false);
                   }}
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
-                    backgroundColor: lang === language
+                    backgroundColor: lang.value === language
                       ? `rgba(${colors.onboardingAccent.replace(/ /g, ',')}, 0.15)`
                       : 'transparent',
                   }}
                 >
                   <Text
                     style={{
-                      fontFamily: lang === language ? fonts.bodySemibold : fonts.body,
+                      fontFamily: lang.value === language ? fonts.bodySemibold : fonts.body,
                       fontSize: 13,
-                      color: lang === language ? accentRgb : surfaceRgb,
-                      fontWeight: lang === language ? '600' : '400',
+                      color: lang.value === language ? accentRgb : surfaceRgb,
+                      fontWeight: lang.value === language ? '600' : '400',
                     }}
                   >
-                    {lang}
+                    {t(`onboarding.${lang.labelKey}`)}
                   </Text>
                 </Pressable>
               ))}

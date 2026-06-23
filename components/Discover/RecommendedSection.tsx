@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import type { ImageSourcePropType } from "react-native";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
@@ -78,11 +79,12 @@ export default function RecommendedSection({
   onPressItem,
   onPressSeeAll,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <View>
       <SectionTitle
-        title="Recommended for you"
-        actionLabel="See all"
+        title={t("discover.recommendedTitle")}
+        actionLabel={t("discover.seeAll")}
         onPressAction={onPressSeeAll}
       />
       <ScrollView

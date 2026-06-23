@@ -1,8 +1,10 @@
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import type { ImageSourcePropType } from "react-native";
 import { Pressable, Text, View } from "react-native";
 
 import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import SectionTitle from "./SectionTitle";
@@ -28,6 +30,7 @@ function EventRow({
   item: EventItem;
   onPress?: () => void;
 }) {
+  const isRTL = useIsRTL();
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
@@ -43,7 +46,7 @@ function EventRow({
       className="flex-row items-center px-6 py-3"
     >
       <View
-        className="mr-4 h-[50px] w-[50px] overflow-hidden rounded-[10px]"
+        className="me-4 h-[50px] w-[50px] overflow-hidden rounded-[10px]"
         style={{ backgroundColor: mutedRgb }}
       >
         {item.thumbnail ? (
@@ -94,7 +97,12 @@ function EventRow({
           </Text>
         ) : null}
       </View>
-      <IconSymbol name="chevron.right" size={14} color={chevronColor} />
+      <IconSymbol
+        name="chevron.right"
+        size={14}
+        color={chevronColor}
+        style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+      />
     </Pressable>
   );
 }
@@ -104,6 +112,7 @@ export default function UpcomingEventsSection({
   onPressItem,
   onPressViewCalendar,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const rowBorder = `rgba(${fg}, 0.1)`;
@@ -111,8 +120,8 @@ export default function UpcomingEventsSection({
   return (
     <View>
       <SectionTitle
-        title="Upcoming events"
-        actionLabel="View calendar"
+        title={t("discover.upcomingEvents")}
+        actionLabel={t("discover.viewCalendar")}
         actionLeading={
           <Image
             source={require("@/assets/images/discover_calendar_icon_next_to_search_bar.png")}

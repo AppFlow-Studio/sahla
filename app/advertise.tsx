@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
@@ -12,25 +14,27 @@ import { useConfigStore } from '@/src/stores/config-store';
 const BENEFITS = [
   {
     icon: 'check-circle' as IconName,
-    title: 'Easy setup',
-    subtitle: 'Get your ad running in 1-3 days',
+    titleKey: 'benefitSetupTitle',
+    subtitleKey: 'benefitSetupSubtitle',
   },
   {
     icon: 'eye-outline' as IconName,
-    title: 'High visibility',
-    subtitle: 'Reach 3000+ local community members',
+    titleKey: 'benefitVisibilityTitle',
+    subtitleKey: 'benefitVisibilitySubtitle',
   },
   {
     icon: 'heart' as IconName,
-    title: 'Community impact',
-    subtitle: 'Support your local center while you grow',
+    titleKey: 'benefitImpactTitle',
+    subtitleKey: 'benefitImpactSubtitle',
   },
-];
+] as const;
 
 const MOCK_CHART_BARS = [0.4, 0.55, 0.7, 0.5, 0.65, 0.85, 1.0];
 
 export default function AdvertiseScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const fonts = useFontFamily();
   const supabase = useSupabase();
   const { displayName, colors } = useMasjidConfig();
@@ -72,7 +76,7 @@ export default function AdvertiseScreen() {
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
-            className="ml-5 mt-2 h-8 w-8 items-center justify-center"
+            className="ms-5 mt-2 h-8 w-8 items-center justify-center"
           >
             <Icon name="arrow-back" size={22} color={fgRgb} />
           </Pressable>
@@ -83,11 +87,10 @@ export default function AdvertiseScreen() {
               className="text-[28px] font-bold leading-[34px] text-foreground"
               style={{ fontFamily: fonts.display }}
             >
-              Advertise to The{'\n'}Community
+              {t('ads.heroTitle')}
             </Text>
             <Text className="mt-3 text-[15px] leading-[22px] text-foreground/60">
-              Showcase your business to the {displayName} community and connect
-              with 3,000+ local members.
+              {t('ads.heroSubtitle', { name: displayName })}
             </Text>
           </View>
 
@@ -107,10 +110,10 @@ export default function AdvertiseScreen() {
                 {/* Header */}
                 <View className="flex-row items-center justify-between">
                   <Text className="text-[13px] font-semibold text-foreground">
-                    Analytics
+                    {t('ads.analytics')}
                   </Text>
                   <Text className="text-[11px] text-foreground/40">
-                    This Week
+                    {t('ads.thisWeek')}
                   </Text>
                 </View>
 
@@ -135,21 +138,21 @@ export default function AdvertiseScreen() {
                 {/* Stats */}
                 <View className="mt-4 flex-row justify-between">
                   <View>
-                    <Text className="text-[10px] text-foreground/40">Views</Text>
+                    <Text className="text-[10px] text-foreground/40">{t('ads.views')}</Text>
                     <Text className="text-[16px] font-bold text-foreground">
                       2,847
                     </Text>
                   </View>
                   <View>
                     <Text className="text-[10px] text-foreground/40">
-                      Clicks
+                      {t('ads.clicks')}
                     </Text>
                     <Text className="text-[16px] font-bold text-foreground">
                       384
                     </Text>
                   </View>
                   <View>
-                    <Text className="text-[10px] text-foreground/40">Rate</Text>
+                    <Text className="text-[10px] text-foreground/40">{t('ads.rate')}</Text>
                     <Text
                       className="text-[16px] font-bold"
                       style={{ color: primaryRgb }}
@@ -165,7 +168,7 @@ export default function AdvertiseScreen() {
           {/* Benefits */}
           <View className="mt-8 gap-5 px-5">
             {BENEFITS.map((benefit) => (
-              <View key={benefit.title} className="flex-row items-center gap-4">
+              <View key={benefit.titleKey} className="flex-row items-center gap-4">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-foreground/5">
                   <Icon
                     name={benefit.icon}
@@ -175,10 +178,10 @@ export default function AdvertiseScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-[15px] font-semibold text-foreground">
-                    {benefit.title}
+                    {t(`ads.${benefit.titleKey}`)}
                   </Text>
                   <Text className="mt-0.5 text-[13px] text-foreground/50">
-                    {benefit.subtitle}
+                    {t(`ads.${benefit.subtitleKey}`)}
                   </Text>
                 </View>
               </View>
@@ -188,27 +191,29 @@ export default function AdvertiseScreen() {
           {/* Pricing Info Box */}
           <View className="mx-5 mt-8 rounded-2xl bg-muted/60 px-5 py-5">
             <Text className="text-[14px] leading-[22px] text-foreground/80">
-              By donating{' '}
-              <Text className="font-bold text-foreground">{monthlyDisplay} a month</Text> to
-              the community, you get your business advertised through the app to{' '}
+              {t('ads.pricingLeadIn')}{' '}
               <Text className="font-bold text-foreground">
-                3,000+ community members
+                {t('ads.pricingMonthlyAmount', { amount: monthlyDisplay })}
+              </Text>{' '}
+              {t('ads.pricingMiddle')}{' '}
+              <Text className="font-bold text-foreground">
+                {t('ads.pricingMembers')}
               </Text>
-              .
+              {t('ads.pricingTrail')}
             </Text>
             <Text className="mt-2 text-[13px] leading-[20px] text-foreground/50">
-              A one-time{' '}
+              {t('ads.pricingOnboardingLeadIn')}{' '}
               <Text className="font-semibold text-foreground/60">
-                {onboardingDisplay} onboarding donation fee
+                {t('ads.pricingOnboardingFee', { amount: onboardingDisplay })}
               </Text>{' '}
-              applies.
+              {t('ads.pricingOnboardingTrail')}
             </Text>
           </View>
 
           {/* Ad Preview */}
           <View className="mx-5 mt-8">
             <Text className="mb-3 text-[13px] text-foreground/50">
-              Example of your in-app ad
+              {t('ads.previewExampleLabel')}
             </Text>
 
             <View
@@ -222,9 +227,9 @@ export default function AdvertiseScreen() {
               }}
             >
               {/* Preview badge */}
-              <View className="absolute right-3 top-3 z-10 rounded-md bg-foreground/80 px-2.5 py-1">
+              <View className="absolute end-3 top-3 z-10 rounded-md bg-foreground/80 px-2.5 py-1">
                 <Text className="text-[10px] font-bold uppercase tracking-[1px] text-background">
-                  Preview
+                  {t('ads.previewBadge')}
                 </Text>
               </View>
 
@@ -236,16 +241,16 @@ export default function AdvertiseScreen() {
                   color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.25)`}
                 />
                 <Text className="mt-2 text-[13px] text-foreground/30">
-                  Your flyer will appear here
+                  {t('ads.flyerPlaceholder')}
                 </Text>
               </View>
 
               {/* Action buttons */}
               <View className="flex-row justify-center gap-8 border-t border-foreground/5 py-4">
                 {[
-                  { icon: 'phone', label: 'Call' },
-                  { icon: 'message-text-outline', label: 'SMS' },
-                  { icon: 'email-outline', label: 'Email' },
+                  { icon: 'phone', label: t('ads.actionCall') },
+                  { icon: 'message-text-outline', label: t('ads.actionSms') },
+                  { icon: 'email-outline', label: t('ads.actionEmail') },
                 ].map((action) => (
                   <View key={action.label} className="items-center gap-1.5">
                     <View className="h-10 w-10 items-center justify-center rounded-full bg-foreground/5">
@@ -269,16 +274,16 @@ export default function AdvertiseScreen() {
                   size={16}
                   color={fgRgb}
                 />
-                <View className="ml-2.5 flex-1">
+                <View className="ms-2.5 flex-1">
                   <Text className="text-[13px] text-foreground">
-                    123 Main St, Staten Island, NY
+                    {t('ads.sampleAddress')}
                   </Text>
                   <Text className="mt-0.5 text-[10px] uppercase tracking-[0.5px] text-foreground/35">
-                    Open in Maps
+                    {t('ads.openInMaps')}
                   </Text>
                 </View>
                 <Icon
-                  name="chevron-right"
+                  name={isRTL ? 'chevron-left' : 'chevron-right'}
                   size={18}
                   color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`}
                 />
@@ -304,14 +309,16 @@ export default function AdvertiseScreen() {
               className="h-[52px] flex-row items-center justify-center rounded-full bg-foreground active:opacity-90"
             >
               <Text className="text-[16px] font-semibold text-background">
-                Start Application
+                {t('ads.startApplication')}
               </Text>
-              <Text className="ml-2 text-[16px] text-background">{'\u2192'}</Text>
+              <Text className="ms-2 text-[16px] text-background">
+                {isRTL ? '\u2190' : '\u2192'}
+              </Text>
             </Pressable>
           ) : (
             <View className="h-[52px] items-center justify-center rounded-full bg-foreground/10">
               <Text className="text-[15px] font-semibold text-foreground/50">
-                Not currently accepting advertisers
+                {t('ads.notAccepting')}
               </Text>
             </View>
           )}

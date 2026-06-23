@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -41,6 +42,7 @@ import {
 } from '@stripe/stripe-react-native';
 import { useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 // CardField onCardChange details type
 type CardDetails = { complete: boolean; brand?: string; last4?: string };
 // A reusable card returned by the get-payment-methods edge function.
@@ -80,6 +82,8 @@ export function DonationModal({
 }) {
   const { colors, displayName } = useMasjidConfig();
   const fonts = useFontFamily();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const supabase = useSupabase();
   const { profile } = useProfile();
@@ -395,7 +399,7 @@ export function DonationModal({
 
   const handleContinueToCard = async () => {
     if (displayAmount < 1) {
-      Alert.alert('Invalid amount', 'Please enter at least $1.');
+      Alert.alert(t('donate.invalidAmountTitle'), t('donate.invalidAmountMessage'));
       return;
     }
 
@@ -465,7 +469,7 @@ export function DonationModal({
     } catch (err: any) {
       setStripeAccountId(undefined);
       setStep('amount');
-      Alert.alert('Error', err.message ?? 'Something went wrong.');
+      Alert.alert(t('donate.errorTitle'), err.message ?? t('donate.somethingWentWrong'));
     }
   };
 
@@ -494,11 +498,11 @@ export function DonationModal({
         setStripeAccountId(undefined);
         setStep('thanks');
       } else {
-        throw new Error('Payment was not completed.');
+        throw new Error(t('donate.paymentNotCompleted'));
       }
     } catch (err: any) {
       setStep(fromStep);
-      Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
+      Alert.alert(t('donate.paymentFailedTitle'), err.message ?? t('donate.somethingWentWrong'));
     }
   };
 
@@ -535,7 +539,7 @@ export function DonationModal({
       setStep('thanks');
     } catch (err: any) {
       setStep(fromStep);
-      Alert.alert('Payment failed', err.message ?? 'Something went wrong.');
+      Alert.alert(t('donate.paymentFailedTitle'), err.message ?? t('donate.somethingWentWrong'));
     }
   };
 
@@ -593,7 +597,7 @@ export function DonationModal({
           <View>
             <View className="px-6 pt-5">
               <Text className="text-center text-[11px] font-semibold uppercase tracking-[2px] text-foreground/35">
-                Donate
+                {t('donate.eyebrow')}
               </Text>
 
               <Text
@@ -649,7 +653,7 @@ export function DonationModal({
                 className="mt-4 items-center py-2"
               >
                 <Text style={{ fontSize: 12, color: accentRgb, fontWeight: '500' }}>
-                  {customMode ? 'Use preset' : 'Custom amount'}
+                  {customMode ? t('donate.usePreset') : t('donate.customAmount')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -699,12 +703,12 @@ export function DonationModal({
                 }}
               >
                 <Text style={{ fontSize: 15, fontWeight: '600', color: bgRgb }}>
-                  Continue
+                  {t('donate.continue')}
                 </Text>
               </TouchableOpacity>
 
               <Text style={{ marginTop: 14, textAlign: 'center', fontSize: 10, color: `rgba(${fg},0.3)` }}>
-                Secured by Stripe
+                {t('donate.securedByStripe')}
               </Text>
             </View>
           </View>
@@ -747,14 +751,14 @@ export function DonationModal({
                     backgroundColor: `rgba(${fg},0.06)`,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginRight: 12,
+                    marginEnd: 12,
                   }}
                 >
-                  <Icon name="chevron-back" size={18} color={`rgba(${fg},0.45)`} />
+                  <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={18} color={`rgba(${fg},0.45)`} />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: fgRgb }}>
-                    {onCardEntry ? 'Card details' : 'Payment details'}
+                    {onCardEntry ? t('donate.cardDetails') : t('donate.paymentDetails')}
                   </Text>
                 </View>
                 <Icon name="lock-closed" size={13} color={`rgba(${fg},0.25)`} />
@@ -775,7 +779,7 @@ export function DonationModal({
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View>
                     <Text style={{ fontSize: 11, color: `rgba(${fg},0.4)`, fontWeight: '500', letterSpacing: 0.5 }}>
-                      DONATING TO
+                      {t('donate.donatingTo')}
                     </Text>
                     <Text style={{ fontSize: 14, color: fgRgb, fontWeight: '500', marginTop: 3 }}>
                       {displayName}
@@ -783,7 +787,7 @@ export function DonationModal({
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={{ fontSize: 11, color: `rgba(${fg},0.4)`, fontWeight: '500', letterSpacing: 0.5 }}>
-                      AMOUNT
+                      {t('donate.amount')}
                     </Text>
                     <Text
                       style={{
@@ -816,7 +820,7 @@ export function DonationModal({
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16 }}>
                     <View style={{ flex: 1, height: 1, backgroundColor: `rgba(${fg},0.08)` }} />
                     <Text style={{ marginHorizontal: 14, fontSize: 11, color: `rgba(${fg},0.3)`, fontWeight: '500' }}>
-                      or pay with card
+                      {t('donate.orPayWithCard')}
                     </Text>
                     <View style={{ flex: 1, height: 1, backgroundColor: `rgba(${fg},0.08)` }} />
                   </View>
@@ -853,7 +857,9 @@ export function DonationModal({
                             {formatBrand(card.brand)} •••• {card.last4}
                           </Text>
                           <Text style={{ fontSize: 11, color: `rgba(${fg},0.4)`, marginTop: 2 }}>
-                            Expires {String(card.expMonth).padStart(2, '0')}/{String(card.expYear).slice(-2)}
+                            {t('donate.expires', {
+                              expiry: `${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`,
+                            })}
                           </Text>
                         </View>
                         <View
@@ -892,9 +898,9 @@ export function DonationModal({
                   >
                     <Icon name="add-circle-outline" size={20} color={`rgba(${fg},0.5)`} />
                     <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: fgRgb }}>
-                      Use a new card
+                      {t('donate.useANewCard')}
                     </Text>
-                    <Icon name="chevron-forward" size={18} color={`rgba(${fg},0.3)`} />
+                    <Icon name={isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={`rgba(${fg},0.3)`} />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -955,7 +961,7 @@ export function DonationModal({
                       {saveCard && <Icon name="checkmark" size={11} color={bgRgb} />}
                     </View>
                     <Text style={{ fontSize: 13, color: `rgba(${fg},0.6)` }}>
-                      Save card for future donations
+                      {t('donate.saveCard')}
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -979,7 +985,7 @@ export function DonationModal({
               >
                 <Icon name="shield-checkmark" size={16} color={bgRgb} />
                 <Text style={{ fontSize: 16, fontWeight: '700', color: bgRgb }}>
-                  Donate ${displayAmount}
+                  {t('donate.donateAmount', { amount: `$${displayAmount}` })}
                 </Text>
               </TouchableOpacity>
 
@@ -989,7 +995,7 @@ export function DonationModal({
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, gap: 5 }}>
                 <Icon name="lock-closed-outline" size={10} color={`rgba(${fg},0.25)`} />
                 <Text style={{ fontSize: 10, color: `rgba(${fg},0.25)`, fontWeight: '500' }}>
-                  Encrypted & secured by Stripe
+                  {t('donate.encryptedSecured')}
                 </Text>
               </View>
               </>
@@ -1011,7 +1017,7 @@ export function DonationModal({
           >
             <ActivityIndicator size="large" color={accentRgb} />
             <Text style={{ marginTop: 16, fontSize: 13, color: `rgba(${fg},0.4)`, fontWeight: '500' }}>
-              Processing payment...
+              {t('donate.processingPayment')}
             </Text>
           </View>
           )}
@@ -1082,17 +1088,22 @@ export function DonationModal({
                     textAlign: 'center',
                   }}
                 >
-                  Thank you{profile?.first_name ? `, ${profile.first_name}` : ''}
+                  {profile?.first_name
+                    ? t('donate.thankYouNamed', { name: profile.first_name })
+                    : t('donate.thankYou')}
                 </Text>
                 <Text style={{ marginTop: 10, fontSize: 13, color: `rgba(${fg},0.5)`, textAlign: 'center', lineHeight: 20 }}>
-                  Your ${displayAmount} donation to{'\n'}{displayName} has been received
+                  {t('donate.received', {
+                    amount: `$${displayAmount}`,
+                    name: displayName,
+                  })}
                 </Text>
               </Animated.View>
 
               {/* Dua — fades in last */}
               <Animated.View style={{ marginTop: 20, opacity: thanksDuaOpacity }}>
                 <Text style={{ fontSize: 12, color: accentRgb, textAlign: 'center', fontWeight: '500', fontStyle: 'italic' }}>
-                  May Allah reward you abundantly
+                  {t('donate.dua')}
                 </Text>
               </Animated.View>
             </Animated.View>

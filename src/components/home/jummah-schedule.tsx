@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import type { IconName } from '@/src/components/ui/icon';
@@ -9,6 +10,7 @@ import { useJummahSchedule, type JummahSlot } from '@/src/hooks/use-jummah-sched
 import { JummahDetailSheet } from './jummah-detail-sheet';
 
 export function JummahScheduleCard() {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const fonts = useFontFamily();
   const { slots, date } = useJummahSchedule();
@@ -44,7 +46,7 @@ export function JummahScheduleCard() {
           marginBottom: 14,
         }}
       >
-        Jummah Schedule
+        {t('home.jummahSchedule')}
       </Text>
 
       <View style={{ gap: 8 }}>
@@ -70,7 +72,7 @@ export function JummahScheduleCard() {
                 height: 34,
                 borderRadius: 17,
                 backgroundColor: `rgba(${accent},0.18)`,
-                marginRight: 12,
+                marginEnd: 12,
               }}
             >
               <Icon

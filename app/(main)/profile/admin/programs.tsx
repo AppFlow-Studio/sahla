@@ -21,10 +21,12 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useSpeakers } from '@/src/hooks/use-speakers';
 import {
   CONTENT_TYPES,
@@ -49,26 +51,33 @@ import {
 const SCREEN_H = Dimensions.get('window').height;
 
 type Filter = 'all' | 'program' | 'event';
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'program', label: 'Programs' },
-  { value: 'event', label: 'Events' },
+const FILTERS: { value: Filter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'common.all' },
+  { value: 'program', labelKey: 'admin.filterPrograms' },
+  { value: 'event', labelKey: 'admin.filterEvents' },
 ];
 
 type DateFilter = 'all' | 'upcoming' | 'past';
 const DATE_FILTER_VALUES: DateFilter[] = ['all', 'upcoming', 'past'];
 
+type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
 // Labels follow the active type tab so the wording matches what the user is
 // actually filtering: "All events" on Events, "All programs" on Programs,
 // "All events and programs" on All.
-function dateFilterLabel(value: DateFilter, filter: Filter): string {
+function dateFilterLabel(t: TFn, value: DateFilter, filter: Filter): string {
   const noun =
     filter === 'event'
-      ? 'events'
+      ? t('admin.nounEvents')
       : filter === 'program'
-        ? 'programs'
-        : 'events and programs';
-  const prefix = value === 'all' ? 'All' : value === 'upcoming' ? 'Upcoming' : 'Past';
+        ? t('admin.nounPrograms')
+        : t('admin.nounEventsAndPrograms');
+  const prefix =
+    value === 'all'
+      ? t('admin.datePrefixAll')
+      : value === 'upcoming'
+        ? t('admin.datePrefixUpcoming')
+        : t('admin.datePrefixPast');
   return `${prefix} ${noun}`;
 }
 
@@ -92,6 +101,8 @@ function formatTime12(time: string | null | undefined): string {
 export default function ProgramsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ',');
@@ -139,12 +150,12 @@ export default function ProgramsScreen() {
 
   const handleDelete = (item: AdminContentItem) => {
     Alert.alert(
-      'Delete item',
-      `Delete "${item.name ?? 'this item'}"? People who saved or set reminders for it will lose them.`,
+      t('admin.deleteItemTitle'),
+      t('admin.deleteItemMessage', { name: item.name ?? t('admin.thisItem') }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('admin.delete'),
           style: 'destructive',
           onPress: () => deleteItem.mutate(item.content_id),
         },
@@ -159,10 +170,10 @@ export default function ProgramsScreen() {
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Icon name="chevron-back" size={22} color={fgRgb} />
+            <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={fgRgb} />
           </Pressable>
-          <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
-            Programs & Events
+          <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
+            {t('admin.programsEvents')}
           </Text>
         </View>
         {/* The date-filter button is rendered as a screen-root overlay (see
@@ -190,7 +201,7 @@ export default function ProgramsScreen() {
                   color: active ? fgRgb : mutedRgb,
                 }}
               >
-                {f.label}
+                {t(f.labelKey)}
               </Text>
               {active ? (
                 <View
@@ -212,12 +223,14 @@ export default function ProgramsScreen() {
           <Icon name="megaphone-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
             {items.length === 0
-              ? 'No programs or events yet. Tap + to create one.'
+              ? t('admin.noProgramsOrEvents')
               : dateFilter !== 'all'
-                ? `No ${dateFilterLabel(dateFilter, filter).toLowerCase()}.`
+                ? t('admin.noFilteredItems', {
+                    label: dateFilterLabel(t, dateFilter, filter).toLowerCase(),
+                  })
                 : filter === 'program'
-                  ? 'No programs yet. Tap + to create one.'
-                  : 'No events yet. Tap + to create one.'}
+                  ? t('admin.noProgramsYet')
+                  : t('admin.noEventsYet')}
           </Text>
         </View>
       ) : (
@@ -247,7 +260,7 @@ export default function ProgramsScreen() {
         value={dateFilter}
         options={DATE_FILTER_VALUES.map((v) => ({
           id: v,
-          title: dateFilterLabel(v, filter),
+          title: dateFilterLabel(t, v, filter),
         }))}
         onChange={(id) => setDateFilter(id as DateFilter)}
         fgRgb={fgRgb}
@@ -278,6 +291,7 @@ function ContentCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const schedule =
     item.recurrence_freq && item.recurrence_freq !== 'once'
       ? (describeRecurrence({
@@ -311,7 +325,7 @@ function ContentCard({
           borderRadius: 8,
           overflow: 'hidden',
           backgroundColor: borderColor,
-          marginRight: 12,
+          marginEnd: 12,
         }}
       >
         {item.image ? (
@@ -325,14 +339,14 @@ function ContentCard({
 
       <View className="flex-1">
         <Text style={{ color: fgRgb, fontSize: 14, fontWeight: '600' }} numberOfLines={1}>
-          {item.name ?? 'Untitled'}
+          {item.name ?? t('admin.untitled')}
         </Text>
         <Text style={{ color: mutedRgb, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
           {sub}
         </Text>
       </View>
 
-      <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 12 }}>
+      <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginEnd: 12 }}>
         <Icon name="pencil-outline" size={18} color={mutedRgb} />
       </TouchableOpacity>
       <TouchableOpacity onPress={onDelete} hitSlop={8}>
@@ -353,6 +367,7 @@ function ContentFormModal({
   item: AdminContentItem | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const insets = useSafeAreaInsets();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
@@ -492,7 +507,7 @@ function ContentFormModal({
     } catch (e) {
       // Surface real failures (permission denied, upload errors) instead of
       // silently doing nothing.
-      Alert.alert('Couldn’t add image', e instanceof Error ? e.message : 'Please try again.');
+      Alert.alert(t('admin.couldNotAddImage'), e instanceof Error ? e.message : t('admin.pleaseTryAgain'));
     }
   }, [item, pickAndUpload]);
 
@@ -654,7 +669,7 @@ function ContentFormModal({
               className="text-center text-foreground/40"
               style={{ fontSize: 13, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' }}
             >
-              {isEditing ? 'Edit Item' : 'New Program or Event'}
+              {isEditing ? t('admin.editItem') : t('admin.newProgramOrEvent')}
             </Text>
           </View>
 
@@ -685,13 +700,13 @@ function ContentFormModal({
               ) : (
                 <>
                   <Icon name="image-outline" size={26} color={mutedRgb} />
-                  <Text style={{ color: labelColor, fontSize: 11, marginTop: 6 }}>Add cover image</Text>
+                  <Text style={{ color: labelColor, fontSize: 11, marginTop: 6 }}>{t('admin.addCoverImage')}</Text>
                 </>
               )}
             </TouchableOpacity>
 
             {/* Type selector */}
-            {sectionLabel('Type')}
+            {sectionLabel(t('admin.type'))}
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
               {CONTENT_TYPES.map((t) => {
                 const active = type === t.value;
@@ -726,11 +741,11 @@ function ContentFormModal({
 
             {/* Name */}
             <View style={{ marginBottom: 20 }}>
-              {sectionLabel('Name')}
+              {sectionLabel(t('admin.name'))}
               <TextInput
                 value={name}
                 onChangeText={setName}
-                placeholder="e.g. Friday Youth Halaqa"
+                placeholder={t('admin.programNamePlaceholder')}
                 placeholderTextColor={placeholderColor}
                 autoCapitalize="words"
                 style={inputStyle}
@@ -739,11 +754,11 @@ function ContentFormModal({
 
             {/* Description */}
             <View style={{ marginBottom: 20 }}>
-              {sectionLabel('Description')}
+              {sectionLabel(t('admin.description'))}
               <TextInput
                 value={description}
                 onChangeText={setDescription}
-                placeholder="What is this about?"
+                placeholder={t('admin.descriptionPlaceholder')}
                 placeholderTextColor={placeholderColor}
                 multiline
                 style={{ ...inputStyle, minHeight: 44, textAlignVertical: 'top' }}
@@ -751,13 +766,13 @@ function ContentFormModal({
             </View>
 
             {/* Schedule: how often it repeats */}
-            {sectionLabel('Schedule')}
+            {sectionLabel(t('admin.schedule'))}
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
               {(
                 [
-                  { label: 'One-time', value: 'once' },
-                  { label: 'Weekly', value: 'weekly' },
-                  { label: 'Monthly', value: 'monthly' },
+                  { label: t('admin.freqOnce'), value: 'once' },
+                  { label: t('admin.freqWeekly'), value: 'weekly' },
+                  { label: t('admin.freqMonthly'), value: 'monthly' },
                 ] as { label: string; value: RecurrenceFreq }[]
               ).map((opt) => {
                 const active = freq === opt.value;
@@ -792,7 +807,7 @@ function ContentFormModal({
             {/* One-time: single date */}
             {freq === 'once' && (
               <View style={{ marginBottom: 20 }}>
-                {sectionLabel('Date')}
+                {sectionLabel(t('admin.date'))}
                 <DatePicker
                   value={startDate}
                   onChange={setStartDate}
@@ -808,17 +823,17 @@ function ContentFormModal({
             {freq === 'weekly' && (
               <>
                 <View style={{ marginBottom: 20 }}>
-                  {sectionLabel('How often')}
+                  {sectionLabel(t('admin.howOften'))}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {[
-                      { label: 'Every week', value: 1 },
-                      { label: 'Every other', value: 2 },
-                      { label: 'Every 3 weeks', value: 3 },
+                      { label: t('admin.everyWeek'), value: 1 },
+                      { label: t('admin.everyOther'), value: 2 },
+                      { label: t('admin.every3Weeks'), value: 3 },
                     ].map((o) => pill(o.label, repeatInterval === o.value, () => setRepeatInterval(o.value)))}
                   </View>
                 </View>
                 <View style={{ marginBottom: 20 }}>
-                  {sectionLabel('Repeats on')}
+                  {sectionLabel(t('admin.repeatsOn'))}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {WEEK_DAYS.map((d) => pill(d.slice(0, 3), days.includes(d), () => toggleDay(d)))}
                   </View>
@@ -830,7 +845,7 @@ function ContentFormModal({
             {freq === 'monthly' && (
               <>
                 <View style={{ marginBottom: 20 }}>
-                  {sectionLabel('Which week')}
+                  {sectionLabel(t('admin.whichWeek'))}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {WEEK_OF_MONTH_OPTIONS.map((o) =>
                       pill(o.label, weekOfMonth === o.value, () => setWeekOfMonth(o.value)),
@@ -838,17 +853,17 @@ function ContentFormModal({
                   </View>
                 </View>
                 <View style={{ marginBottom: 20 }}>
-                  {sectionLabel('On')}
+                  {sectionLabel(t('admin.on'))}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {WEEK_DAYS.map((d) => pill(d.slice(0, 3), days.includes(d), () => toggleDay(d)))}
                   </View>
                 </View>
                 <View style={{ marginBottom: 20 }}>
-                  {sectionLabel('How often')}
+                  {sectionLabel(t('admin.howOften'))}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {[
-                      { label: 'Every month', value: 1 },
-                      { label: 'Every other month', value: 2 },
+                      { label: t('admin.everyMonth'), value: 1 },
+                      { label: t('admin.everyOtherMonth'), value: 2 },
                     ].map((o) => pill(o.label, repeatInterval === o.value, () => setRepeatInterval(o.value)))}
                   </View>
                 </View>
@@ -858,7 +873,7 @@ function ContentFormModal({
             {/* Recurring: when the series starts (anchors "every other" parity) */}
             {isRecurring && (
               <View style={{ marginBottom: 20 }}>
-                {sectionLabel('Starts on')}
+                {sectionLabel(t('admin.startsOn'))}
                 <DatePicker
                   value={anchor}
                   onChange={setAnchor}
@@ -889,7 +904,7 @@ function ContentFormModal({
 
             {/* Time */}
             <View style={{ marginBottom: 20 }}>
-              {sectionLabel('Start time')}
+              {sectionLabel(t('admin.startTime'))}
               <TimePicker
                 value={startTime}
                 onChange={setStartTime}
@@ -902,7 +917,7 @@ function ContentFormModal({
 
             {/* End date (optional) */}
             <View style={{ marginBottom: 20 }}>
-              {sectionLabel('End date (optional)')}
+              {sectionLabel(t('admin.endDateOptional'))}
               <DatePicker
                 value={endDate}
                 onChange={setEndDate}
@@ -917,7 +932,7 @@ function ContentFormModal({
             {/* Speakers */}
             {speakers.length > 0 ? (
               <View style={{ marginBottom: 20 }}>
-                {sectionLabel('Speakers')}
+                {sectionLabel(t('admin.speakers'))}
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {speakers.map((sp) => {
                     const n = sp.speaker_name ?? '';
@@ -949,12 +964,12 @@ function ContentFormModal({
 
             {/* Audience */}
             <View style={{ marginBottom: 8 }}>
-              {sectionLabel('Audience (optional)')}
+              {sectionLabel(t('admin.audienceOptional'))}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {[
-                  { label: 'Kids', value: isKids, set: setIsKids },
-                  { label: '14+', value: isFourteenPlus, set: setIsFourteenPlus },
-                  { label: 'Young Professionals', value: isYoungPros, set: setIsYoungPros },
+                  { label: t('admin.audienceKids'), value: isKids, set: setIsKids },
+                  { label: t('admin.audience14Plus'), value: isFourteenPlus, set: setIsFourteenPlus },
+                  { label: t('admin.audienceYoungPros'), value: isYoungPros, set: setIsYoungPros },
                 ].map((a) => (
                   <TouchableOpacity
                     key={a.label}
@@ -988,12 +1003,12 @@ function ContentFormModal({
               style={{ height: 43, opacity: canSave ? 1 : 0.5 }}
             >
               <Text className="text-[14px] font-semibold text-primary-foreground">
-                {mutation.isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Create'}
+                {mutation.isPending ? t('admin.saving') : isEditing ? t('admin.saveChanges') : t('admin.create')}
               </Text>
             </TouchableOpacity>
             {mutation.isError && (
               <Text className="mt-2 text-center text-[11px] text-red-500">
-                {mutation.error?.message ?? 'Failed to save'}
+                {mutation.error?.message ?? t('admin.failedToSave')}
               </Text>
             )}
           </View>
