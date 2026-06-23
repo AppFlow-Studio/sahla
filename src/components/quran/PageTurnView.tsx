@@ -250,11 +250,9 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
           if (isFastFlick) {
             earlyCommitFired.value = true;
             // Anchor spring origin at the current finger position so the
-            // hand-off is continuous (no visible jump backward). Honor
-            // the live y too so a diagonal flick doesn't snap-flatten
-            // the bend right before the auto-finish kicks in.
+            // hand-off is continuous (no visible jump backward).
             touchX.value = e.x;
-            touchY.value = e.y;
+            touchY.value = startY.value;
             const targetX = goingForward
               ? direction === 'rtl' ? pageW * 1.5 : -pageW * 0.5
               : direction === 'rtl' ? 0 : pageW;
@@ -281,14 +279,13 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
           }
 
           touchX.value = e.x;
-          // touchY follows the finger so the fold actually reacts to
-          // where the swipe is. The "wall pose" we're trying to avoid
-          // is now prevented at the curl-amount level — R is driven by
-          // horizontal drag only, so even if the finger goes
-          // straight up/down, R stays at 0 and there's no curl to flip
-          // vertical. Backward is unaffected (its fold derivation
-          // hard-codes touch.y = startY for the vertical seam).
-          touchY.value = e.y;
+          // Lock touchY to the gesture's start Y so the fold axis stays
+          // perpendicular and the curl is a strict side-curl. Without this
+          // the perpendicular-bisector tilts diagonally as the finger drifts
+          // up or down, which sends the wrap off-axis and looks broken.
+          // Backward already does this via the fold derivation (which
+          // ignores touchY); doing it here covers forward too.
+          touchY.value = startY.value;
         })
         .onEnd((e) => {
           'worklet';
@@ -421,26 +418,17 @@ export const PageTurnView = forwardRef<PageTurnViewRef, PageTurnViewProps>(
       }
       const goingForward = dir === 1;
       if (goingForward) {
-        // Forward (going to next page) — corner peel. Origin anchors at
-        // the nearest real page corner so the fold tilts diagonally and
-        // the lifted region reads as a triangular dog-ear. The curl
-        // AMOUNT (R) is driven by horizontal drag DELTA from where the
-        // finger first landed — NOT by absolute touchX. Using touchX
-        // directly would make R = startX/π pop a curl in the instant
-        // the finger touches the page mid-screen. The delta is 0 at
-        // gesture start and grows as the finger swipes in the commit
-        // direction, so the curl starts at ~0 and grows smoothly.
+        // Forward (going to next page) — corner peel: origin snaps to the
+        // actual leading-edge page corner (TL/BL for RTL, TR/BR for LTR)
+        // so the lifted pivot is a real paper corner and the perpendicular
+        // edge stroke can read it as a sharp triangular tip. Touch follows
+        // the finger freely; no Y clamp.
         const origin = originCorner(startY.value, w, h, direction);
-        const horizontalDrag =
-          direction === 'rtl'
-            ? touchX.value - startX.value
-            : startX.value - touchX.value;
         return computeFold(
           origin.x,
           origin.y,
           touchX.value,
           touchY.value,
-          Math.max(0, horizontalDrag),
         );
       }
       // Backward (going to previous page) — vertical-seam sweep: origin
