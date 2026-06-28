@@ -16,8 +16,10 @@ import DonateCard from "./DonateCard";
 import LanguageRow from "./LanguageRow";
 import Notifications from "./Notifications";
 import PersonalizedCard from "./PersonalizedCard";
+import ProfileSetupRow from "./ProfileSetupRow";
 import RowItem from "./RowItem";
 import SectionHeader from "./SectionHeader";
+import { useSetupCompleteness } from "@/src/hooks/use-setup-completeness";
 
 const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: replace with real App Store URL
 
@@ -40,6 +42,9 @@ const ADMIN_ICON = "shield";
 type Props = {
   onPressPersonalized: () => void;
   onPressNotifications: () => void;
+  /** Open the EditProfile sheet — lifted to the parent so the header CTA and
+   *  the new Profile setup row trigger the same instance. */
+  onPressCompleteProfile: () => void;
 };
 
 function SectionRule() {
@@ -128,6 +133,7 @@ function DeleteAccountButton() {
 export default function ProfileBody({
   onPressPersonalized,
   onPressNotifications,
+  onPressCompleteProfile,
 }: Props) {
   const { t } = useTranslation();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -137,6 +143,7 @@ export default function ProfileBody({
   const appVersion = useAppVersion();
   const updates = useAppUpdates();
   const { checkAndNotify } = useUpdatesActions();
+  const setup = useSetupCompleteness();
 
   const handleInviteFriends = useCallback(async () => {
     try {
@@ -161,7 +168,16 @@ export default function ProfileBody({
         ...(Platform.OS === "android" ? { elevation: 3 } : {}),
       }}
     >
-      <PersonalizedCard onPress={onPressPersonalized} />
+      {/* Setup affordances — each row disappears once the user has completed
+          it, and the IncompleteBadge clears in-session via useSetupCompleteness. */}
+      {!setup.profile ? (
+        <View style={{ marginBottom: 12 }}>
+          <ProfileSetupRow onPress={onPressCompleteProfile} />
+        </View>
+      ) : null}
+      {!setup.personalization ? (
+        <PersonalizedCard onPress={onPressPersonalized} incomplete />
+      ) : null}
 
       {/* COMMUNITY */}
       <View className="flex-col">
@@ -217,7 +233,9 @@ export default function ProfileBody({
       {/* NOTIFICATIONS */}
       <View className="flex-col gap-2">
         <SectionHeader title={t('profile.sectionNotifications')} />
-        <Notifications onEnablePress={onPressNotifications} />
+        {!setup.notifications ? (
+          <Notifications onEnablePress={onPressNotifications} incomplete />
+        ) : null}
         <View className="flex-col">
           <RowItem
             icon={PRAYER_ALERTS_ICON}

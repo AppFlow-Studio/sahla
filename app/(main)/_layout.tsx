@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
+import { Badge, Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
 
 import { NotificationPermissionPrompt } from '@/src/components/notifications/permission-prompt';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useRegisterPushToken } from '@/src/hooks/use-register-push-token';
+import { useSetupCompleteness } from '@/src/hooks/use-setup-completeness';
 
 // Each tab uses a matched Ionicons outline/filled pair so the active tab simply
 // fills in the same silhouette (rather than swapping to a different icon shape).
@@ -15,6 +16,7 @@ export default function TabLayout() {
   useRegisterPushToken();
   const { t } = useTranslation();
   const { colors } = useMasjidConfig();
+  const { incompleteCount } = useSetupCompleteness();
   // `accent` (gold marigold) is the app's highlight color — used for the donate
   // button, prayer chips, dates, etc. `primary` is a near-black green, too dark
   // to read as an active-tab tint.
@@ -67,6 +69,7 @@ export default function TabLayout() {
               selected: <VectorIcon family={Ionicons} name="person" />,
             }}
           />
+          {incompleteCount > 0 ? <Badge>{String(incompleteCount)}</Badge> : null}
         </NativeTabs.Trigger>
       </NativeTabs>
     </>

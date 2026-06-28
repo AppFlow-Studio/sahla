@@ -5,12 +5,15 @@ import { Icon } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { IncompleteBadge } from '@/src/components/profile/IncompleteBadge';
 
 type Props = {
     onPress: () => void;
+    /** Show the red "1" pill — set by useSetupCompleteness when personalization is incomplete. */
+    incomplete?: boolean;
 }
 
-export default function PersonalizedCard({ onPress }: Props) {
+export default function PersonalizedCard({ onPress, incomplete }: Props) {
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
@@ -54,7 +57,10 @@ export default function PersonalizedCard({ onPress }: Props) {
             </View>
         </View>
 
-        <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={fg40} />
+        <View className="flex-row items-center gap-2">
+          {incomplete ? <IncompleteBadge /> : null}
+          <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={fg40} />
+        </View>
     </Pressable>
   )
 }
