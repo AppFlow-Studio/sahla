@@ -1,8 +1,8 @@
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
-const BUSH = "#0A261E";
-const MUTED = "rgba(10,38,30,0.6)";
-const RULE = "#0A261E";
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 type Props = {
   title: string;
@@ -11,29 +11,29 @@ type Props = {
   onPressAction?: () => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 export default function SectionTitle({
   title,
   actionLabel,
   actionLeading,
   onPressAction,
 }: Props) {
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+
   return (
     <View className="px-5 pt-3">
       <View className="flex-row items-center justify-between pb-3">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "600",
             letterSpacing: 0.5,
             textTransform: "uppercase",
-            color: BUSH,
+            color: fgRgb,
           }}
         >
           {title}
@@ -47,18 +47,20 @@ export default function SectionTitle({
             {actionLeading}
             <Text
               style={{
-                fontFamily: platformUiFont,
+                fontFamily: fonts.body,
                 fontSize: 10,
-                color: MUTED,
+                color: mutedFgRgb,
                 textTransform: "uppercase",
               }}
             >
-              {actionLeading ? actionLabel : `${actionLabel} →`}
+              {actionLeading
+                ? actionLabel
+                : `${actionLabel} ${isRTL ? "\u2190" : "\u2192"}`}
             </Text>
           </Pressable>
         ) : null}
       </View>
-      <View style={{ height: 1, backgroundColor: RULE }} />
+      <View style={{ height: 1, backgroundColor: fgRgb }} />
     </View>
   );
 }

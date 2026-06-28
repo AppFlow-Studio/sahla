@@ -1,22 +1,26 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
 import { OptionRow } from '@/src/components/personalization/option-row';
 import { PersonalizationScaffold } from '@/src/components/personalization/scaffold';
 import { useUserPreferences } from '@/src/hooks/use-user-preferences';
 
+// `value` is persisted to the DB (attendance_reasons text[]) — never translate
+// it. `labelKey` resolves to the displayed, localized label only.
 const OPTIONS = [
-  'Prayer & Worship',
-  'Learning & lectures',
-  'Community events',
-  'Youth Programs',
-  'Volunteering',
-  'Donation & zakat',
+  { value: 'Prayer & Worship', labelKey: 'personalization.reasonPrayerWorship' },
+  { value: 'Learning & lectures', labelKey: 'personalization.reasonLearningLectures' },
+  { value: 'Community events', labelKey: 'personalization.reasonCommunityEvents' },
+  { value: 'Youth Programs', labelKey: 'personalization.reasonYouthPrograms' },
+  { value: 'Volunteering', labelKey: 'personalization.reasonVolunteering' },
+  { value: 'Donation & zakat', labelKey: 'personalization.reasonDonationZakat' },
 ] as const;
 
 export default function ReasonsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { preferences, status, upsertAttendanceReasons } = useUserPreferences();
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -39,7 +43,10 @@ export default function ReasonsScreen() {
       await upsertAttendanceReasons.mutateAsync(selected);
       router.push('/(personalization)/programs-for');
     } catch (e) {
-      Alert.alert('Could not save', e instanceof Error ? e.message : 'Unknown error');
+      Alert.alert(
+        t('personalization.couldNotSave'),
+        e instanceof Error ? e.message : t('personalization.unknownError'),
+      );
     }
   };
 
@@ -48,9 +55,13 @@ export default function ReasonsScreen() {
   return (
     <PersonalizationScaffold
       step={1}
-      title={`What bring you to\nthe Masjid?`}
-      body="Select all that apply This helps us show you relevant programs and events"
-      primaryLabel={upsertAttendanceReasons.isPending ? 'Saving…' : 'Continue →'}
+      title={t('personalization.reasonsTitle')}
+      body={t('personalization.selectAllApply')}
+      primaryLabel={
+        upsertAttendanceReasons.isPending
+          ? t('personalization.saving')
+          : t('personalization.continue')
+      }
       onPrimary={handleContinue}
       primaryDisabled={upsertAttendanceReasons.isPending || status === 'loading'}
       onSkip={handleSkip}
@@ -58,10 +69,10 @@ export default function ReasonsScreen() {
       <View>
         {OPTIONS.map((option, i) => (
           <OptionRow
-            key={option}
-            label={option}
-            selected={selected.includes(option)}
-            onToggle={() => toggle(option)}
+            key={option.value}
+            label={t(option.labelKey)}
+            selected={selected.includes(option.value)}
+            onToggle={() => toggle(option.value)}
             showDivider={i < OPTIONS.length - 1}
           />
         ))}

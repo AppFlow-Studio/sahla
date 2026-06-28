@@ -1,27 +1,29 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
+import { Icon } from '@/src/components/ui/icon';
+import type { IconName } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import {
-  MOCK_JUMMAH_DATE,
-  MOCK_JUMMAH_SCHEDULE,
-  type JummahSlot,
-} from '@/src/data/mock-home';
+import { useJummahSchedule, type JummahSlot } from '@/src/hooks/use-jummah-schedule';
 import { JummahDetailSheet } from './jummah-detail-sheet';
 
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-
 export function JummahScheduleCard() {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
+  const { slots, date } = useJummahSchedule();
   const accent = colors.accent.replace(/ /g, ',');
   const fg = colors.primaryForeground.replace(/ /g, ',');
   const accentRgb = `rgb(${accent})`;
   const textRgb = `rgb(${fg})`;
   const [selected, setSelected] = useState<JummahSlot | null>(null);
 
+  if (slots.length === 0) return null;
+
   return (
-    <View className="px-5 pt-2">
+    <View className="px-5 pb-5 pt-2">
       <View
         className="self-start"
         style={{
@@ -32,23 +34,23 @@ export function JummahScheduleCard() {
           borderRadius: 100,
         }}
       >
-        <Text style={{ color: accentRgb, fontSize: 10 }}>{MOCK_JUMMAH_DATE}</Text>
+        <Text style={{ color: accentRgb, fontSize: 10 }}>{date}</Text>
       </View>
 
       <Text
         style={{
           color: textRgb,
           fontSize: 20,
-          fontFamily: 'PlayfairDisplay_400Regular',
+          fontFamily: fonts.displayRegular,
           marginTop: 10,
           marginBottom: 14,
         }}
       >
-        Jummah Schedule
+        {t('home.jummahSchedule')}
       </Text>
 
       <View style={{ gap: 8 }}>
-        {MOCK_JUMMAH_SCHEDULE.map((slot) => (
+        {slots.map((slot) => (
           <TouchableOpacity
             key={slot.id}
             activeOpacity={0.7}
@@ -70,10 +72,10 @@ export function JummahScheduleCard() {
                 height: 34,
                 borderRadius: 17,
                 backgroundColor: `rgba(${accent},0.18)`,
-                marginRight: 12,
+                marginEnd: 12,
               }}
             >
-              <MaterialCommunityIcons
+              <Icon
                 name={slot.icon as IconName}
                 size={18}
                 color={accentRgb}

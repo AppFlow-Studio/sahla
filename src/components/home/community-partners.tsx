@@ -1,75 +1,40 @@
-import { View, Text, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { MOCK_COMMUNITY_PARTNER } from '@/src/data/mock-home';
-
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+import { useCommunityPartners } from '@/src/hooks/use-community-partners';
+import { CommunityPartnersCarousel } from '@/src/components/community-partners-carousel';
 
 export function CommunityPartners() {
+  const { t } = useTranslation();
+  const { data } = useCommunityPartners();
   const { colors } = useMasjidConfig();
-  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
-  const partner = MOCK_COMMUNITY_PARTNER;
+  const partners = data ?? [];
+
+  // Nothing approved yet → hide the section entirely.
+  if (partners.length === 0) return null;
+
+  const fg = colors.foreground.replace(/ /g, ',');
 
   return (
     <View>
       <View className="pb-3">
         <Text className="text-[13px] font-semibold uppercase tracking-[1px] text-foreground">
-          Community partners
+          {t('home.communityPartners')}
         </Text>
       </View>
 
       <View className="border-t border-foreground pt-4">
-        <View className="overflow-hidden rounded-2xl bg-muted">
-          <View className="h-[189px] items-center justify-center bg-primary/10">
-            <MaterialCommunityIcons
-              name={partner.icon as IconName}
-              size={72}
-              color={fgRgb}
-            />
-            <Text
-              className="mt-2 text-[18px] font-bold text-foreground"
-              style={{ fontFamily: 'Georgia' }}
-            >
-              {partner.name}
-            </Text>
-          </View>
-
-          <View className="flex-row items-center justify-between px-4 py-4">
-            <View className="flex-1">
-              <Text className="text-[10px] text-foreground">{partner.address}</Text>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                className="mt-2 flex-row items-center self-start rounded-full border border-foreground px-2.5 py-1"
-              >
-                <MaterialCommunityIcons
-                  name="map-marker-outline"
-                  size={12}
-                  color={fgRgb}
-                />
-                <Text className="ml-1 text-[9px] font-semibold text-foreground">
-                  Directions
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View className="flex-row gap-2">
-              <IconPill icon="phone" />
-              <IconPill icon="web" />
-              <IconPill icon="message-text-outline" />
-            </View>
-          </View>
-        </View>
+        <CommunityPartnersCarousel
+          partners={partners}
+          colors={{
+            text: `rgb(${fg})`,
+            cardBg: `rgb(${colors.muted.replace(/ /g, ',')})`,
+            fallbackBg: `rgb(${colors.primary.replace(/ /g, ',')} / 0.1)`,
+            border: `rgb(${fg} / 0.2)`,
+          }}
+        />
       </View>
-    </View>
-  );
-}
-
-function IconPill({ icon }: { icon: string }) {
-  const { colors } = useMasjidConfig();
-  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
-  return (
-    <View className="h-[26px] w-[26px] items-center justify-center rounded-full border border-foreground/20">
-      <MaterialCommunityIcons name={icon as IconName} size={14} color={fgRgb} />
     </View>
   );
 }

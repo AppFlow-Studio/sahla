@@ -1,20 +1,13 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
+import { Icon } from "@/src/components/ui/icon";
 import { Image } from "expo-image";
-import { Platform, Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Pressable, Text, View } from "react-native";
 
-const BUSH = "#0A261E";
-const MUTED = "rgba(10,38,30,0.6)";
-const GOLD = "#B8922A";
-const PILL_BG = "rgba(184,146,42,0.2)";
-const SECTION_LINE = "#0A261E";
-const ROW_DIVIDER = "rgba(10,38,30,0.1)";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useUserPreferences } from "@/src/hooks/use-user-preferences";
 
 export type ForYouRowItem = {
   id: string;
@@ -31,72 +24,122 @@ type Props = {
   onPressEdit?: () => void;
 };
 
-function CustomizedPill({ onPress }: { onPress?: () => void }) {
+type PrefState = "none" | "started" | "complete";
+
+function CustomizedPill({
+  onPress,
+  prefState,
+}: {
+  onPress?: () => void;
+  prefState: PrefState;
+}) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+  const accent = colors.accent.replace(/ /g, ",");
+  const pillBg = `rgba(${accent}, 0.2)`;
+
+  const copy = {
+    complete: {
+      action: t("discover.prefCompleteAction"),
+      title: t("discover.prefCompleteTitle"),
+      subtitle: t("discover.prefCompleteSubtitle"),
+      a11y: t("discover.prefCompleteA11y"),
+    },
+    started: {
+      action: t("discover.prefStartedAction"),
+      title: t("discover.prefStartedTitle"),
+      subtitle: t("discover.prefStartedSubtitle"),
+      a11y: t("discover.prefStartedA11y"),
+    },
+    none: {
+      action: t("discover.prefNoneAction"),
+      title: t("discover.prefNoneTitle"),
+      subtitle: t("discover.prefNoneSubtitle"),
+      a11y: t("discover.prefNoneA11y"),
+    },
+  }[prefState];
+
+  const { action: actionLabel, title, subtitle } = copy;
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Edit your preferences"
+      accessibilityLabel={copy.a11y}
       className="flex-row items-center rounded-full px-4 py-3"
-      style={{ backgroundColor: PILL_BG }}
+      style={{ backgroundColor: pillBg }}
     >
-      <Feather name="sun" size={18} color={GOLD} />
-      <View className="ml-3 flex-1">
+      <Icon name="fingerprint" size={18} color={accentRgb} />
+      <View className="ms-3 flex-1">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 12,
             fontWeight: "600",
-            color: BUSH,
+            color: fgRgb,
             lineHeight: 16,
           }}
         >
-          Customized for you
+          {title}
         </Text>
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 11,
-            color: MUTED,
+            color: mutedFgRgb,
             lineHeight: 14,
             marginTop: 2,
           }}
         >
-          Based on your preferences
+          {subtitle}
         </Text>
       </View>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.body,
           fontSize: 12,
-          color: GOLD,
-          marginRight: 4,
+          color: accentRgb,
+          marginEnd: 4,
         }}
       >
-        Edit
+        {actionLabel}
       </Text>
-      <AntDesign name="right" size={10} color={GOLD} />
+      <AntDesign
+        name={isRTL ? "left" : "right"}
+        size={10}
+        color={accentRgb}
+      />
     </Pressable>
   );
 }
 
 function SectionHeading({ label }: { label: string }) {
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+
   return (
     <View className="px-6">
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 13,
           fontWeight: "700",
           letterSpacing: 0.6,
           textTransform: "uppercase",
-          color: BUSH,
+          color: fgRgb,
           marginBottom: 6,
         }}
       >
         {label}
       </Text>
-      <View style={{ height: 1, backgroundColor: SECTION_LINE }} />
+      <View style={{ height: 1, backgroundColor: fgRgb }} />
     </View>
   );
 }
@@ -110,6 +153,16 @@ function Row({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+  const rowDivider = `rgba(${fg}, 0.1)`;
+
   return (
     <View>
       <Pressable
@@ -125,7 +178,7 @@ function Row({
             height: 50,
             borderRadius: 10,
             overflow: "hidden",
-            backgroundColor: "#EFEDE6",
+            backgroundColor: mutedRgb,
           }}
         >
           {item.image ? (
@@ -137,14 +190,14 @@ function Row({
           ) : null}
         </View>
 
-        <View className="ml-3 flex-1">
+        <View className="ms-3 flex-1">
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
-              color: BUSH,
+              color: fgRgb,
               lineHeight: 16,
             }}
           >
@@ -153,34 +206,38 @@ function Row({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.body,
               fontSize: 11,
               lineHeight: 16,
               marginTop: 2,
             }}
           >
             {item.speaker ? (
-              <Text style={{ color: MUTED }}>{item.speaker}</Text>
+              <Text style={{ color: mutedFgRgb }}>{item.speaker}</Text>
             ) : null}
             {item.speaker && item.category ? (
-              <Text style={{ color: MUTED }}> • </Text>
+              <Text style={{ color: mutedFgRgb }}> {"\u2022"} </Text>
             ) : null}
             {item.category ? (
-              <Text style={{ color: GOLD, fontWeight: "500" }}>
+              <Text style={{ color: accentRgb, fontWeight: "500" }}>
                 {item.category}
               </Text>
             ) : null}
           </Text>
         </View>
 
-        <AntDesign name="right" size={12} color={MUTED} />
+        <AntDesign
+          name={isRTL ? "left" : "right"}
+          size={12}
+          color={mutedFgRgb}
+        />
       </Pressable>
 
       {showDivider ? (
         <View
           style={{
             height: 1,
-            backgroundColor: ROW_DIVIDER,
+            backgroundColor: rowDivider,
             marginHorizontal: 24,
           }}
         />
@@ -195,15 +252,39 @@ export default function ForYouContent({
   onPressItem,
   onPressEdit,
 }: Props) {
+  const { t } = useTranslation();
+  const { preferences } = useUserPreferences();
+
+  // Three states for the banner:
+  //  - complete : finished the flow (reached all-set) → "Edit"
+  //  - started  : saved at least one step but didn't finish → "Continue"
+  //  - none     : nothing yet → "Get started"
+  // "started" reads only personalization-exclusive columns so a user who did
+  // the initial onboarding (which writes knowledge level / demographics) isn't
+  // mistaken for having started this flow.
+  const completed = !!preferences?.personalization_completed_at;
+  const started =
+    !!preferences &&
+    ((preferences.attendance_reasons?.length ?? 0) > 0 ||
+      (preferences.programs_for?.length ?? 0) > 0 ||
+      (preferences.attendance_windows?.length ?? 0) > 0 ||
+      (preferences.additional_preferences?.length ?? 0) > 0);
+
+  const prefState: PrefState = completed
+    ? "complete"
+    : started
+      ? "started"
+      : "none";
+
   return (
     <View>
       <View className="px-6" style={{ marginTop: 33 }}>
-        <CustomizedPill onPress={onPressEdit} />
+        <CustomizedPill onPress={onPressEdit} prefState={prefState} />
       </View>
 
       {events.length > 0 ? (
         <View className="mt-7">
-          <SectionHeading label="Events for you" />
+          <SectionHeading label={t("discover.eventsForYou")} />
           <View className="mt-2">
             {events.map((item, idx) => (
               <Row
@@ -219,7 +300,7 @@ export default function ForYouContent({
 
       {programs.length > 0 ? (
         <View className="mt-7">
-          <SectionHeading label="Programs for you" />
+          <SectionHeading label={t("discover.programsForYou")} />
           <View className="mt-2">
             {programs.map((item, idx) => (
               <Row

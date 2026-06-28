@@ -1,10 +1,17 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
-import { router, Stack } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { router, Stack, useFocusEffect } from 'expo-router';
+
+import { useTranslation } from 'react-i18next';
+
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -12,14 +19,18 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
+import { Icon, type IconName } from '@/src/components/ui/icon';
 import QuranScreen from '@/src/screens/QuranScreen';
+import { PrayerNotificationSheet } from '@/src/components/prayer/prayer-notification-sheet';
+import { CommunityPartnersCarousel } from '@/src/components/community-partners-carousel';
+import { useCommunityPartners } from '@/src/hooks/use-community-partners';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { usePrayerTimes, type PrayerEntry } from '@/src/hooks/use-prayer-times';
+import { usePrayerAlerts, type PrayerName } from '@/src/hooks/use-prayer-alerts';
+import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 import { useTrackerVersion } from '@/src/hooks/use-tracker';
-import { getHijriDate } from '@/src/lib/hijri';
 import { getLastViewed } from '@/src/lib/quran-tracker';
 import {
   getGoalForPeriod,
@@ -45,21 +56,23 @@ type PrayerRow = {
 };
 
 function buildPrayerRows(
-  items: PrayerEntry[],
-  countdownLabel: string | null,
+  items: { name: string; athan: string; iqamah: string; status: Status }[],
+  nextPrayer: { name: string; timeRemaining: string } | null,
+  t: (key: string, opts?: Record<string, unknown>) => string
 ): PrayerRow[] {
-  return items.map((p) => ({
-    name: p.name,
-    athan: p.athan,
-    iqamah: p.iqamah,
-    status: p.status,
-    statusLabel:
-      p.status === 'passed'
-        ? 'Passed'
-        : p.status === 'next' && countdownLabel
-          ? `Next in ${countdownLabel}`
-          : '',
-  }));
+  return items.map((p) => {
+    let statusLabel = '';
+    if (p.status === 'passed') statusLabel = t('prayer.passed');
+    if (p.status === 'next' && nextPrayer)
+      statusLabel = t('prayer.nextIn', { time: nextPrayer.timeRemaining });
+    return {
+      name: p.name,
+      athan: p.athan,
+      iqamah: p.iqamah,
+      status: p.status,
+      statusLabel,
+    };
+  });
 }
 
 type Palette = {
@@ -120,17 +133,42 @@ function usePalette(): Palette {
 }
 
 const STARS = [
-  { x: 14, y: 12, size: 10, max: 1, delay: 0, duration: 1600 },
-  { x: 72, y: 6, size: 6, max: 0.9, delay: 800, duration: 2200 },
-  { x: 188, y: 2, size: 7, max: 1, delay: 400, duration: 1900 },
-  { x: 288, y: 8, size: 12, max: 1, delay: 1200, duration: 2400 },
-  { x: 356, y: 18, size: 8, max: 0.95, delay: 200, duration: 2000 },
-  { x: 8, y: 70, size: 6, max: 0.85, delay: 1500, duration: 1700 },
-  { x: 22, y: 190, size: 7, max: 0.9, delay: 600, duration: 2100 },
-  { x: 360, y: 70, size: 9, max: 1, delay: 1000, duration: 2300 },
-  { x: 352, y: 200, size: 5, max: 0.8, delay: 300, duration: 1800 },
-  { x: 4, y: 300, size: 5, max: 0.75, delay: 1400, duration: 2000 },
-  { x: 362, y: 300, size: 6, max: 0.85, delay: 900, duration: 2200 },
+  // Highest — deep pull-to-refresh zone
+  { x: 60, y: -160, size: 6, max: 0.85, delay: 400, duration: 4200 },
+  { x: 180, y: -170, size: 9, max: 1, delay: 1600, duration: 3800 },
+  { x: 300, y: -155, size: 5, max: 0.8, delay: 2800, duration: 4600 },
+  { x: 20, y: -145, size: 7, max: 0.9, delay: 1200, duration: 4000 },
+  { x: 350, y: -165, size: 8, max: 0.95, delay: 2000, duration: 3600 },
+  { x: 120, y: -140, size: 5, max: 0.75, delay: 3200, duration: 4400 },
+  { x: 240, y: -150, size: 10, max: 1, delay: 800, duration: 4800 },
+  // Upper — visible on normal overscroll
+  { x: 50, y: -115, size: 7, max: 0.9, delay: 2400, duration: 4000 },
+  { x: 170, y: -105, size: 5, max: 0.8, delay: 600, duration: 4400 },
+  { x: 280, y: -120, size: 8, max: 0.95, delay: 1800, duration: 3400 },
+  { x: 360, y: -100, size: 6, max: 0.85, delay: 3000, duration: 4200 },
+  { x: 15, y: -95, size: 9, max: 1, delay: 1000, duration: 3800 },
+  { x: 220, y: -90, size: 5, max: 0.75, delay: 2200, duration: 4600 },
+  // Mid-upper — visible on pull-to-refresh
+  { x: 40, y: -60, size: 5, max: 0.8, delay: 600, duration: 4000 },
+  { x: 150, y: -55, size: 8, max: 0.9, delay: 2200, duration: 3600 },
+  { x: 260, y: -65, size: 6, max: 0.85, delay: 1400, duration: 4400 },
+  { x: 340, y: -50, size: 7, max: 0.95, delay: 200, duration: 3800 },
+  { x: 90, y: -35, size: 10, max: 1, delay: 1000, duration: 4800 },
+  { x: 210, y: -30, size: 5, max: 0.75, delay: 2600, duration: 4200 },
+  { x: 320, y: -25, size: 9, max: 0.9, delay: 1800, duration: 3400 },
+  { x: 10, y: -40, size: 6, max: 0.85, delay: 3200, duration: 4600 },
+  // Original top row
+  { x: 14, y: 12, size: 10, max: 1, delay: 0, duration: 3200 },
+  { x: 72, y: 6, size: 6, max: 0.9, delay: 1600, duration: 4400 },
+  { x: 188, y: 2, size: 7, max: 1, delay: 800, duration: 3800 },
+  { x: 288, y: 8, size: 12, max: 1, delay: 2400, duration: 4800 },
+  { x: 356, y: 18, size: 8, max: 0.95, delay: 400, duration: 4000 },
+  { x: 8, y: 70, size: 6, max: 0.85, delay: 3000, duration: 3400 },
+  { x: 22, y: 190, size: 7, max: 0.9, delay: 1200, duration: 4200 },
+  { x: 360, y: 70, size: 9, max: 1, delay: 2000, duration: 4600 },
+  { x: 352, y: 200, size: 5, max: 0.8, delay: 600, duration: 3600 },
+  { x: 4, y: 300, size: 5, max: 0.75, delay: 2800, duration: 4000 },
+  { x: 362, y: 300, size: 6, max: 0.85, delay: 1800, duration: 4400 },
 ];
 
 function parseTimeToHours(time: string): number {
@@ -240,7 +278,7 @@ function PrayerDots({
       pointerEvents="none"
       style={{ position: 'absolute', width: size, height: size }}
     >
-      {prayers.map((p) => {
+      {prayers.map((p, idx) => {
         const h = parseTimeToHours(p.athan);
         const angleRad = ((h / 24) * 360 - 90) * (Math.PI / 180);
         const x = cx + ringR * Math.cos(angleRad);
@@ -250,7 +288,7 @@ function PrayerDots({
         const dotSize = isNext ? 16 : 13;
         return (
           <View
-            key={p.name}
+            key={`${p.name}-${idx}`}
             style={{
               position: 'absolute',
               left: x - dotSize / 2,
@@ -269,7 +307,7 @@ function PrayerDots({
                 width: dotSize,
                 height: dotSize,
                 backgroundColor: isPassed
-                  ? c.text
+                  ? c.muted
                   : isNext
                     ? c.goldGlass
                     : 'transparent',
@@ -344,7 +382,7 @@ function TwinklingStar({
 
 function StarField({ color }: { color: string }) {
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 360 }}>
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 360, overflow: 'visible' }}>
       {STARS.map((s, i) => (
         <TwinklingStar key={i} star={s} color={color} />
       ))}
@@ -388,13 +426,16 @@ function ProgressRing({
   );
 }
 
-const PERIOD_OPTIONS: { key: Period; short: string; long: string }[] = [
-  { key: 'day', short: 'Daily', long: 'today' },
-  { key: 'month', short: 'Monthly', long: 'this month' },
-  { key: 'year', short: 'Yearly', long: 'this year' },
+const PERIOD_OPTIONS: { key: Period; shortKey: string; longKey: string }[] = [
+  { key: 'day', shortKey: 'periodDaily', longKey: 'periodToday' },
+  { key: 'month', shortKey: 'periodMonthly', longKey: 'periodThisMonth' },
+  { key: 'year', shortKey: 'periodYearly', longKey: 'periodThisYear' },
 ];
 
 function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueReading?: () => void }) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
+  const isRTL = useIsRTL();
   const [period, setPeriod] = useState<Period>('day');
   const version = useTrackerVersion();
 
@@ -406,12 +447,16 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
       pages: p,
       goal: g,
       percent: Math.min(1, p / g),
-      periodLabel: PERIOD_OPTIONS.find((o) => o.key === period)!.long,
+      periodLabel: t(`prayer.${PERIOD_OPTIONS.find((o) => o.key === period)!.longKey}`),
     };
-  }, [period, version]);
+  }, [period, version, t]);
 
   const remaining = Math.max(0, goal - pages);
   const ringSize = 64;
+
+  // No saved last-viewed position → the user hasn't read yet, so prompt them to
+  // "Start Reading" rather than "Continue Reading".
+  const hasRead = useMemo(() => getLastViewed() != null, [version]);
 
   return (
     <View
@@ -432,14 +477,14 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
             borderRadius: 17,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: 12,
+            marginEnd: 12,
             overflow: 'hidden',
           }}
         >
-          <MaterialCommunityIcons name="book-open-page-variant" size={16} color={c.gold} />
+          <Icon name="book-open-page-variant" size={16} color={c.gold} />
         </GlassView>
-        <Text style={{ color: c.text, fontSize: 24, fontFamily: 'PlayfairDisplay_400Regular', fontWeight: '400' }}>
-          Quran Goal
+        <Text style={{ color: c.text, fontSize: 24, fontFamily: fonts.displayRegular, fontWeight: '400' }}>
+          {t('prayer.quranGoal')}
         </Text>
       </View>
 
@@ -452,14 +497,14 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: c.text, fontSize: 20, fontWeight: '700' }}>
-            {pages} / {goal} pages
+            {t('prayer.pagesProgress', { pages, goal })}
           </Text>
           <Text style={{ color: c.muted, fontSize: 12, marginTop: 6 }}>
             {remaining === 0 ? (
-              <Text style={{ color: c.gold }}>Goal reached {periodLabel}</Text>
+              <Text style={{ color: c.gold }}>{t('prayer.goalReached', { period: periodLabel })}</Text>
             ) : (
               <>
-                {periodLabel} <Text style={{ color: c.gold }}>• {remaining} left</Text>
+                {periodLabel} <Text style={{ color: c.gold }}>{t('prayer.pagesLeft', { count: remaining })}</Text>
               </>
             )}
           </Text>
@@ -487,11 +532,11 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
               transform: [{ scale: pressed ? 0.97 : 1 }],
             })}
           >
-            <MaterialCommunityIcons name="book-open-variant" size={15} color={c.depth} />
+            <Icon name="book-open-variant" size={15} color={c.depth} />
             <Text style={{ color: c.depth, fontSize: 13.5, fontWeight: '700', letterSpacing: 0.2 }}>
-              Continue Reading
+              {hasRead ? t('prayer.continueReading') : t('prayer.startReading')}
             </Text>
-            <MaterialCommunityIcons name="arrow-right" size={15} color={c.gold} />
+            <Icon name={isRTL ? 'arrow-back' : 'arrow-forward'} size={15} color={c.gold} />
           </Pressable>
         </View>
 
@@ -517,7 +562,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
               position: 'absolute',
               color: c.text,
               fontSize: 22,
-              fontFamily: 'CormorantGaramond_400Regular',
+              fontFamily: fonts.displayRegular,
             }}
           >
             {Math.round(percent * 100)}%
@@ -548,6 +593,7 @@ function PeriodToggle({
   value: Period;
   onChange: (p: Period) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -580,7 +626,7 @@ function PeriodToggle({
                 letterSpacing: 0.5,
               }}
             >
-              {opt.short}
+              {t(`prayer.${opt.shortKey}`)}
             </Text>
           </Pressable>
         );
@@ -590,26 +636,29 @@ function PeriodToggle({
 }
 
 function RemembrancesSection({ c }: { c: Palette }) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
+  const meta = t('prayer.athkarMeta', { count: 42, minutes: 12 });
   return (
     <View style={{ marginTop: 18, marginBottom: 16 }}>
       <Text
         style={{
           color: c.text,
           fontSize: 24,
-          fontFamily: 'PlayfairDisplay_400Regular',
+          fontFamily: fonts.displayRegular,
           fontWeight: '400',
           marginBottom: 22,
         }}
       >
-        Remembrances
+        {t('prayer.remembrances')}
       </Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <RemembranceItem
           c={c}
           icon="weather-sunny"
-          title="Morning Athkar"
-          meta="42 Prayers • 12m"
+          title={t('prayer.morningAthkar')}
+          meta={meta}
         />
         <View
           style={{
@@ -622,8 +671,8 @@ function RemembrancesSection({ c }: { c: Palette }) {
         <RemembranceItem
           c={c}
           icon="moon-waning-crescent"
-          title="Evening Athkar"
-          meta="42 Prayers • 12m"
+          title={t('prayer.eveningAthkar')}
+          meta={meta}
         />
       </View>
     </View>
@@ -637,13 +686,13 @@ function RemembranceItem({
   meta,
 }: {
   c: Palette;
-  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  icon: IconName;
   title: string;
   meta: string;
 }) {
   return (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-      <MaterialCommunityIcons name={icon} size={18} color={c.gold} style={{ marginRight: 10 }} />
+      <Icon name={icon} size={18} color={c.gold} style={{ marginEnd: 10 }} />
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.text, fontSize: 13, fontWeight: '600' }}>{title}</Text>
         <Text style={{ color: c.muted, fontSize: 11, marginTop: 2 }}>{meta}</Text>
@@ -653,15 +702,12 @@ function RemembranceItem({
 }
 
 function CommunityPartnersSection({ c }: { c: Palette }) {
-  const iconBtn = {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: c.border20,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  };
+  const { t } = useTranslation();
+  const { data } = useCommunityPartners();
+  const partners = data ?? [];
+
+  // Nothing approved yet → hide the section entirely.
+  if (partners.length === 0) return null;
 
   return (
     <View style={{ marginTop: 32 }}>
@@ -675,99 +721,27 @@ function CommunityPartnersSection({ c }: { c: Palette }) {
           marginBottom: 16,
         }}
       >
-        <Text
-          style={{
-            color: c.text,
-            fontSize: 12,
-            fontWeight: '700',
-            letterSpacing: 2,
-          }}
-        >
-          COMMUNITY PARTNERS
+        <Text style={{ color: c.text, fontSize: 12, fontWeight: '700', letterSpacing: 2 }}>
+          {t('prayer.communityPartners')}
         </Text>
       </View>
 
-      <View
-        style={{
-          borderRadius: 20,
-          overflow: 'hidden',
-          backgroundColor: c.depth35,
+      <CommunityPartnersCarousel
+        partners={partners}
+        colors={{
+          text: c.text,
+          cardBg: c.depth35,
+          fallbackBg: c.iconBg,
+          border: c.border20,
         }}
-      >
-        <Image
-          source={{
-            uri: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=60',
-          }}
-          style={{ width: '100%', aspectRatio: 16 / 10 }}
-          resizeMode="cover"
-        />
-
-        <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
-          <Text style={{ color: c.text, fontSize: 13, lineHeight: 18 }}>
-            1805 Forest Ave @ Richmond AVe.,{'\n'}Staten Island, NY 10303
-          </Text>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginTop: 14,
-            }}
-          >
-            <Pressable
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: c.border25,
-              }}
-            >
-              <MaterialCommunityIcons name="map-marker-outline" size={14} color={c.text} />
-              <Text style={{ color: c.text, fontSize: 13, fontWeight: '500', marginLeft: 6 }}>
-                Directions
-              </Text>
-            </Pressable>
-
-            <View style={{ flexDirection: 'row' }}>
-              <Pressable style={[iconBtn, { marginRight: 8 }]}>
-                <MaterialCommunityIcons name="phone-outline" size={16} color={c.text} />
-              </Pressable>
-              <Pressable style={[iconBtn, { marginRight: 8 }]}>
-                <MaterialCommunityIcons name="message-text-outline" size={16} color={c.text} />
-              </Pressable>
-              <Pressable style={iconBtn}>
-                <MaterialCommunityIcons name="email-outline" size={16} color={c.text} />
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <Pressable
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 10,
-          marginTop: 16,
-          borderRadius: 20,
-          backgroundColor: c.depth35,
-        }}
-      >
-        <Text style={{ color: c.text, fontSize: 14, fontWeight: '500', marginRight: 6 }}>
-          Become a Community Partner
-        </Text>
-        <MaterialCommunityIcons name="arrow-right" size={16} color={c.text} />
-      </Pressable>
+      />
     </View>
   );
 }
 
 function SupportMasjidCard({ c }: { c: Palette }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { open } = useDonation();
   return (
     <View
@@ -783,57 +757,96 @@ function SupportMasjidCard({ c }: { c: Palette }) {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <GlassView
-          glassEffectStyle="regular"
+        <View
           style={{
             width: 40,
             height: 40,
             borderRadius: 20,
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: 'hidden',
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
           <Text style={{ color: c.gold, fontSize: 20, lineHeight: 22 }}>♥</Text>
-        </GlassView>
+        </View>
         <View>
           <Text style={{ color: c.text, fontSize: 14, fontWeight: '700' }}>
-            Support Your Masjid
+            {t('prayer.supportYourMasjid')}
           </Text>
-          <Text style={{ color: c.muted, fontSize: 11, marginTop: 1 }}>Donate</Text>
+          <Text style={{ color: c.muted, fontSize: 11, marginTop: 1 }}>{t('prayer.donate')}</Text>
         </View>
       </View>
 
       <Pressable onPress={open}>
-        <GlassView
-          glassEffectStyle="regular"
+        <View
           style={{
             borderRadius: 999,
             paddingHorizontal: 16,
             paddingVertical: 8,
-            overflow: 'hidden',
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
           <Text style={{ color: c.gold, fontSize: 11, fontWeight: '800' }}>
-            DONATE →
+            {t('prayer.donateCta')} {isRTL ? '←' : '→'}
           </Text>
-        </GlassView>
+        </View>
       </Pressable>
     </View>
   );
+}
+
+// Map a raw prayer name (DB-derived, title-cased) to its i18n key suffix so it
+// can be translated. Falls back to the original name when unrecognized.
+function prayerNameKey(name: string): string | null {
+  const n = name.toLowerCase();
+  if (n.includes('fajr')) return 'fajr';
+  if (n.includes('sunrise') || n.includes('shuru') || n.includes('shorooq'))
+    return 'sunrise';
+  if (n.includes('dhuhr') || n.includes('zuhr') || n.includes('duhr'))
+    return 'dhuhr';
+  if (n.includes('asr')) return 'asr';
+  if (n.includes('maghrib')) return 'maghrib';
+  if (n.includes('isha')) return 'isha';
+  if (n.includes('jummah') || n.includes('jumah') || n.includes('juma'))
+    return 'jummah';
+  return null;
+}
+
+// Icon per prayer, matching the time of day it falls in.
+function prayerIcon(
+  name: string,
+): IconName {
+  const n = name.toLowerCase();
+  if (n.includes('fajr')) return 'weather-sunset-up'; // dawn
+  if (n.includes('sunrise') || n.includes('shuru') || n.includes('shorooq'))
+    return 'weather-sunny'; // sun up
+  if (n.includes('dhuhr') || n.includes('zuhr') || n.includes('duhr'))
+    return 'white-balance-sunny'; // midday
+  if (n.includes('asr')) return 'weather-partly-cloudy'; // afternoon
+  if (n.includes('maghrib')) return 'weather-sunset-down'; // sunset
+  if (n.includes('isha')) return 'weather-night'; // night
+  return 'weather-sunny';
 }
 
 function PrayerRowItem({
   row,
   c,
   showDivider,
+  hasNotifications,
+  onBellPress,
 }: {
   row: PrayerRow;
   c: Palette;
   showDivider: boolean;
+  hasNotifications: boolean;
+  onBellPress: () => void;
 }) {
+  const { t } = useTranslation();
   const isNext = row.status === 'next';
   const isPassed = row.status === 'passed';
+  const bellActive = hasNotifications || isNext;
+  const nameKey = prayerNameKey(row.name);
+  const displayName = nameKey ? t(`prayer.${nameKey}`) : row.name;
 
   return (
     <View
@@ -849,9 +862,9 @@ function PrayerRowItem({
         borderBottomColor: c.divider10,
       }}
     >
-      <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
-        <MaterialCommunityIcons
-          name="weather-sunny"
+      <View style={{ width: 40, alignItems: 'center', marginEnd: 12 }}>
+        <Icon
+          name={prayerIcon(row.name)}
           size={22}
           color={isNext ? c.gold : isPassed ? c.muted : c.text}
         />
@@ -865,7 +878,7 @@ function PrayerRowItem({
             fontWeight: '600',
           }}
         >
-          {row.name}
+          {displayName}
         </Text>
         {row.statusLabel ? (
           <Text style={{ color: isNext ? c.gold : c.muted, fontSize: 11, marginTop: 2 }}>
@@ -897,57 +910,227 @@ function PrayerRowItem({
         {row.iqamah}
       </Text>
 
-      <View style={{ width: 20, alignItems: 'flex-end' }}>
-        {!isPassed ? (
-          <MaterialCommunityIcons
-            name={isNext ? 'bell' : 'bell-outline'}
-            size={16}
-            color={isNext ? c.gold : c.muted}
-          />
-        ) : null}
-      </View>
+      <Pressable
+        onPress={onBellPress}
+        hitSlop={12}
+        style={{ width: 24, alignItems: 'center' }}
+      >
+        <Icon
+          name={bellActive ? 'bell' : 'bell-outline'}
+          size={16}
+          color={bellActive ? c.gold : c.muted}
+          fill={bellActive ? c.gold : 'none'}
+        />
+      </Pressable>
     </View>
   );
 }
 
+function SkeletonRow({ c, index }: { c: Palette; index: number }) {
+  const pulse = useSharedValue(0.08);
+  useEffect(() => {
+    pulse.value = withDelay(
+      index * 80,
+      withRepeat(
+        withSequence(
+          withTiming(0.18, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.08, { duration: 800, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      )
+    );
+  }, [pulse, index]);
+
+  const shimmer = useAnimatedStyle(() => ({
+    opacity: pulse.value,
+  }));
+
+  return (
+    <View
+      style={{
+        borderRadius: 18,
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        marginBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}
+    >
+      <View style={{ width: 40, alignItems: 'center', marginEnd: 12 }}>
+        <Animated.View style={[{ width: 22, height: 22, borderRadius: 11, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ flex: 1.1 }}>
+        <Animated.View style={[{ width: 60, height: 14, borderRadius: 7, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ flex: 0.9, alignItems: 'center' }}>
+        <Animated.View style={[{ width: 52, height: 14, borderRadius: 7, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ flex: 0.9, alignItems: 'center' }}>
+        <Animated.View style={[{ width: 52, height: 14, borderRadius: 7, backgroundColor: c.text }, shimmer]} />
+      </View>
+      <View style={{ width: 24 }} />
+    </View>
+  );
+}
+
+function DateBarSkeleton({ c }: { c: Palette }) {
+  const pulse = useSharedValue(0.08);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(0.18, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.08, { duration: 800, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, [pulse]);
+  const shimmer = useAnimatedStyle(() => ({ opacity: pulse.value }));
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: c.depth30,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+      }}
+    >
+      <Animated.View style={[{ width: 180, height: 12, borderRadius: 6, backgroundColor: c.text }, shimmer]} />
+    </View>
+  );
+}
+
+const SKELETON_PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
+
 export default function PrayerScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const c = usePalette();
+  const fonts = useFontFamily();
+  const [now, setNow] = useState(new Date());
+  const [quranOpen, setQuranOpen] = useState(false);
+  const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
+  const [sheetPrayer, setSheetPrayer] = useState<PrayerName | null>(null);
+  // Date navigation — allow browsing ±7 days
+  const [dayOffset, setDayOffset] = useState(0);
+
   const { timezone } = useMasjidConfig();
+  const tz = timezone || 'UTC';
+
+  const todayDateStr = useMemo(() => {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tz, now]);
+
+  const selectedDateStr = useMemo(() => {
+    // Parse today in mosque tz, then offset by days
+    const [y, m, d] = todayDateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + dayOffset);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }, [dayOffset, todayDateStr]);
+
+  const isToday = selectedDateStr === todayDateStr;
+
   const {
     items: prayerItems,
     nextPrayer,
-    currentTimeFormatted,
     countdownLabel,
     countdownClock,
-    nowHours,
-  } = usePrayerTimes();
-  const [quranOpen, setQuranOpen] = useState(false);
-  const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
+    isFetching: prayersFetching,
+    status: prayersStatus,
+    refetch: refetchPrayers,
+  } = usePrayerTimes(isToday ? undefined : selectedDateStr);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const prayers = useMemo(
-    () => buildPrayerRows(prayerItems, countdownLabel),
-    [prayerItems, countdownLabel],
+  const onRefresh = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setRefreshing(true);
+    refetchPrayers().finally(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setRefreshing(false);
+    });
+  }, [refetchPrayers]);
+  const {
+    toggles: prayerToggles,
+    getSettings,
+    savePrayerSettings,
+    applyToAll,
+  } = usePrayerAlerts();
+  const prayerRows = useMemo(
+    () => buildPrayerRows(prayerItems, isToday ? nextPrayer : null, t),
+    [prayerItems, nextPrayer, isToday, t]
   );
 
-  const dateStripGregorian = useMemo(() => {
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone || 'UTC',
-      weekday: 'long',
-      month: 'short',
-      year: 'numeric',
-    })
-      .format(new Date())
+  const goBack = useCallback(() => setDayOffset((d) => Math.max(d - 1, 0)), []);
+  const goForward = useCallback(() => setDayOffset((d) => Math.min(d + 1, 7)), []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const currentTime = now.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const selectedDateFormatted = useMemo(() => {
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return date
+      .toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
       .toUpperCase();
-  }, [timezone]);
-  const dateStripHijri = getHijriDate();
+  }, [selectedDateStr]);
+
+  const insets = useSafeAreaInsets();
+
+  useStatusBarStyle('light');
+
+  // Always start the Prayer page at the top each time it's focused, rather than
+  // restoring the previous scroll position.
+  const scrollRef = useRef<ScrollView>(null);
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: -insets.top, animated: false });
+    }, [insets.top]),
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={{ paddingBottom: 160 }}
-          contentInsetAdjustmentBehavior="never"
+          indicatorStyle="white"
+          scrollEventThrottle={16}
+          contentInset={{ top: insets.top }}
+          contentOffset={{ x: 0, y: -insets.top }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={c.gold}
+              colors={[c.gold]}
+              progressBackgroundColor={c.bg}
+            />
+          }
         >
           <View style={{ position: 'relative' }}>
             <StarField color={c.gold} />
@@ -996,11 +1179,11 @@ export default function PrayerScreen() {
                   }}
                 />
                 <CountdownRing
-                  prayers={prayers}
-                  nowHours={nowHours}
+                  prayers={prayerRows}
+                  nowHours={now.getHours() + now.getMinutes() / 60}
                   c={c}
                 />
-                <PrayerDots prayers={prayers} c={c} />
+                <PrayerDots prayers={prayerRows} c={c} />
                 <View
                   style={{
                     position: 'absolute',
@@ -1017,7 +1200,14 @@ export default function PrayerScreen() {
                       marginBottom: 4,
                     }}
                   >
-                    {nextPrayer ? `${nextPrayer.name.toUpperCase()} IN` : 'ALL DONE'}
+                    {nextPrayer
+                      ? t('prayer.countdownLabel', {
+                          name: (() => {
+                            const k = prayerNameKey(nextPrayer.name);
+                            return (k ? t(`prayer.${k}`) : nextPrayer.name).toUpperCase();
+                          })(),
+                        })
+                      : ''}
                   </Text>
                   <Text
                     style={{
@@ -1027,7 +1217,7 @@ export default function PrayerScreen() {
                       letterSpacing: 1,
                     }}
                   >
-                    {countdownClock ?? '--:--'}
+                    {countdownClock ?? '--'}
                   </Text>
                   <GlassView
                     glassEffectStyle="regular"
@@ -1040,7 +1230,7 @@ export default function PrayerScreen() {
                     }}
                   >
                     <Text style={{ color: c.gold, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
-                      {currentTimeFormatted} CURRENT
+                      {t('prayer.currentTime', { time: currentTime })}
                     </Text>
                   </GlassView>
                 </View>
@@ -1054,38 +1244,48 @@ export default function PrayerScreen() {
                 textAlign: 'center',
                 marginTop: 24,
                 fontWeight: '400',
-                fontFamily: 'PlayfairDisplay_400Regular',
+                fontFamily: fonts.displayRegular,
               }}
             >
-              Prayer Times
+              {t('prayer.title')}
             </Text>
           </View>
 
           <View style={{ paddingHorizontal: 20, marginTop: 56 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: c.depth30,
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-              }}
-            >
-              <Pressable hitSlop={12}>
-                <MaterialCommunityIcons name="chevron-left" size={22} color={c.muted} />
-              </Pressable>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: c.text, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }}>
-                  {dateStripGregorian}
-                </Text>
-                <Text style={{ color: c.gold, fontSize: 10, marginTop: 2 }}>{dateStripHijri}</Text>
+            {refreshing ? (
+              <DateBarSkeleton c={c} />
+            ) : (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: c.depth30,
+                  borderRadius: 16,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                }}
+              >
+                <Pressable hitSlop={12} onPress={goBack} style={{ opacity: dayOffset > 0 ? 1 : 0.3 }}>
+                  <Icon name={isRTL ? 'chevron-right' : 'chevron-left'} size={22} color={c.muted} />
+                </Pressable>
+                <Pressable onPress={() => setDayOffset(0)} hitSlop={8}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: c.text, fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }}>
+                      {selectedDateFormatted}
+                    </Text>
+                    {!isToday && (
+                      <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
+                        {t('prayer.tapToReturnToday')}
+                      </Text>
+                    )}
+                  </View>
+                </Pressable>
+                <Pressable hitSlop={12} onPress={goForward} style={{ opacity: dayOffset < 7 ? 1 : 0.3 }}>
+                  <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={22} color={c.muted} />
+                </Pressable>
               </View>
-              <Pressable hitSlop={12}>
-                <MaterialCommunityIcons name="chevron-right" size={22} color={c.muted} />
-              </Pressable>
-            </View>
+            )}
 
             <View
               style={{
@@ -1096,35 +1296,52 @@ export default function PrayerScreen() {
                 paddingHorizontal: 14,
               }}
             >
-              <View style={{ width: 40, marginRight: 12 }} />
-              <Text style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 1.1 }}>PRAYER</Text>
+              <View style={{ width: 40, marginEnd: 12 }} />
+              <Text style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 1.1 }}>{t('prayer.colPrayer')}</Text>
               <Text
                 style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 0.9, textAlign: 'center' }}
               >
-                ATHAN
+                {t('prayer.colAthan')}
               </Text>
               <Text
                 style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 0.9, textAlign: 'center' }}
               >
-                IQAMAH
+                {t('prayer.colIqamah')}
               </Text>
               <View style={{ width: 20 }} />
             </View>
 
-            {prayers.map((p, i) => {
-              const isPassed = p.status === 'passed';
-              const isNext = p.status === 'next';
-              const nextRow = prayers[i + 1];
-              const showDivider = !isPassed && !isNext && nextRow?.status !== 'next';
-              return <PrayerRowItem key={p.name} row={p} c={c} showDivider={showDivider} />;
-            })}
+            {refreshing || (prayersFetching && prayerRows.length === 0) ? (
+              SKELETON_PRAYERS.map((name, i) => (
+                <SkeletonRow key={name} c={c} index={i} />
+              ))
+            ) : (
+              <Animated.View entering={FadeIn.duration(300)} key={selectedDateStr}>
+                {prayerRows.map((p, i) => {
+                  const isPassed = p.status === 'passed';
+                  const isNext = p.status === 'next';
+                  const nextRow = prayerRows[i + 1];
+                  const showDivider = !isPassed && !isNext && nextRow?.status !== 'next';
+                  const pName = p.name as PrayerName;
+                  return (
+                    <PrayerRowItem
+                      key={`${p.name}-${i}`}
+                      row={p}
+                      c={c}
+                      showDivider={showDivider}
+                      hasNotifications={prayerToggles[pName] ?? false}
+                      onBellPress={() => setSheetPrayer(pName)}
+                    />
+                  );
+                })}
+              </Animated.View>
+            )}
 
             <DailyQuranGoalCard c={c} onContinueReading={() => { setResumeTarget(getLastViewed()); setQuranOpen(true); }} />
             <SupportMasjidCard c={c} />
             <CommunityPartnersSection c={c} />
           </View>
         </ScrollView>
-      </SafeAreaView>
 
       <Modal
         visible={quranOpen}
@@ -1134,6 +1351,18 @@ export default function PrayerScreen() {
       >
         <QuranScreen onClose={() => { setQuranOpen(false); setResumeTarget(null); }} initial={resumeTarget} />
       </Modal>
+
+      <PrayerNotificationSheet
+        prayer={sheetPrayer}
+        currentSettings={sheetPrayer ? getSettings(sheetPrayer) : []}
+        onSave={(settings) => {
+          if (sheetPrayer) savePrayerSettings(sheetPrayer, settings).catch(() => {});
+        }}
+        onApplyToAll={(settings) => {
+          applyToAll(settings).catch(() => {});
+        }}
+        onClose={() => setSheetPrayer(null)}
+      />
     </View>
   );
 }

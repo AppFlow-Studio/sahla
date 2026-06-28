@@ -1,13 +1,18 @@
 import { useUser } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Icon } from '@/src/components/ui/icon';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 export default function ChangePasswordScreen() {
   const { user } = useUser();
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -18,20 +23,20 @@ export default function ChangePasswordScreen() {
   const clerkError = (err: unknown) => {
     if (err && typeof err === 'object' && 'errors' in err) {
       // @ts-expect-error Clerk error shape
-      return err.errors?.[0]?.message ?? 'Something went wrong';
+      return err.errors?.[0]?.message ?? t('misc.somethingWentWrong');
     }
-    return 'Something went wrong';
+    return t('misc.somethingWentWrong');
   };
 
   const onSubmit = useCallback(async () => {
     if (!user || submitting) return;
 
     if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
+      setError(t('misc.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('misc.passwordsDoNotMatch'));
       return;
     }
 
@@ -42,8 +47,8 @@ export default function ChangePasswordScreen() {
         currentPassword,
         newPassword,
       });
-      Alert.alert('Password Changed', 'Your password has been updated successfully.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('misc.passwordChangedTitle'), t('misc.passwordChangedMessage'), [
+        { text: t('misc.ok'), onPress: () => router.back() },
       ]);
     } catch (err) {
       setError(clerkError(err));
@@ -61,13 +66,13 @@ export default function ChangePasswordScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color="rgba(255,251,242,0.6)" />
+            <Icon name={isRTL ? 'arrow-forward' : 'arrow-back'} size={20} color="rgba(255,251,242,0.6)" />
           </Pressable>
           <Text
-            className="ml-3 text-[#FFFBF2]"
+            className="ms-3 text-[#FFFBF2]"
             style={{ fontSize: 16, fontWeight: '600' }}
           >
-            Change Password
+            {t('misc.changePassword')}
           </Text>
         </View>
 
@@ -76,12 +81,12 @@ export default function ChangePasswordScreen() {
             className="mb-2 text-[#FFFBF2]/40"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            CURRENT PASSWORD
+            {t('misc.currentPasswordLabel')}
           </Text>
           <TextInput
             value={currentPassword}
             onChangeText={setCurrentPassword}
-            placeholder="Enter current password"
+            placeholder={t('misc.currentPasswordPlaceholder')}
             placeholderTextColor="rgba(255,251,242,0.25)"
             secureTextEntry
             autoComplete="current-password"
@@ -93,12 +98,12 @@ export default function ChangePasswordScreen() {
             className="mb-2 text-[#FFFBF2]/40"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            NEW PASSWORD
+            {t('misc.newPasswordLabel')}
           </Text>
           <TextInput
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="At least 8 characters"
+            placeholder={t('misc.newPasswordPlaceholder')}
             placeholderTextColor="rgba(255,251,242,0.25)"
             secureTextEntry
             autoComplete="new-password"
@@ -110,12 +115,12 @@ export default function ChangePasswordScreen() {
             className="mb-2 text-[#FFFBF2]/40"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            CONFIRM NEW PASSWORD
+            {t('misc.confirmPasswordLabel')}
           </Text>
           <TextInput
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Re-enter new password"
+            placeholder={t('misc.confirmPasswordPlaceholder')}
             placeholderTextColor="rgba(255,251,242,0.25)"
             secureTextEntry
             autoComplete="new-password"
@@ -142,7 +147,7 @@ export default function ChangePasswordScreen() {
                   className="text-[#0A261E]"
                   style={{ fontSize: 14, fontWeight: '600' }}
                 >
-                  Update Password
+                  {t('misc.updatePassword')}
                 </Text>
               )}
             </Pressable>

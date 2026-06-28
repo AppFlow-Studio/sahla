@@ -28,6 +28,8 @@ const CORS = {
 
 type Body = {
   mosque_id?: string;
+  /** YYYY-MM-DD in the mosque's local timezone. Defaults to UTC today if absent. */
+  date?: string;
 };
 
 serve(async (req) => {
@@ -53,10 +55,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    const date = body.date ?? new Date().toISOString().split('T')[0];
+
     const { data, error } = await supabase
       .from('todays_prayers')
       .select('prayer_name, athan_time, iqamah_time')
       .eq('mosque_id', body.mosque_id)
+      .eq('date', date)
       .order('athan_time', { ascending: true });
 
     if (error) {

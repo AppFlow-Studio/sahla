@@ -1,9 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const SERIF = 'PlayfairDisplay_500Medium';
+import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 type PersonalizationScaffoldProps = {
   step: number;
@@ -36,6 +38,9 @@ export function PersonalizationScaffold({
   onSkip,
 }: PersonalizationScaffoldProps) {
   const router = useRouter();
+  const fonts = useFontFamily();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const progress = Math.max(0, Math.min(1, step / totalSteps));
 
   return (
@@ -47,11 +52,18 @@ export function PersonalizationScaffold({
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color="rgba(10,38,30,0.6)" />
+            <Icon
+              name="arrow-back"
+              size={20}
+              color="rgba(10,38,30,0.6)"
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </Pressable>
           {onSkip ? (
             <Pressable onPress={onSkip} hitSlop={12} className="active:opacity-60">
-              <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)' }}>Skip</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)' }}>
+                {t('personalization.skip')}
+              </Text>
             </Pressable>
           ) : (
             <View />
@@ -69,7 +81,7 @@ export function PersonalizationScaffold({
             className="mt-3 text-onboarding-bg/60"
             style={{ fontSize: 11, letterSpacing: 0.6 }}
           >
-            STEP {step} OF {totalSteps}
+            {t('personalization.stepOf', { step, total: totalSteps })}
           </Text>
         </View>
 
@@ -80,7 +92,7 @@ export function PersonalizationScaffold({
         >
           <Text
             className="text-onboarding-bg"
-            style={{ fontFamily: SERIF, fontSize: 30, lineHeight: 35 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 35 }}
           >
             {title}
           </Text>

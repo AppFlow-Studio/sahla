@@ -1,55 +1,66 @@
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Platform, Pressable, Text, View } from "react-native";
-
-const BRAND_GOLD = "#B8922A";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
+import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Icon } from "@/src/components/ui/icon";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 type Props = {
   onEnablePress: () => void;
 };
 
 export default function Notifications({ onEnablePress }: Props) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+
   return (
-    <View className="mb-1 min-h-[49px] w-full flex-row items-center justify-between rounded-full border-0.5 border-[#B8922A] bg-[#B8922A33] px-5 py-4">
-      <View className="min-w-0 flex-1 flex-row items-center gap-2 pr-2">
-        <IconSymbol name="bell.fill" size={14} color={BRAND_GOLD} />
+    <View
+      className="mb-1 w-full flex-row items-center justify-between rounded-[14px] bg-accent/20 px-5"
+      style={{
+        minHeight: 49,
+        paddingVertical: 14,
+        borderWidth: 0.5,
+        borderColor: `rgba(${colors.accent.replace(/ /g, ',')}, 0.2)`,
+        borderStyle: 'dashed',
+      }}
+    >
+      <View className="min-w-0 flex-1 flex-row items-center gap-2 pe-2">
+        <Icon name="bell" size={14} color={accentRgb} fill={accentRgb} />
         <Text
           numberOfLines={1}
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodyMedium,
             fontWeight: "500",
             fontSize: 11,
             lineHeight: 15,
-            color: BRAND_GOLD,
+            color: accentRgb,
           }}
         >
-          Push Notifications are off
+          {t('profile.pushNotificationsOff')}
         </Text>
       </View>
       <Pressable
         onPress={onEnablePress}
         accessibilityRole="button"
-        accessibilityLabel="Enable push notifications"
+        accessibilityLabel={t('profile.enablePushNotifications')}
         className="shrink-0 flex-row items-center gap-1.5"
         hitSlop={8}
       >
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontWeight: "400",
-            fontSize: 12,
+            fontSize: 11,
             lineHeight: 15,
-            color: BRAND_GOLD,
+            color: accentRgb,
           }}
         >
-          Enable
+          {t('profile.enable')}
         </Text>
-        <IconSymbol name="chevron.right" size={10} color={BRAND_GOLD} />
+        <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={accentRgb} />
       </Pressable>
     </View>
   );

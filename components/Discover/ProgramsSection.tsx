@@ -1,15 +1,20 @@
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import type { ImageSourcePropType } from "react-native";
-import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import SectionTitle from "./SectionTitle";
-
-const BUSH = "#0A261E";
 
 export type ProgramItem = {
   id: string;
   title: string;
   image?: ImageSourcePropType;
+  /** Which Discover "Programs" filter tapping this card opens into. */
+  audience?: "All" | "Kids" | "Youth" | "Adults";
+  /** Solid background shown behind/instead of the cover image. */
+  bgColor?: string | null;
 };
 
 type Props = {
@@ -18,12 +23,6 @@ type Props = {
   onPressSeeAll?: () => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 function ProgramCard({
   item,
   onPress,
@@ -31,13 +30,20 @@ function ProgramCard({
   item: ProgramItem;
   onPress?: () => void;
 }) {
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const cardRgb = `rgb(${colors.card.replace(/ /g, ",")})`;
+  const borderColor = `rgba(${fg}, 0.1)`;
+
   return (
     <Pressable onPress={onPress} className="w-[149px]">
       <View
         className="h-[217px] w-full overflow-hidden rounded-[16px] border"
         style={{
-          backgroundColor: "#FAF9F4",
-          borderColor: "rgba(10,38,30,0.1)",
+          backgroundColor: item.bgColor ?? cardRgb,
+          borderColor,
         }}
       >
         {item.image ? (
@@ -51,10 +57,10 @@ function ProgramCard({
       <Text
         style={{
           marginTop: 10,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodyMedium,
           fontSize: 13,
           fontWeight: "500",
-          color: BUSH,
+          color: fgRgb,
         }}
       >
         {item.title}
@@ -68,11 +74,12 @@ export default function ProgramsSection({
   onPressItem,
   onPressSeeAll,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <View>
       <SectionTitle
-        title="Programs"
-        actionLabel="See all"
+        title={t("discover.programsTitle")}
+        actionLabel={t("discover.seeAll")}
         onPressAction={onPressSeeAll}
       />
       <ScrollView

@@ -1,0 +1,5 @@
+-- backfilled placeholder: schema already applied on staging.
+-- Remote schema_migrations row exists with empty statements; the original
+-- DDL was applied via Studio (no local file ever existed) and the column
+-- mosques.clerk_org_id is already live. This file exists purely to align
+-- local CLI history with remote.

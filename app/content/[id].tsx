@@ -1,14 +1,10 @@
 import { useAuth } from "@clerk/clerk-expo";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
   Dimensions,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -16,13 +12,16 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Icon } from "@/src/components/ui/icon";
 import SpeakerInfoModal from "@/components/Discover/SpeakerInfoModal";
 import { ContentNotificationSettingsSheet } from "@/components/content/ContentNotificationSettingsSheet";
 import {
@@ -32,26 +31,20 @@ import {
 import { useContentNotifSettings } from "@/src/hooks/use-content-notification-settings";
 import { useIsSaved, useToggleSave } from "@/src/hooks/use-saved-content";
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useConfigStore } from "@/src/stores/config-store";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 
-const BUSH = "#0A261E";
-const TRAY_BG = "#EFEDE6";
-const CARD_BG = "#F5F3EE";
-const CHIP_BG = "#F3EBD2";
-const CHIP_TEXT = "#8B6F1A";
-const MUTED = "rgba(10,38,30,0.55)";
 const SHEET_RADIUS = 40;
 
-const platformTitleFont = Platform.select({
-  ios: "SF Pro Display",
-  android: "Roboto",
-  default: "system-ui",
-});
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
+// Colors come from the active masjid theme (`useMasjidConfig().colors`), which
+// stores each value as a `"R G B"` triplet. These helpers turn a triplet into a
+// usable CSS color so the screen re-themes per tenant instead of shipping a
+// fixed green/gold palette.
+const rgb = (triplet: string) => `rgb(${triplet.replace(/ /g, ",")})`;
+const rgba = (triplet: string, alpha: number) =>
+  `rgba(${triplet.replace(/ /g, ",")},${alpha})`;
 
 type Detail = {
   content_id: string;
@@ -63,6 +56,47 @@ type Detail = {
   start_time: string | null;
   speakers: string[] | null;
 };
+
+function SkeletonPulse({ width, height, borderRadius = 8, style, color }: { width: number | string; height: number; borderRadius?: number; style?: any; color: string }) {
+  const opacity = useSharedValue(0.35);
+  useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.8, { duration: 900 }), -1, true);
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return (
+    <Animated.View
+      style={[{ width, height, borderRadius, backgroundColor: color }, animStyle, style]}
+    />
+  );
+}
+
+function ContentSkeleton({ cardBg, pulseColor }: { cardBg: string; pulseColor: string }) {
+  const screenWidth = Dimensions.get("window").width;
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Image placeholder — 16:9 to match the banner cover crop */}
+      <SkeletonPulse color={pulseColor} width="100%" height={screenWidth * 9 / 16} borderRadius={0} style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }} />
+
+      <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
+        {/* Title */}
+        <SkeletonPulse color={pulseColor} width="75%" height={28} borderRadius={6} style={{ marginBottom: 10 }} />
+        <SkeletonPulse color={pulseColor} width="50%" height={28} borderRadius={6} style={{ marginBottom: 20 }} />
+
+        {/* Speaker chip */}
+        <SkeletonPulse color={pulseColor} width={140} height={36} borderRadius={18} style={{ marginBottom: 24 }} />
+
+        {/* Description card */}
+        <View style={{ backgroundColor: cardBg, borderRadius: 16, padding: 16 }}>
+          <SkeletonPulse color={pulseColor} width={60} height={10} borderRadius={4} style={{ marginBottom: 14 }} />
+          <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse color={pulseColor} width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <SkeletonPulse color={pulseColor} width="60%" height={12} borderRadius={4} />
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function CircleButton({
   children,
@@ -83,8 +117,11 @@ function CircleButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
-      className="h-9 w-9 items-center justify-center rounded-full active:opacity-80"
-      style={{ backgroundColor: "#FFFFFF", opacity: disabled ? 0.5 : 1 }}
+      className="h-10 w-10 items-center justify-center rounded-full active:opacity-80"
+      style={{
+        backgroundColor: "rgba(255,255,255,0.5)",
+        opacity: disabled ? 0.5 : 1,
+      }}
     >
       {children}
     </Pressable>
@@ -92,11 +129,27 @@ function CircleButton({
 }
 
 export default function ContentDetailScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { id } = useLocalSearchParams<{ id: string }>();
   const supabase = useSupabase();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const toastBg = rgb(colors.foreground);
+  const toastText = rgb(colors.background);
+
+  // Themed palette (was a hardcoded green/gold set). Each maps to a theme token
+  // so the screen follows the active masjid's branding.
+  const BUSH = rgb(colors.foreground); //     primary text, icons, "Save to Library"
+  const SURFACE = rgb(colors.muted); //       image placeholder + card/button backgrounds
+  const CARD_BG = SURFACE;
+  const TRAY_BG = SURFACE;
+  const CHIP_BG = rgba(colors.accent, 0.16); // pale accent fill behind the speaker chip
+  const CHIP_TEXT = rgb(colors.accent); //     accent-colored speaker name
+  const MUTED = rgba(colors.foreground, 0.55); // muted/secondary text
   const [detail, setDetail] = useState<Detail | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
@@ -121,18 +174,27 @@ export default function ContentDetailScreen() {
     !userId || !mosqueUuid || isPast || toggleNotif.isPending;
 
   const [showOptInToast, setShowOptInToast] = useState(false);
-  const toastOpacity = useSharedValue(0);
+  // 0 = hidden above the screen, 1 = resting in view. Drives a notification-style
+  // slide-down from the top + fade.
+  const toastAnim = useSharedValue(0);
   useEffect(() => {
     if (!showOptInToast) return;
-    toastOpacity.value = withTiming(1, { duration: 200 });
-    const id = setTimeout(() => {
-      toastOpacity.value = withTiming(0, { duration: 200 }, (finished) => {
-        if (finished) runOnJS(setShowOptInToast)(false);
-      });
-    }, 2400);
-    return () => clearTimeout(id);
-  }, [showOptInToast, toastOpacity]);
-  const toastStyle = useAnimatedStyle(() => ({ opacity: toastOpacity.value }));
+    toastAnim.value = withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) });
+    const tid = setTimeout(() => {
+      toastAnim.value = withTiming(
+        0,
+        { duration: 280, easing: Easing.in(Easing.cubic) },
+        (finished) => {
+          if (finished) runOnJS(setShowOptInToast)(false);
+        },
+      );
+    }, 2600);
+    return () => clearTimeout(tid);
+  }, [showOptInToast, toastAnim]);
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: toastAnim.value,
+    transform: [{ translateY: (toastAnim.value - 1) * 140 }],
+  }));
 
   const handleToggleNotif = () => {
     const willOptIn = !isNotifOptedIn;
@@ -140,9 +202,67 @@ export default function ContentDetailScreen() {
     if (willOptIn) setShowOptInToast(true);
   };
 
+  // This screen is a transparentModal (sheet). Replace it with a root-level
+  // full-screen route so the destination shows as a real page (not a stacked
+  // sheet) and never deep-links into — and gets stuck in — the Profile tab.
+  const goToPage = (href: Href) => {
+    router.replace(href);
+  };
+
+  // Tapping the confirmation toast takes the user to their reminder settings.
+  const handleOpenReminders = () => {
+    setShowOptInToast(false);
+    goToPage("/reminders-settings" as Href);
+  };
+
+  // Save-to-library confirmation toast (mirrors the reminder toast).
+  const [showSaveToast, setShowSaveToast] = useState(false);
+  const saveToastAnim = useSharedValue(0);
+  useEffect(() => {
+    if (!showSaveToast) return;
+    saveToastAnim.value = withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) });
+    const tid = setTimeout(() => {
+      saveToastAnim.value = withTiming(
+        0,
+        { duration: 280, easing: Easing.in(Easing.cubic) },
+        (finished) => {
+          if (finished) runOnJS(setShowSaveToast)(false);
+        },
+      );
+    }, 2600);
+    return () => clearTimeout(tid);
+  }, [showSaveToast, saveToastAnim]);
+  const saveToastStyle = useAnimatedStyle(() => ({
+    opacity: saveToastAnim.value,
+    transform: [{ translateY: (saveToastAnim.value - 1) * 140 }],
+  }));
+
+  const handleToggleSave = () => {
+    const willSave = !isSaved;
+    toggleSave.mutate(isSaved);
+    if (willSave) setShowSaveToast(true);
+  };
+
+  const handleOpenLibrary = () => {
+    setShowSaveToast(false);
+    goToPage("/saved-library" as Href);
+  };
+
   const { data: notifSettings = null } = useContentNotifSettings(id);
   const hasCustomTimings = (notifSettings?.length ?? 0) > 0;
   const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
+
+  // Toast copy reflects the actual reminder timing: the user's custom offsets
+  // when set, otherwise the masjid default (which the client doesn't know the
+  // exact value of, so we stay generic instead of hardcoding "30 minutes").
+  const reminderEventName = detail?.name ?? t("content.thisEvent");
+  const reminderMessage = hasCustomTimings
+    ? `${t("content.remindYou", {
+        timing: (notifSettings ?? [])
+          .map((o) => (o === "At start time" ? "at start time" : o.toLowerCase()))
+          .join(` ${t("content.and")} `),
+      })} · ${reminderEventName}`
+    : t("content.remindYouBefore", { event: reminderEventName });
 
   useEffect(() => {
     let cancelled = false;
@@ -169,7 +289,7 @@ export default function ContentDetailScreen() {
         return;
       }
       if (!data?.row) {
-        setError("Content not found");
+        setError(t("content.contentNotFound"));
         setStatus("error");
         return;
       }
@@ -180,10 +300,9 @@ export default function ContentDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, supabase]);
+  }, [id, supabase, t]);
 
   const firstSpeaker = detail?.speakers?.[0];
-  const [imageAspect, setImageAspect] = useState(1);
   const screenHeight = Dimensions.get("window").height;
   const translateY = useSharedValue(screenHeight);
   const DISMISS_DISTANCE = 120;
@@ -247,74 +366,27 @@ export default function ContentDetailScreen() {
       <Pressable
         onPress={dismiss}
         className="absolute inset-0"
-        accessibilityLabel="Close"
+        accessibilityLabel={t("common.close")}
       />
-      {showOptInToast ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            {
-              position: "absolute",
-              top: insets.top + 12,
-              left: 24,
-              right: 24,
-              zIndex: 10,
-              backgroundColor: BUSH,
-              borderRadius: 14,
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-            },
-            toastStyle,
-          ]}
-        >
-          <Text
-            style={{
-              color: "#FFFFFF",
-              fontSize: 13,
-              fontWeight: "600",
-              fontFamily: platformUiFont,
-              textAlign: "center",
-            }}
-          >
-            We&rsquo;ll remind you 30 minutes before {detail?.name ?? "this event"}
-          </Text>
-        </Animated.View>
-      ) : null}
 
       <Animated.View
         className="flex-1"
         style={[
           {
-            marginHorizontal: 12,
             marginTop: Math.max(insets.top, 24) + 12,
-            marginBottom: 12,
-            borderRadius: SHEET_RADIUS,
+            borderTopLeftRadius: SHEET_RADIUS,
+            borderTopRightRadius: SHEET_RADIUS,
             backgroundColor: "#FFFFFF",
             overflow: "hidden",
           },
           sheetStyle,
         ]}
       >
-        <GestureDetector gesture={panGesture}>
-          <View className="items-center pt-3 pb-2">
-            <View
-              style={{
-                width: 40,
-                height: 5,
-                borderRadius: 999,
-                backgroundColor: "rgba(10,38,30,0.18)",
-              }}
-            />
-          </View>
-        </GestureDetector>
-
         {status === "loading" ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={BUSH} />
-          </View>
+          <ContentSkeleton cardBg={CARD_BG} pulseColor={rgba(colors.foreground, 0.1)} />
         ) : status === "error" || !detail ? (
           <View className="flex-1 items-center justify-center px-6">
-            <Text style={{ color: BUSH }}>{error ?? "Not found"}</Text>
+            <Text style={{ color: BUSH }}>{error ?? t("content.notFound")}</Text>
           </View>
         ) : (
           <>
@@ -322,18 +394,41 @@ export default function ContentDetailScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 24 }}
             >
-              <View
-                style={{
-                  paddingTop: 8,
-                  paddingBottom: 16,
-                }}
-              >
-                <View className="flex-row items-center justify-between px-4">
+              <GestureDetector gesture={panGesture}>
+              <Animated.View style={{ position: "relative" }}>
+                <View
+                  style={{
+                    width: "100%",
+                    aspectRatio: 16 / 9,
+                    backgroundColor: TRAY_BG,
+                    borderTopLeftRadius: SHEET_RADIUS,
+                    borderTopRightRadius: SHEET_RADIUS,
+                    overflow: "hidden",
+                  }}
+                >
+                  {detail.image ? (
+                    <Image
+                      source={{ uri: detail.image }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover"
+                    />
+                  ) : null}
+                </View>
+
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 28,
+                    left: 16,
+                    right: 16,
+                  }}
+                  className="flex-row items-center justify-between"
+                >
                   <CircleButton
                     onPress={dismiss}
-                    accessibilityLabel="Close"
+                    accessibilityLabel={t("common.close")}
                   >
-                    <AntDesign name="close" size={16} color="#1A1A1A" />
+                    <Icon name="close" size={16} color="#1A1A1A" />
                   </CircleButton>
                   <View className="flex-row items-center" style={{ gap: 8 }}>
                     {isNotifOptedIn && !isPast ? (
@@ -342,130 +437,104 @@ export default function ContentDetailScreen() {
                         hitSlop={8}
                         className="flex-row items-center rounded-full px-3 active:opacity-80"
                         style={{
-                          backgroundColor: "rgba(10,38,30,0.06)",
+                          backgroundColor: "rgba(255,255,255,0.85)",
                           height: 28,
                         }}
                         accessibilityRole="button"
-                        accessibilityLabel="Customize reminder timing"
+                        accessibilityLabel={t("content.customizeReminderTiming")}
                       >
                         <Text
                           style={{
-                            fontFamily: platformUiFont,
+                            fontFamily: fonts.bodySemibold,
                             fontSize: 12,
                             fontWeight: "600",
                             color: BUSH,
                           }}
                         >
-                          Customize
+                          {t("content.customize")}
                         </Text>
                       </Pressable>
                     ) : null}
-                    <View>
-                      <CircleButton
-                        onPress={notifDisabled ? undefined : handleToggleNotif}
-                        disabled={notifDisabled}
-                        accessibilityLabel={
-                          isPast
-                            ? "Notifications unavailable, event has passed"
-                            : isNotifOptedIn
-                              ? "Turn off reminders"
-                              : "Turn on reminders"
-                        }
-                      >
-                        <Ionicons
-                          name={isNotifOptedIn ? "notifications" : "notifications-outline"}
-                          size={16}
-                          color="#1A1A1A"
-                        />
-                      </CircleButton>
-                      {hasCustomTimings && isNotifOptedIn ? (
-                        <View
-                          pointerEvents="none"
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            right: 0,
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            backgroundColor: BUSH,
-                            borderWidth: 1.5,
-                            borderColor: "#FFFFFF",
-                          }}
-                        />
-                      ) : null}
-                    </View>
+                    {/* No reminder bell once the program/event has passed. */}
+                    {!isPast ? (
+                      <View>
+                        <CircleButton
+                          onPress={notifDisabled ? undefined : handleToggleNotif}
+                          disabled={notifDisabled}
+                          accessibilityLabel={
+                            isNotifOptedIn
+                              ? t("content.turnOffReminders")
+                              : t("content.turnOnReminders")
+                          }
+                        >
+                          <Icon
+                            name={isNotifOptedIn ? "notifications" : "notifications-outline"}
+                            size={16}
+                            color="#1A1A1A"
+                            fill={isNotifOptedIn ? "#1A1A1A" : "none"}
+                          />
+                        </CircleButton>
+                        {hasCustomTimings && isNotifOptedIn ? (
+                          <View
+                            pointerEvents="none"
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              right: 0,
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: BUSH,
+                              borderWidth: 1.5,
+                              borderColor: "#FFFFFF",
+                            }}
+                          />
+                        ) : null}
+                      </View>
+                    ) : null}
                   </View>
                 </View>
-
-                <View className="mt-4 items-center px-4">
-                  <View
-                    className="overflow-hidden rounded-2xl"
-                    style={{
-                      width: "100%",
-                      backgroundColor: TRAY_BG,
-                      padding: 16,
-                    }}
-                  >
-                    <View
-                      className="overflow-hidden rounded-xl"
-                      style={{ aspectRatio: imageAspect }}
-                    >
-                      {detail.image ? (
-                        <Image
-                          source={{ uri: detail.image }}
-                          style={{ width: "100%", height: "100%" }}
-                          contentFit="cover"
-                          onLoad={(e) => {
-                            const w = e.source?.width;
-                            const h = e.source?.height;
-                            if (w && h) setImageAspect(w / h);
-                          }}
-                        />
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              </View>
+              </Animated.View>
+              </GestureDetector>
 
               <View className="px-5 pt-6">
                 <Text
                   style={{
-                    fontFamily: platformTitleFont,
-                    fontSize: 28,
-                    lineHeight: 34,
+                    fontFamily: fonts.display,
+                    fontSize: 19,
+                    lineHeight: 24,
                     fontWeight: "700",
                     color: BUSH,
                   }}
                 >
-                  {detail.name ?? "Untitled"}
+                  {detail.name ?? t("content.untitled")}
                 </Text>
 
                 {firstSpeaker ? (
                   <Pressable
                     onPress={() => setSpeakerModalOpen(true)}
                     accessibilityRole="button"
-                    accessibilityLabel={`View bio for ${firstSpeaker}`}
+                    accessibilityLabel={t("content.viewBioFor", { name: firstSpeaker })}
                     className="mt-4 flex-row items-center self-start rounded-full px-4 py-2"
                     style={{ backgroundColor: CHIP_BG }}
                   >
-                    <Feather name="user" size={14} color={CHIP_TEXT} />
+                    <Icon name="user" size={14} color={CHIP_TEXT} />
                     <Text
                       style={{
-                        marginLeft: 8,
-                        fontFamily: platformUiFont,
-                        fontSize: 14,
+                        marginStart: 8,
+                        fontFamily: fonts.bodySemibold,
+                        fontSize: 13,
                         fontWeight: "700",
                         color: CHIP_TEXT,
                       }}
                     >
                       {firstSpeaker}
                     </Text>
-                    <AntDesign
-                      name="right"
+                    <Icon
+                      name={isRTL ? "chevron-back" : "right"}
                       size={12}
                       color={CHIP_TEXT}
-                      style={{ marginLeft: 6 }}
+                      style={{ marginStart: 6 }}
                     />
                   </Pressable>
                 ) : null}
@@ -476,10 +545,10 @@ export default function ContentDetailScreen() {
                       marginTop: 12,
                       fontSize: 13,
                       color: MUTED,
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                     }}
                   >
-                    This already happened
+                    {t("content.alreadyHappened")}
                   </Text>
                 ) : null}
 
@@ -490,7 +559,7 @@ export default function ContentDetailScreen() {
                   >
                     <Text
                       style={{
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.bodySemibold,
                         fontSize: 11,
                         fontWeight: "700",
                         letterSpacing: 1.4,
@@ -498,14 +567,14 @@ export default function ContentDetailScreen() {
                         color: MUTED,
                       }}
                     >
-                      About
+                      {t("content.about")}
                     </Text>
                     <Text
                       style={{
                         marginTop: 10,
-                        fontFamily: platformUiFont,
-                        fontSize: 15,
-                        lineHeight: 22,
+                        fontFamily: fonts.body,
+                        fontSize: 12,
+                        lineHeight: 18,
                         color: BUSH,
                       }}
                     >
@@ -523,39 +592,162 @@ export default function ContentDetailScreen() {
                 paddingBottom: Math.max(insets.bottom - 8, 12),
                 backgroundColor: "#FFFFFF",
                 borderTopWidth: 1,
-                borderTopColor: "rgba(10,38,30,0.08)",
+                borderTopColor: rgba(colors.foreground, 0.08),
               }}
             >
               <Pressable
-                onPress={() => toggleSave.mutate(isSaved)}
+                onPress={handleToggleSave}
                 disabled={saveDisabled}
                 className="flex-row items-center justify-center rounded-2xl py-4 active:opacity-80"
                 style={{ backgroundColor: CARD_BG, opacity: saveDisabled ? 0.6 : 1 }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSaved, disabled: saveDisabled }}
-                accessibilityLabel={isSaved ? "Remove from Library" : "Save to Library"}
+                accessibilityLabel={isSaved ? t("content.removeFromLibrary") : t("content.saveToLibrary")}
               >
-                <Ionicons
+                <Icon
                   name={isSaved ? "heart" : "heart-outline"}
                   size={18}
                   color={BUSH}
+                  fill={isSaved ? BUSH : "none"}
                 />
                 <Text
                   style={{
-                    marginLeft: 8,
-                    fontFamily: platformUiFont,
+                    marginStart: 8,
+                    fontFamily: fonts.bodySemibold,
                     fontSize: 16,
                     fontWeight: "700",
                     color: BUSH,
                   }}
                 >
-                  {isSaved ? "Saved to Library" : "Save to Library"}
+                  {isSaved ? t("content.savedToLibrary") : t("content.saveToLibrary")}
                 </Text>
               </Pressable>
             </View>
           </>
         )}
       </Animated.View>
+
+      {showOptInToast ? (
+        <Animated.View
+          style={[
+            {
+              position: "absolute",
+              top: insets.top + 8,
+              left: 12,
+              right: 12,
+              zIndex: 50,
+              backgroundColor: toastBg,
+              borderRadius: 16,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.18,
+              shadowRadius: 16,
+              elevation: 8,
+            },
+            toastStyle,
+          ]}
+        >
+          <Pressable
+            onPress={handleOpenReminders}
+            accessibilityRole="button"
+            accessibilityLabel={t("content.reminderSetA11y")}
+            className="flex-row items-center active:opacity-80"
+            style={{ paddingVertical: 14, paddingHorizontal: 16 }}
+          >
+            <Icon name="checkmark-circle" size={20} color={toastText} />
+            <View style={{ flex: 1, marginStart: 10, marginEnd: 8 }}>
+              <Text
+                style={{
+                  color: toastText,
+                  fontSize: 14,
+                  fontWeight: "700",
+                  fontFamily: fonts.bodySemibold,
+                }}
+              >
+                {t("content.reminderSet")}
+              </Text>
+              <Text
+                style={{
+                  color: toastText,
+                  opacity: 0.75,
+                  fontSize: 12,
+                  fontFamily: fonts.body,
+                  marginTop: 1,
+                }}
+              >
+                {reminderMessage}
+              </Text>
+            </View>
+            <Icon
+              name={isRTL ? "chevron-back" : "chevron-forward"}
+              size={16}
+              color={toastText}
+              style={{ opacity: 0.7 }}
+            />
+          </Pressable>
+        </Animated.View>
+      ) : null}
+
+      {showSaveToast ? (
+        <Animated.View
+          style={[
+            {
+              position: "absolute",
+              top: insets.top + 8,
+              left: 12,
+              right: 12,
+              zIndex: 50,
+              backgroundColor: toastBg,
+              borderRadius: 16,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.18,
+              shadowRadius: 16,
+              elevation: 8,
+            },
+            saveToastStyle,
+          ]}
+        >
+          <Pressable
+            onPress={handleOpenLibrary}
+            accessibilityRole="button"
+            accessibilityLabel={t("content.savedToLibraryA11y")}
+            className="flex-row items-center active:opacity-80"
+            style={{ paddingVertical: 14, paddingHorizontal: 16 }}
+          >
+            <Icon name="heart" size={20} color={toastText} fill={toastText} />
+            <View style={{ flex: 1, marginStart: 10, marginEnd: 8 }}>
+              <Text
+                style={{
+                  color: toastText,
+                  fontSize: 14,
+                  fontWeight: "700",
+                  fontFamily: fonts.bodySemibold,
+                }}
+              >
+                {t("content.savedToLibraryToast")}
+              </Text>
+              <Text
+                style={{
+                  color: toastText,
+                  opacity: 0.75,
+                  fontSize: 12,
+                  fontFamily: fonts.body,
+                  marginTop: 1,
+                }}
+              >
+                {t("content.itemInLibrary", { item: detail?.name ?? t("content.thisItem") })}
+              </Text>
+            </View>
+            <Icon
+              name={isRTL ? "chevron-back" : "chevron-forward"}
+              size={16}
+              color={toastText}
+              style={{ opacity: 0.7 }}
+            />
+          </Pressable>
+        </Animated.View>
+      ) : null}
 
       <SpeakerInfoModal
         visible={speakerModalOpen}

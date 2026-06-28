@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Fragment } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Fragment, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import {
   type PrayerName,
   usePrayerAlerts,
 } from '@/src/hooks/use-prayer-alerts';
+import { PrayerNotificationSheet } from '@/src/components/prayer/prayer-notification-sheet';
 
 import { Toggle } from './Toggle';
 
@@ -15,11 +17,6 @@ const INK = '#0A261E';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
 const SURFACE = '#FFFBF2';
 const HAIRLINE = 'rgba(10,38,30,0.1)';
-
-const PLAYFAIR = Platform.select({
-  ios: 'PlayfairDisplay-Medium',
-  default: 'PlayfairDisplay_500Medium',
-});
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -44,10 +41,11 @@ function PrayerRow({
 }: {
   prayer: PrayerMeta;
   on: boolean;
-  onToggle: (next: boolean) => void;
+  onToggle: () => void;
 }) {
   return (
-    <View
+    <Pressable
+      onPress={onToggle}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -79,75 +77,29 @@ function PrayerRow({
           {prayer.time}
         </Text>
       </View>
-      <Toggle value={on} onChange={onToggle} />
-    </View>
-  );
-}
-
-function RemindMeRow({
-  value,
-  onPress,
-}: {
-  value: string;
-  onPress?: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 16,
-      }}
-    >
-      <View style={{ width: 24, marginRight: 14, alignItems: 'center' }}>
-        <Ionicons name="notifications-outline" size={16} color={INK} />
-      </View>
-      <Text
-        style={{
-          flex: 1,
-          fontSize: 13,
-          fontWeight: '500',
-          lineHeight: 18,
-          color: INK,
-        }}
-      >
-        Remind me
-      </Text>
-      <Text
-        style={{
-          fontSize: 12,
-          color: INK_MUTED,
-          marginRight: 6,
-        }}
-      >
-        {value}
-      </Text>
-      <Ionicons name="chevron-forward" size={14} color={INK_MUTED} />
+      <Toggle value={on} onChange={() => onToggle()} />
     </Pressable>
   );
 }
 
+
 export function PrayerAlerts({ onBack }: { onBack?: () => void }) {
   const insets = useSafeAreaInsets();
-  const { toggles, setPrayer } = usePrayerAlerts();
+  const fonts = useFontFamily();
+  const { toggles, getSettings, savePrayerSettings, applyToAll } = usePrayerAlerts();
+  const [sheetPrayer, setSheetPrayer] = useState<PrayerName | null>(null);
 
   const handleBack = onBack ?? (() => router.back());
 
-  const handleToggle = (prayer: PrayerName, next: boolean) => {
-    setPrayer(prayer, next).catch(() => {});
-  };
-
   return (
-    <View style={{ flex: 1, backgroundColor: INK, paddingTop: insets.top }}>
-      <View style={{ flex: 1, backgroundColor: SURFACE }}>
+    <View style={{ flex: 1, backgroundColor: SURFACE, paddingTop: insets.top }}>
       <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
         <Pressable onPress={handleBack} hitSlop={12} style={{ marginBottom: 12 }}>
           <Ionicons name="arrow-back" size={22} color={INK_MUTED} />
         </Pressable>
         <Text
           style={{
-            fontFamily: PLAYFAIR,
+            fontFamily: fonts.display,
             fontWeight: '500',
             fontSize: 30,
             lineHeight: 38,
@@ -171,15 +123,11 @@ export function PrayerAlerts({ onBack }: { onBack?: () => void }) {
             <PrayerRow
               prayer={prayer}
               on={toggles[prayer.name]}
-              onToggle={(next) => handleToggle(prayer.name, next)}
+              onToggle={() => setSheetPrayer(prayer.name)}
             />
             <View style={{ height: 1, backgroundColor: HAIRLINE }} />
           </Fragment>
         ))}
-
-        <RemindMeRow value="At Athan time" />
-
-        <View style={{ height: 1, backgroundColor: HAIRLINE }} />
 
         <Text
           style={{
@@ -189,10 +137,21 @@ export function PrayerAlerts({ onBack }: { onBack?: () => void }) {
             color: INK_MUTED,
           }}
         >
-          You'll get a notification for each prayer you've selected.
+          Tap a prayer to customize its notification settings.
         </Text>
       </ScrollView>
-      </View>
+
+      <PrayerNotificationSheet
+        prayer={sheetPrayer}
+        currentSettings={sheetPrayer ? getSettings(sheetPrayer) : []}
+        onSave={(settings) => {
+          if (sheetPrayer) savePrayerSettings(sheetPrayer, settings).catch(() => {});
+        }}
+        onApplyToAll={(settings) => {
+          applyToAll(settings).catch(() => {});
+        }}
+        onClose={() => setSheetPrayer(null)}
+      />
     </View>
   );
 }

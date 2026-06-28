@@ -43,4 +43,5 @@ export const defaultConfig: MasjidConfig = {
   timezone: "UTC",
   prayerCalculationMethod: "ISNA",
   clerkOrgId: "org_3CfxuY1bSbDRGv2y8LIcZRA6w7Q",
+  fontTheme: "classic",
 };

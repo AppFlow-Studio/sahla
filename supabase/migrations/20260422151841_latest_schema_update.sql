@@ -1,0 +1,4 @@
+-- backfilled placeholder: schema already applied on staging.
+-- Remote schema_migrations row exists with empty statements; whatever DDL
+-- this represented was applied via Studio. This file exists purely to align
+-- local CLI history with remote.

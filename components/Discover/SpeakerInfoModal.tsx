@@ -1,35 +1,26 @@
 import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Dimensions,
   Modal,
-  Platform,
   Pressable,
   Text,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useSupabase } from "@/src/hooks/use-supabase";
-
-const BUSH = "#0A261E";
-const SHEET_BG = "#F4EFE2";
-const AVATAR_BG = "#E8E3D2";
-const DIVIDER = "#0A261E";
-const SUBLABEL = "rgba(10,38,30,0.55)";
-const BULLET_GOLD = "#C9A227";
-const HANDLE = "rgba(10,38,30,0.22)";
-
-const platformTitleFont = Platform.select({
-  ios: "SF Pro Display",
-  android: "Roboto",
-  default: "system-ui",
-});
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 function splitIntoSentences(text: string): string[] {
   return text
@@ -57,6 +48,56 @@ export default function SpeakerInfoModal({
   mosqueUuid,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
+  const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ",")})`;
+  const mutedRgb = `rgb(${colors.muted.replace(/ /g, ",")})`;
+  const handleColor = `rgba(${fg}, 0.22)`;
+  const sublabelColor = `rgba(${fg}, 0.55)`;
+
+  const screenHeight = Dimensions.get("window").height;
+  const translateY = useSharedValue(screenHeight);
+  const DISMISS_DISTANCE = 120;
+  const DISMISS_VELOCITY = 800;
+
+  useEffect(() => {
+    if (visible) {
+      translateY.value = screenHeight;
+      translateY.value = withTiming(0, { duration: 280 });
+    }
+  }, [visible, screenHeight, translateY]);
+
+  const animateClose = () => {
+    translateY.value = withTiming(screenHeight, { duration: 280 }, (finished) => {
+      if (finished) runOnJS(onClose)();
+    });
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      translateY.value = Math.max(0, e.translationY);
+    })
+    .onEnd((e) => {
+      if (
+        e.translationY > DISMISS_DISTANCE ||
+        e.velocityY > DISMISS_VELOCITY
+      ) {
+        translateY.value = withTiming(screenHeight, { duration: 280 }, (finished) => {
+          if (finished) runOnJS(onClose)();
+        });
+      } else {
+        translateY.value = withTiming(0, { duration: 180 });
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
   const supabase = useSupabase();
   const [data, setData] = useState<SpeakerRow | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
@@ -101,12 +142,12 @@ export default function SpeakerInfoModal({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent
     >
       <Pressable
-        onPress={onClose}
+        onPress={animateClose}
         style={{
           flex: 1,
           backgroundColor: "rgba(0,0,0,0.55)",
@@ -116,16 +157,19 @@ export default function SpeakerInfoModal({
         }}
       >
         <Pressable onPress={() => {}}>
-          <View
-            style={{
-              backgroundColor: SHEET_BG,
-              borderRadius: 48,
-              paddingTop: 12,
-              paddingBottom: 28,
-              paddingHorizontal: 24,
-              minHeight: 500,
-              overflow: "hidden",
-            }}
+          <GestureDetector gesture={panGesture}>
+          <Animated.View
+            style={[
+              {
+                backgroundColor: mutedRgb,
+                borderRadius: 28,
+                paddingTop: 12,
+                paddingBottom: 28,
+                paddingHorizontal: 24,
+                overflow: "hidden",
+              },
+              sheetStyle,
+            ]}
           >
             <View
               style={{
@@ -133,94 +177,106 @@ export default function SpeakerInfoModal({
                 width: 44,
                 height: 4,
                 borderRadius: 2,
-                backgroundColor: HANDLE,
+                backgroundColor: handleColor,
                 marginBottom: 6,
               }}
             />
 
             <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
               <Pressable
-                onPress={onClose}
+                onPress={animateClose}
                 hitSlop={12}
                 accessibilityRole="button"
-                accessibilityLabel="Close speaker info"
+                accessibilityLabel={t("content.closeSpeakerInfo")}
                 style={{ padding: 4 }}
               >
                 <Text
                   style={{
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.body,
                     fontSize: 22,
                     fontWeight: "400",
-                    color: BUSH,
+                    color: fgRgb,
                     lineHeight: 22,
                   }}
                 >
-                  ×
+                  {"\u00d7"}
                 </Text>
               </Pressable>
             </View>
 
             <Text
               style={{
-                fontFamily: platformUiFont,
-                fontSize: 13,
-                fontWeight: "600",
-                color: BUSH,
+                fontFamily: fonts.bodySemibold,
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 1.5,
+                color: accentRgb,
                 marginTop: 14,
               }}
             >
-              SPEAKER
+              {t("content.speaker")}
             </Text>
             <View
               style={{
                 height: 1,
-                backgroundColor: DIVIDER,
+                backgroundColor: `rgba(${fg}, 0.12)`,
                 marginTop: 10,
-                marginBottom: 22,
+                marginBottom: 20,
               }}
             />
 
             {status === "loading" ? (
               <View style={{ paddingVertical: 36, alignItems: "center" }}>
-                <ActivityIndicator color={BUSH} />
+                <ActivityIndicator color={accentRgb} />
               </View>
             ) : (
               <>
+                {/* Profile header — avatar + name on one line */}
                 <View
                   style={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: 12,
-                    backgroundColor: AVATAR_BG,
-                    overflow: "hidden",
+                    flexDirection: "row",
                     alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 8,
+                    gap: 14,
+                    marginBottom: credentials.length > 0 ? 22 : 4,
                   }}
                 >
-                  {data?.speaker_img ? (
-                    <Image
-                      source={{ uri: data.speaker_img }}
-                      style={{ width: "100%", height: "100%" }}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <Feather name="user" size={28} color={BUSH} />
-                  )}
-                </View>
+                  <View
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 18,
+                      backgroundColor: mutedRgb,
+                      borderWidth: 1,
+                      borderColor: `rgba(${fg}, 0.08)`,
+                      overflow: "hidden",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {data?.speaker_img ? (
+                      <Image
+                        source={{ uri: data.speaker_img }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Feather name="user" size={30} color={`rgba(${fg}, 0.5)`} />
+                    )}
+                  </View>
 
-                <Text
-                  style={{
-                    fontFamily: platformUiFont,
-                    fontSize: 11,
-                    lineHeight: 18,
-                    fontWeight: "600",
-                    color: BUSH,
-                    marginBottom: 8,
-                  }}
-                >
-                  {displayName}
-                </Text>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontFamily: fonts.display,
+                      fontSize: 18,
+                      lineHeight: 24,
+                      fontWeight: "700",
+                      color: fgRgb,
+                    }}
+                  >
+                    {displayName}
+                  </Text>
+                </View>
 
                 {credentials.length > 0 ? (
                   <View>
@@ -229,28 +285,29 @@ export default function SpeakerInfoModal({
                         key={`${cred}-${idx}`}
                         style={{
                           flexDirection: "row",
-                          marginBottom: idx === credentials.length - 1 ? 0 : 16,
-                          paddingRight: 8,
+                          alignItems: "flex-start",
+                          marginBottom: idx === credentials.length - 1 ? 0 : 14,
+                          paddingEnd: 4,
                         }}
                       >
                         <View
                           style={{
-                            width: 4,
-                            height: 4,
-                            borderRadius: 2,
-                            backgroundColor: BULLET_GOLD,
+                            width: 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: accentRgb,
                             marginTop: 7,
-                            marginRight: 8,
+                            marginEnd: 12,
                           }}
                         />
                         <Text
                           style={{
                             flex: 1,
-                            fontFamily: platformUiFont,
-                            fontSize: 11,
-                            lineHeight: 18,
+                            fontFamily: fonts.body,
+                            fontSize: 14,
+                            lineHeight: 21,
                             fontWeight: "400",
-                            color: "rgba(10,38,30,0.6)",
+                            color: mutedFgRgb,
                           }}
                         >
                           {cred}
@@ -261,18 +318,19 @@ export default function SpeakerInfoModal({
                 ) : (
                   <Text
                     style={{
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                       fontSize: 14,
                       lineHeight: 22,
-                      color: SUBLABEL,
+                      color: sublabelColor,
                     }}
                   >
-                    No credentials available.
+                    {t("content.noCredentials")}
                   </Text>
                 )}
               </>
             )}
-          </View>
+          </Animated.View>
+          </GestureDetector>
         </Pressable>
       </Pressable>
     </Modal>

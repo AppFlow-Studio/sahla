@@ -1,17 +1,19 @@
-import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useUser } from '@clerk/clerk-expo';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import Pattern from '@/assets/onboarding/pattern.svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
+import { Icon } from '@/src/components/ui/icon';
 import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useUploadProfilePhoto } from '@/src/hooks/use-upload-profile-photo';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
+import EditProfileSheet from './EditProfileSheet';
 
 import {
   useFonts,
@@ -19,38 +21,22 @@ import {
   CormorantGaramond_600SemiBold,
 } from '@expo-google-fonts/cormorant-garamond';
 
-function tripletToRgb(triplet: string) {
-  return `rgb(${triplet.replace(/ /g, ',')})`;
-}
-
 export default function ProfileHeader() {
+  const { t } = useTranslation();
   const { profile, status, error } = useProfile();
-  const { signOut } = useAuth();
   const { user } = useUser();
   const { clerkOrgId, colors } = useMasjidConfig();
-  const primaryRgb = tripletToRgb(colors.primary);
-  const accentRgb = tripletToRgb(colors.accent);
+  const fonts = useFontFamily();
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
-  const router = useRouter();
-  const passwordEnabled = (user as any)?.passwordEnabled ?? false;
 
-  const handleSignOut = useCallback(() => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          useOnboardingStore.getState().reset();
-          queryClient.clear();
-          await signOut();
-        },
-      },
-    ]);
-  }, [signOut, queryClient]);
+  const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
+  const primaryRgba0 = `rgba(${colors.primary.replace(/ /g, ',')}, 0)`;
+  const fgRgb = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const { takePhoto, chooseFromGallery, isUploading } = useUploadProfilePhoto();
+  const [editVisible, setEditVisible] = useState(false);
 
   const handlePhotoSource = useCallback(
     async (source: 'camera' | 'gallery') => {
@@ -60,13 +46,14 @@ export default function ProfileHeader() {
         return result;
       } catch (e) {
         Alert.alert(
-          'Could not update photo',
-          e instanceof Error ? e.message : 'Unknown error',
+          t('profile.couldNotUpdatePhoto'),
+          e instanceof Error ? e.message : t('profile.unknownError'),
         );
       }
     },
-    [takePhoto, chooseFromGallery],
+    [takePhoto, chooseFromGallery, t],
   );
+
   const [fontsLoaded] = useFonts({
     CormorantGaramond_500Medium,
     CormorantGaramond_600SemiBold,
@@ -78,7 +65,7 @@ export default function ProfileHeader() {
         className="w-full items-center justify-center bg-primary"
         style={{ paddingTop: insets.top, minHeight: 160 }}
       >
-        <ActivityIndicator size="large" color="#D4AF37" />
+        <ActivityIndicator size="large" color={accentRgb} />
       </View>
     );
   }
@@ -91,7 +78,6 @@ export default function ProfileHeader() {
     );
   }
 
-  // Resolve user info: Supabase profile → Clerk metadata (org-keyed) → onboarding store → Clerk user
   const meta = user?.publicMetadata as Record<string, any> | undefined;
   const metaFirstName = clerkOrgId ? meta?.[clerkOrgId]?.firstName : null;
   const storedFirstName = useOnboardingStore.getState().firstName;
@@ -101,7 +87,7 @@ export default function ProfileHeader() {
   const firstName =
     profile?.first_name ?? metaFirstName ?? (storedFirstName.trim() || null) ?? user?.firstName;
   const lastName = profile?.last_name ?? user?.lastName;
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (user?.primaryEmailAddress?.emailAddress ?? 'Unknown');
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (user?.primaryEmailAddress?.emailAddress ?? t('profile.unknownName'));
   const createdYear = profile?.created_at
     ? new Date(profile.created_at).getFullYear()
     : user?.createdAt
@@ -120,30 +106,32 @@ export default function ProfileHeader() {
 
   return (
     <View className="relative w-full overflow-hidden bg-primary">
-      <LinearGradient
-        colors={[primaryRgb, primaryRgb]}
+      <View
         className="w-full"
-        style={{ paddingTop: insets.top + 5, paddingBottom: 28 }}
+        style={{ backgroundColor: primaryRgb, paddingTop: insets.top + 20, paddingBottom: 48 }}
       >
-        <Image
-          source={require('@/assets/islamic-pattern.png')}
-          tintColor={accentRgb}
-          style={{
-            position: 'absolute',
-            top: -10,
-            left: 0,
-            right: 0,
-            height: 340,
-            opacity: 0.35,
-            transform: [{ rotate: '180deg' }],
-          }}
-          contentFit="cover"
+        {/* Golden geometric pattern (same SVG as the create-account screen),
+            flush to the top edge. Rendered once at the SVG's natural aspect so
+            the full motif shows (zoomed out, not a tight crop), then faded so it
+            dissolves into the header with no seam. */}
+        <View
           pointerEvents="none"
-        />
+          className="absolute left-0 right-0 top-0"
+          style={{ zIndex: 1, aspectRatio: 424 / 262 }}
+        >
+          <View style={{ ...StyleSheet.absoluteFillObject, opacity: 0.55 }}>
+            <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin meet" />
+          </View>
+          <LinearGradient
+            colors={[primaryRgba0, primaryRgb]}
+            locations={[0, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
 
         <View className="relative z-10 w-full items-center px-4">
         {/* Avatar */}
-        <View className="relative h-20 w-20">
+        <View className="relative h-20 w-20 items-center justify-center self-center">
           {hasPhoto && url ? (
             <Image
               source={{ uri: url }}
@@ -155,10 +143,8 @@ export default function ProfileHeader() {
               <Text
                 className="text-5xl text-primary-foreground text-center "
                 style={{
-                  fontFamily: 'CormorantGaramond_500Medium',
+                  fontFamily: fonts.display,
                   lineHeight: 48,
-                  marginLeft: 5,
-                  marginTop: 3,
                 }}
               >
                 {initial}
@@ -168,87 +154,73 @@ export default function ProfileHeader() {
           <Pressable
             onPress={() => setPhotoModalOpen(true)}
             hitSlop={10}
-            className="absolute -bottom-2 -right-2 rounded-full bg-[#B8922A] p-1 active:opacity-80"
+            className="absolute -bottom-2 -right-2 rounded-full bg-accent p-1 active:opacity-80"
           >
-            <EvilIcons name="pencil" size={14} color="#FFFBF2" />
+            <Icon name="pencil" size={14} color={fgRgb} />
           </Pressable>
         </View>
 
-        {/* Name */}
-        <Text
-          className="mt-2 text-center text-3xl text-primary-foreground"
-          style={{ fontFamily: 'CormorantGaramond_600SemiBold' }}
-        >
-          {fullName}
-        </Text>
-
-        {/* Signed-in email */}
-        {user?.primaryEmailAddress?.emailAddress && (
+          {/* Name */}
           <Text
-            className="mt-0.5 text-center text-xs text-[#FFFBF280]"
-            style={{ fontWeight: '400' }}
-          >
-            {user.primaryEmailAddress.emailAddress}
-          </Text>
-        )}
-
-        {/* Member since */}
-        {createdYear && (
-          <Text
-            className="mb-0.5 text-center text-xs text-[#FFFBF260]"
+            className="mt-3 text-center text-primary-foreground"
             style={{
-              fontFamily: Platform.select({
-                android: 'Roboto',
-                default: 'sans-serif',
-              }),
-              fontWeight: '400',
+              fontFamily: fonts.display,
+              fontSize: 21,
             }}
           >
-            Member Since {createdYear}
+            {fullName}
           </Text>
-        )}
 
-        {/* Action buttons */}
-        <View className="mt-3 flex-row items-center justify-center gap-3">
-  {!isProfileComplete && (
-    <Pressable className="flex-row items-center justify-center rounded-full border border-accent px-5 py-2.5" style={{ minWidth: 130 }}>
-      <View className="mr-2 items-center justify-center">
-    {/* Glow */}
-    <View className="absolute h-4 w-4 rounded-full bg-accent opacity-20" />
-    {/* Dot */}
-    <View className="h-2.5 w-2.5 rounded-full bg-accent" />
-  </View>
-      <Text className="text-xs font-medium text-accent">Complete Profile</Text>
-    </Pressable>
-  )}
-  <Pressable
-    className="items-center justify-center rounded-full border border-[#FFFBF280] px-5 py-2.5 "
-    style={{ minWidth: 130 }}
-  >
-    <Text className="text-xs font-medium text-[#FFFBF2]">Edit Profile</Text>
-  </Pressable>
-</View>
-
-        <View className="mt-3 flex-row items-center justify-center gap-3">
-          {passwordEnabled && (
-            <Pressable
-              onPress={() => router.push('/change-password')}
-              className="items-center justify-center rounded-full border border-[#FFFBF280] px-5 py-2.5"
-              style={{ minWidth: 130 }}
+          {/* Member since */}
+          {createdYear && (
+            <Text
+              className="text-center text-primary-foreground/60"
+              style={{
+                fontFamily: fonts.body,
+                fontWeight: '400',
+                fontSize: 10,
+              }}
             >
-              <Text className="text-xs font-medium text-[#FFFBF2]">Change Password</Text>
-            </Pressable>
+              {t('profile.memberSince', { year: createdYear })}
+            </Text>
           )}
-          <Pressable
-            onPress={handleSignOut}
-            className="items-center justify-center rounded-full border border-red-500/50 px-5 py-2.5"
-            style={{ minWidth: 130 }}
-          >
-            <Text className="text-xs font-medium text-red-400">Sign Out</Text>
-          </Pressable>
+
+          {/* Action buttons */}
+          <View className="mt-2.5 flex-row items-center justify-center gap-2">
+            {!isProfileComplete && (
+              <Pressable
+                className="flex-row items-center justify-center rounded-full border-accent/50 active:opacity-80"
+                style={{
+                  borderWidth: 0.75,
+                  paddingHorizontal: 11,
+                  paddingVertical: 4,
+                }}
+              >
+                <View className="me-1 items-center justify-center">
+                  <View className="absolute h-2.5 w-2.5 rounded-full bg-accent opacity-20" />
+                  <View className="rounded-full bg-accent" style={{ width: 4, height: 4 }} />
+                </View>
+                <Text className="text-accent" style={{ fontSize: 9, fontWeight: '500' }}>
+                  {t('profile.completeProfile')}
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => setEditVisible(true)}
+              className="items-center justify-center rounded-full border-primary-foreground/50 active:opacity-80"
+              style={{
+                borderWidth: 0.75,
+                paddingHorizontal: 11,
+                paddingVertical: 4,
+              }}
+            >
+              <Text className="text-primary-foreground" style={{ fontSize: 9, fontWeight: '500' }}>
+                {t('profile.editProfile')}
+              </Text>
+            </Pressable>
+          </View>
         </View>
-        </View>
-      </LinearGradient>
+      </View>
 
       <ProfilePhotoModal
         visible={photoModalOpen}
@@ -257,6 +229,7 @@ export default function ProfileHeader() {
         onChooseFromGallery={() => handlePhotoSource('gallery')}
         isUploading={isUploading}
       />
+      <EditProfileSheet visible={editVisible} onClose={() => setEditVisible(false)} />
     </View>
   );
 }

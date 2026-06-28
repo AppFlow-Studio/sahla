@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
+import { computeIqamahTime, useIqamahConfig, type IqamahRule } from '@/src/hooks/use-iqamah';
 
 export type PrayerStatus = 'passed' | 'next' | 'upcoming';
 
@@ -18,14 +19,15 @@ export type PrayerEntry = {
   iqamah: string;
   /** Raw HH:MM:SS time-of-day from the DB. */
   athanTimeRaw: string;
-  iqamahTimeRaw: string;
+  /** Computed iqamah time-of-day, or null when no rule/value applies. */
+  iqamahTimeRaw: string | null;
   status: PrayerStatus;
 };
 
 type TodaysPrayerRow = {
   prayer_name: string;
   athan_time: string;
-  iqamah_time: string;
+  iqamah_time: string | null;
 };
 
 const PRAYER_ORDER: Record<string, number> = {
@@ -117,11 +119,54 @@ function getTodayDateStringInTz(timeZone: string): string {
   }).format(new Date());
 }
 
+function getHijriDate(): string | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).formatToParts(new Date());
+    const month = parts.find((p) => p.type === 'month')?.value ?? '';
+    const day = parts.find((p) => p.type === 'day')?.value ?? '';
+    const year = parts.find((p) => p.type === 'year')?.value ?? '';
+    return `${month} ${day}, ${year}`;
+  } catch {
+    return null;
+  }
+}
+
+const PRAYER_ICONS: Record<string, string> = {
+  fajr: 'weather-sunset-up',
+  sunrise: 'weather-sunny',
+  dhuhr: 'white-balance-sunny',
+  asr: 'weather-partly-cloudy',
+  maghrib: 'weather-sunset-down',
+  isha: 'weather-night',
+};
+
+export type SimplePrayer = {
+  name: string;
+  time: string;
+  icon: string;
+  isActive: boolean;
+};
+
+export type NextPrayerInfo = {
+  name: string;
+  type: string;
+  timeRemaining: string;
+};
+
 export type UsePrayerTimesResult = {
   items: PrayerEntry[];
-  nextPrayer: PrayerEntry | null;
-  /** Live-formatted clock time in mosque tz, e.g. '4:01 PM'. */
+  /** Simplified prayer list for UI components like PrayerTimesBar. */
+  prayers: SimplePrayer[];
+  nextPrayer: NextPrayerInfo | null;
+  /** Live-formatted clock time in mosque tz, e.g. '4:18 PM'. */
+  currentTime: string;
   currentTimeFormatted: string;
+  /** Hijri date string, e.g. "Dhu'l-Qi'dah 17, 1447". */
+  hijriDate: string | null;
   /** 'in 1h 53m' style countdown to next iqamah, or null when no next prayer. */
   countdownLabel: string | null;
   /** 'HH:MM' clock-style countdown to next iqamah, or null when no next prayer. */
@@ -129,7 +174,11 @@ export type UsePrayerTimesResult = {
   /** Decimal hours-of-day in mosque tz, used by the prayer screen ring. */
   nowHours: number;
   status: 'idle' | 'loading' | 'success' | 'error';
+  /** True when a background refetch is in-flight (e.g. switching dates). */
+  isFetching: boolean;
   error: string | null;
+  /** Manually trigger a refetch of prayer times from the server. */
+  refetch: () => Promise<unknown>;
 };
 
 /**
@@ -139,15 +188,17 @@ export type UsePrayerTimesResult = {
  * when the day rolls over. A 1-second internal tick keeps the next-prayer
  * status, countdown label, and clock display fresh without needing to refetch.
  */
-export function usePrayerTimes(): UsePrayerTimesResult {
+export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
   const supabase = useSupabase();
   const config = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const timezone = config.timezone || 'UTC';
   const todayDateStr = getTodayDateStringInTz(timezone);
+  const dateStr = dateOverride ?? todayDateStr;
+  const isToday = dateStr === todayDateStr;
 
   const query = useQuery({
-    queryKey: ['prayer-times', mosqueUuid, todayDateStr],
+    queryKey: ['prayer-times', mosqueUuid, dateStr],
     queryFn: async (): Promise<TodaysPrayerRow[]> => {
       // Demo-day workaround: F-RLS-01 added per-org RLS on todays_prayers, but
       // the Clerk → Supabase JWT bridge isn't returning a usable auth context
@@ -158,21 +209,30 @@ export function usePrayerTimes(): UsePrayerTimesResult {
         rows: TodaysPrayerRow[];
         error?: string;
       }>('get-todays-prayers', {
-        body: { mosque_id: mosqueUuid },
+        body: { mosque_id: mosqueUuid, date: dateStr },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      // Filter out rows with null fields — the edge function returns
-      // whatever's in the table and the schema allows nulls.
+      // iqamah_time may be null when the mosque hasn't configured iqamah_config —
+      // athan_time is still useful on its own, so only require those two.
       return (data?.rows ?? []).filter(
         (r) =>
           typeof r.prayer_name === 'string' &&
-          typeof r.athan_time === 'string' &&
-          typeof r.iqamah_time === 'string',
+          typeof r.athan_time === 'string',
       );
     },
     enabled: !!mosqueUuid,
   });
+
+  // Iqamah is derived from per-prayer rules (fixed time or athan+offset) rather
+  // than stored per day, so sync-prayer-times can leave todays_prayers.iqamah_time
+  // null and we compute it here from the day's athan.
+  const { rules } = useIqamahConfig();
+  const ruleMap = useMemo(() => {
+    const m = new Map<string, IqamahRule>();
+    for (const r of rules) m.set(r.prayer_name.toLowerCase(), r);
+    return m;
+  }, [rules]);
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -190,44 +250,105 @@ export function usePrayerTimes(): UsePrayerTimesResult {
 
     const now = getNowInTimezone(timezone);
 
-    const items: PrayerEntry[] = rows.map((r) => {
-      const athanSec = timeToSeconds(r.athan_time);
-      const status: PrayerStatus = athanSec <= now.totalSeconds ? 'passed' : 'upcoming';
+    const items: PrayerEntry[] = rows.map((r, i) => {
+      // A prayer is only "passed" once the next prayer's athan has arrived,
+      // since you can still pray it until then.
+      const nextAthanSec = i < rows.length - 1
+        ? timeToSeconds(rows[i + 1].athan_time)
+        : null;
+      const isPassed = isToday && nextAthanSec !== null && nextAthanSec <= now.totalSeconds;
+      const status: PrayerStatus =
+        isPassed ? 'passed' : 'upcoming';
+      // Prefer the configured rule; fall back to any iqamah_time already stored.
+      const iqamahRaw =
+        computeIqamahTime(r.athan_time, ruleMap.get(r.prayer_name.toLowerCase())) ??
+        r.iqamah_time;
       return {
         name: titleCase(r.prayer_name),
         rawName: r.prayer_name,
         athan: formatTo12Hour(r.athan_time),
-        iqamah: formatTo12Hour(r.iqamah_time),
+        iqamah: formatTo12Hour(iqamahRaw),
         athanTimeRaw: r.athan_time,
-        iqamahTimeRaw: r.iqamah_time,
+        iqamahTimeRaw: iqamahRaw,
         status,
       };
     });
 
-    // The first non-passed entry becomes "next".
-    const nextIdx = items.findIndex((p) => p.status !== 'passed');
-    if (nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
+    // The first prayer whose athan hasn't arrived yet is the countdown target.
+    const upcomingIdx = isToday
+      ? items.findIndex((p) => timeToSeconds(p.athanTimeRaw) > now.totalSeconds)
+      : -1;
 
-    const nextPrayer = nextIdx >= 0 ? items[nextIdx] : null;
-    const secondsToIqamah = nextPrayer
-      ? timeToSeconds(nextPrayer.iqamahTimeRaw) - now.totalSeconds
-      : null;
+    // Once Isha (the last prayer) has passed there's no upcoming athan today, so
+    // the next prayer is tomorrow's Fajr — count down to it and highlight Fajr.
+    const fajrIdx = items.findIndex((p) => p.rawName.toLowerCase() === 'fajr');
+    const fallbackToFajr = isToday && upcomingIdx < 0 && fajrIdx >= 0;
+
+    // Which row is "next": the upcoming prayer, tomorrow's Fajr once everything
+    // has passed, otherwise the current (athan-passed) prayer window.
+    const nextIdx = upcomingIdx >= 0
+      ? upcomingIdx
+      : fallbackToFajr
+        ? fajrIdx
+        : items.findIndex((p) => p.status !== 'passed');
+    if (isToday && nextIdx >= 0) items[nextIdx] = { ...items[nextIdx], status: 'next' };
+
+    // Countdown targets the upcoming prayer's iqamah, or tomorrow's Fajr.
+    const countdownPrayer = isToday && upcomingIdx >= 0 ? items[upcomingIdx] : null;
+
+    let secondsToIqamah: number | null = null;
+
+    if (countdownPrayer) {
+      const nextTimeRaw = countdownPrayer.iqamahTimeRaw || countdownPrayer.athanTimeRaw;
+      secondsToIqamah = timeToSeconds(nextTimeRaw) - now.totalSeconds;
+    } else if (fallbackToFajr) {
+      const fajr = items[fajrIdx];
+      const fajrTimeRaw = fajr.iqamahTimeRaw || fajr.athanTimeRaw;
+      const DAY = 86400;
+      secondsToIqamah = timeToSeconds(fajrTimeRaw) + DAY - now.totalSeconds;
+    }
+
     const countdownLabel =
       secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;
     const countdownClock =
       secondsToIqamah !== null ? formatCountdownClock(secondsToIqamah) : null;
 
+    const prayers: SimplePrayer[] = items.map((p) => ({
+      name: p.name,
+      time: p.athan,
+      icon: PRAYER_ICONS[p.rawName.toLowerCase()] ?? 'weather-sunny',
+      isActive: p.status === 'next',
+    }));
+
+    const currentTimeStr = formatCurrentTimeInTz(timezone);
+    const nextPrayerInfo: NextPrayerInfo | null = countdownPrayer
+      ? {
+          name: countdownPrayer.name,
+          type: 'iqamah',
+          timeRemaining: countdownLabel ?? '',
+        }
+      : fallbackToFajr
+        ? {
+            name: items[fajrIdx].name,
+            type: 'athan',
+            timeRemaining: countdownLabel ?? '',
+          }
+        : null;
+
     return {
       items,
-      nextPrayer,
-      currentTimeFormatted: formatCurrentTimeInTz(timezone),
+      prayers,
+      nextPrayer: nextPrayerInfo,
+      currentTime: currentTimeStr,
+      currentTimeFormatted: currentTimeStr,
+      hijriDate: getHijriDate(),
       countdownLabel,
       countdownClock,
       nowHours: now.hours,
     };
     // `tick` re-runs the memo every second so countdown / status / clock stay live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.data, timezone, tick]);
+  }, [query.data, timezone, tick, isToday, ruleMap]);
 
   const status: UsePrayerTimesResult['status'] = !mosqueUuid
     ? 'idle'
@@ -240,6 +361,8 @@ export function usePrayerTimes(): UsePrayerTimesResult {
   return {
     ...computed,
     status,
+    isFetching: query.isFetching,
     error: query.error?.message ?? null,
+    refetch: () => query.refetch(),
   };
 }

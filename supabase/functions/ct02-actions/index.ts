@@ -9,6 +9,8 @@
  *   - get_detail     → fetch a single content_items row by content_id
  *   - is_saved       → saved_content existence by (user_id, content_id)
  *   - is_notif       → content_notifications existence by (user_id, content_id)
+ *   - list_notif_optins → all content the user opted into reminders for, joined
+ *                         with item details (powers the Notification Center)
  *   - get_settings   → notification_settings text[] for (user_id, content_id), or null if no row
  *   - toggle_save    → upsert/delete saved_content + log interaction
  *   - toggle_notif   → upsert/delete content_notifications + log interaction
@@ -36,6 +38,7 @@ type GetDetail = { action: 'get_detail'; content_id: string };
 type IsSaved = { action: 'is_saved'; user_id: string; content_id: string };
 type IsNotif = { action: 'is_notif'; user_id: string; content_id: string };
 type GetSettings = { action: 'get_settings'; user_id: string; content_id: string };
+type ListNotifOptins = { action: 'list_notif_optins'; user_id: string };
 type ToggleSave = {
   action: 'toggle_save';
   user_id: string;
@@ -62,6 +65,7 @@ type Body =
   | IsSaved
   | IsNotif
   | GetSettings
+  | ListNotifOptins
   | ToggleSave
   | ToggleNotif
   | SetTimings;
@@ -122,6 +126,44 @@ serve(async (req) => {
           .maybeSingle();
         if (error) return jsonError(error.message);
         return jsonOk({ is_opted_in: !!data });
+      }
+      case 'list_notif_optins': {
+        // The content this user opted into reminders for, newest opt-in first,
+        // joined with the item details the Notification Center renders.
+        type OptinRow = { content_id: string; created_at: string | null };
+        const { data: optins, error: optinErr } = await supabase
+          .from('content_notifications')
+          .select('content_id, created_at')
+          .eq('user_id', body.user_id)
+          .order('created_at', { ascending: false });
+        if (optinErr) return jsonError(optinErr.message);
+
+        const optinRows = (optins ?? []) as OptinRow[];
+        const ids = optinRows.map((o) => o.content_id);
+        if (ids.length === 0) return jsonOk({ items: [] });
+
+        const { data: rows, error: rowsErr } = await supabase
+          .from('content_items')
+          .select(
+            'content_id, name, type, image, start_date, end_date, start_time, days, is_weekly_program',
+          )
+          .in('content_id', ids);
+        if (rowsErr) return jsonError(rowsErr.message);
+
+        // Stitch each item's opt-in timestamp back on, preserving opt-in order.
+        const byId = new Map(
+          ((rows ?? []) as { content_id: string }[]).map((r) => [r.content_id, r]),
+        );
+        const items = ids
+          .map((id: string) => {
+            const row = byId.get(id);
+            if (!row) return null;
+            const optedAt = optinRows.find((o) => o.content_id === id)?.created_at ?? null;
+            return { ...row, opted_in_at: optedAt };
+          })
+          .filter(Boolean);
+
+        return jsonOk({ items });
       }
       case 'get_settings': {
         const { data, error } = await supabase

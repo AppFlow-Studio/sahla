@@ -1,22 +1,24 @@
 
-import { Platform, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
   title: string;
 };
 
 export default function SectionHeader({ title }: Props) {
+  const fonts = useFontFamily();
   return (
-    <View className="pb-2 pt-4">
+    <View style={{ paddingBottom: 10, paddingTop: 20 }}>
       <Text
+        className="text-foreground/60"
         style={{
-          fontFamily: Platform.select({ android: 'Roboto', default: undefined }),
+          fontFamily: fonts.bodySemibold,
           fontWeight: '700',
           fontSize: 10,
-          lineHeight: 10,
+          lineHeight: 14,
           letterSpacing: 1.8,
           textTransform: 'uppercase',
-          color: '#0A261E99',
         }}
       >
         {title}

@@ -1,15 +1,18 @@
 import { useClerk, useSignIn, useSSO, useSignInWithApple } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
+import { Icon } from '@/src/components/ui/icon';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -17,7 +20,10 @@ export default function SignInScreen() {
   const { startAppleAuthenticationFlow } = useSignInWithApple();
   const clerk = useClerk();
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,12 +37,12 @@ export default function SignInScreen() {
       if (!orgId) return;
       const result = await joinOrgDirect(userId, orgId);
       if (result === 'error') {
-        setError('Failed to join organization. Please try again.');
+        setError(t('auth.joinOrgFailed'));
         return;
       }
       await clerk.setActive({ organization: orgId });
     },
-    [clerk, config.clerkOrgId],
+    [clerk, config.clerkOrgId, t],
   );
 
   const onSubmit = useCallback(async () => {
@@ -44,46 +50,109 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await clerk.signOut().catch(() => {});
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === 'complete') {
         await setActive({ session: attempt.createdSessionId });
-        const userId = clerk.user?.id;
-        if (userId) await joinAndActivateOrg(userId);
+        // clerk.user is not available synchronously after setActive;
+        // wait for the session to propagate then join org.
+        setTimeout(async () => {
+          const userId = clerk.user?.id;
+          if (userId) await joinAndActivateOrg(userId);
+        }, 500);
+      } else if (attempt.status === 'needs_second_factor') {
+        router.push('/(auth)/two-factor');
       } else {
-        setError(`Additional step required: ${attempt.status}`);
+        setError(t('auth.additionalStepRequired', { status: attempt.status }));
       }
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'errors' in err
           ? // @ts-expect-error Clerk error shape
-            (err.errors?.[0]?.message ?? 'Sign-in failed')
-          : 'Sign-in failed';
+            (err.errors?.[0]?.message ?? t('auth.signInFailed'))
+          : t('auth.signInFailed');
       setError(message);
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk]);
+  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router, t]);
 
   const activateOAuthSession = useCallback(
     async (result: any) => {
       const { createdSessionId, setActive: setActiveOAuth, signIn: oauthSignIn, signUp } = result;
 
-      const sessionId =
+      console.log('[Auth] OAuth result:', JSON.stringify({
+        createdSessionId,
+        signUpStatus: signUp?.status,
+        signUpSessionId: signUp?.createdSessionId,
+        signInStatus: oauthSignIn?.status,
+        signInSessionId: oauthSignIn?.createdSessionId,
+        externalAccountStatus: signUp?.verifications?.externalAccount?.status,
+      }, null, 2));
+
+      let sessionId =
         createdSessionId ??
-        (signUp?.status === 'complete' ? signUp.createdSessionId : null) ??
-        (oauthSignIn?.status === 'complete' ? oauthSignIn.createdSessionId : null);
+        signUp?.createdSessionId ??
+        oauthSignIn?.createdSessionId ??
+        null;
+
+      // Handle transfer: Clerk created both signUp + signIn
+      if (!sessionId && oauthSignIn) {
+        try {
+          console.log('[Auth] No session yet, attempting sign-in transfer.');
+          const transfer = await oauthSignIn.create({ transfer: true });
+          sessionId = transfer.createdSessionId;
+        } catch (transferErr) {
+          console.warn('[Auth] Transfer failed:', transferErr);
+        }
+      }
+
+      // Handle sign-up with missing_requirements — fill missing fields from OAuth profile
+      if (!sessionId && signUp && signUp.status === 'missing_requirements') {
+        try {
+          const missing = signUp.missingFields || [];
+          console.log('[Auth] Sign-up missing fields:', missing);
+
+          const ext = signUp.verifications?.externalAccount;
+          const firstName = signUp.firstName || ext?.firstName || 'User';
+          const lastName = signUp.lastName || ext?.lastName || '';
+
+          const updates: Record<string, string> = {};
+          if (missing.includes('first_name') || missing.includes('last_name')) {
+            updates.firstName = firstName;
+            updates.lastName = lastName;
+          }
+          if (missing.includes('username')) {
+            updates.username = `user_${Date.now()}`;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            console.log('[Auth] Updating sign-up with:', updates);
+            const updated = await signUp.update(updates);
+            sessionId = updated.createdSessionId;
+          }
+
+          if (!sessionId) {
+            await signUp.reload();
+            sessionId = signUp.createdSessionId;
+          }
+        } catch (updateErr) {
+          console.warn('[Auth] Sign-up update failed:', updateErr);
+        }
+      }
 
       if (!sessionId || !setActiveOAuth) {
         console.warn('[Auth] OAuth flow did not produce a session.');
+        setError(t('auth.signInCouldNotComplete'));
         return;
       }
 
       await setActiveOAuth({ session: sessionId });
-      const userId = clerk.user?.id;
-      if (userId) await joinAndActivateOrg(userId);
+      setTimeout(async () => {
+        const userId = clerk.user?.id;
+        if (userId) await joinAndActivateOrg(userId);
+      }, 500);
     },
-    [clerk, joinAndActivateOrg],
+    [clerk, joinAndActivateOrg, t],
   );
 
   const handleApple = useCallback(async () => {
@@ -93,7 +162,7 @@ export default function SignInScreen() {
       if (Platform.OS === 'ios') {
         result = await startAppleAuthenticationFlow();
       } else {
-        result = await startSSOFlow({ strategy: 'oauth_apple' });
+        result = await startSSOFlow({ strategy: 'oauth_apple', redirectUrl: Linking.createURL('/') });
         if (result.authSessionResult?.type === 'dismiss') return;
       }
       await activateOAuthSession(result);
@@ -108,7 +177,7 @@ export default function SignInScreen() {
   const handleGoogle = useCallback(async () => {
     setSsoLoading('google');
     try {
-      const result = await startSSOFlow({ strategy: 'oauth_google' });
+      const result = await startSSOFlow({ strategy: 'oauth_google', redirectUrl: Linking.createURL('/') });
       if (result.authSessionResult?.type === 'dismiss') return;
       await activateOAuthSession(result);
     } catch (err) {
@@ -118,7 +187,11 @@ export default function SignInScreen() {
     }
   }, [startSSOFlow, activateOAuthSession]);
 
-  const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
+  const surface = config.colors.onboardingSurface.replace(/ /g, ',');
+  const surfaceHex = `rgb(${surface})`;
+  const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
+  const surfaceAlpha25 = `rgba(${surface}, 0.25)`;
+  const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
 
   return (
     <View className="flex-1 bg-onboarding-bg">
@@ -133,16 +206,21 @@ export default function SignInScreen() {
             hitSlop={12}
             className="h-6 w-6 items-center justify-center"
           >
-            <Ionicons name="arrow-back" size={20} color="rgba(255,251,242,0.6)" />
+            <Icon
+              name="arrow-back"
+              size={20}
+              color={surfaceAlpha60}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </Pressable>
         </View>
 
         <View className="flex-1 justify-center px-6">
           <Text
             className="text-onboarding-surface"
-            style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginBottom: 8 }}
           >
-            Welcome back
+            {t('auth.welcomeBack')}
           </Text>
           <Text className="text-onboarding-accent mb-8" style={{ fontSize: 12 }}>
             {config.displayName}
@@ -152,13 +230,13 @@ export default function SignInScreen() {
             className="text-onboarding-surface/40 mb-2"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            EMAIL
+            {t('auth.email')}
           </Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor="rgba(255,251,242,0.25)"
+            placeholder={t('auth.emailPlaceholder')}
+            placeholderTextColor={surfaceAlpha25}
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -169,13 +247,13 @@ export default function SignInScreen() {
             className="text-onboarding-surface/40 mb-2"
             style={{ fontSize: 10, letterSpacing: 1.5 }}
           >
-            PASSWORD
+            {t('auth.password')}
           </Text>
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="Your password"
-            placeholderTextColor="rgba(255,251,242,0.25)"
+            placeholder={t('auth.passwordPlaceholder')}
+            placeholderTextColor={surfaceAlpha25}
             secureTextEntry
             autoComplete="password"
             className="border-onboarding-surface/20 text-onboarding-surface mb-2 border-b pb-2"
@@ -186,7 +264,7 @@ export default function SignInScreen() {
             className="text-onboarding-accent mb-4 self-end"
             style={{ fontSize: 11, fontWeight: '500' }}
           >
-            Forgot password?
+            {t('auth.forgotPassword')}
           </Link>
 
           {error ? (
@@ -202,10 +280,10 @@ export default function SignInScreen() {
               className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90 disabled:opacity-50"
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#0A261E" />
+                <ActivityIndicator size="small" color={bgHex} />
               ) : (
                 <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
-                  Sign in
+                  {t('auth.signInButton')}
                 </Text>
               )}
             </Pressable>
@@ -217,12 +295,12 @@ export default function SignInScreen() {
               style={{ gap: 8 }}
             >
               {ssoLoading === 'apple' ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={surfaceHex} />
               ) : (
                 <>
                   <Ionicons name="logo-apple" size={14} color={surfaceHex} />
                   <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
-                    Continue with Apple
+                    {t('auth.continueWithApple')}
                   </Text>
                 </>
               )}
@@ -235,12 +313,12 @@ export default function SignInScreen() {
               style={{ gap: 8 }}
             >
               {ssoLoading === 'google' ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={surfaceHex} />
               ) : (
                 <>
                   <Ionicons name="logo-google" size={12} color={surfaceHex} />
                   <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '500' }}>
-                    Continue with Google
+                    {t('auth.continueWithGoogle')}
                   </Text>
                 </>
               )}
@@ -249,14 +327,14 @@ export default function SignInScreen() {
 
           <View className="mt-6 flex-row justify-center">
             <Text className="text-onboarding-surface/50" style={{ fontSize: 12 }}>
-              Don&apos;t have an account?{' '}
+              {t('auth.noAccount')}
             </Text>
             <Link
               href="/(auth)/create-account"
               className="text-onboarding-accent"
               style={{ fontSize: 12, fontWeight: '500' }}
             >
-              Sign up
+              {t('auth.signUp')}
             </Link>
           </View>
         </View>

@@ -1,41 +1,44 @@
-import { Image } from "expo-image";
-import type { ImageSourcePropType } from "react-native";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
-
-const ROW_FOREGROUND = "#0A261E";
-/** Chevron only — #0A261E @ 40% */
-const CHEVRON_MUTED = "rgba(10, 38, 30, 0.4)";
+import { Icon, type IconName } from "@/src/components/ui/icon";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
   title: string;
-  icon: ImageSourcePropType;
+  icon: IconName;
   onPress: () => void;
 };
 
 export default function RowItem({ title, icon, onPress }: Props) {
+  const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
+  const isRTL = useIsRTL();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
   return (
     <Pressable
       onPress={onPress}
       className="flex-row items-center justify-between px-4 py-3"
     >
       <View className="flex-row items-center gap-2">
-        <Image source={icon} style={{ width: 16, height: 16 }} contentFit="contain" />
+        {/* Icon stroke follows the masjid theme foreground. */}
+        <Icon name={icon} size={16} color={fgRgb} />
         <Text
+          className="text-foreground"
           style={{
-            fontFamily: Platform.select({ android: "Roboto", default: undefined }),
+            fontFamily: fonts.bodyMedium,
             fontWeight: "500",
-            fontSize: 11,
+            fontSize: 13,
             lineHeight: 18,
-            color: ROW_FOREGROUND,
             letterSpacing: 0,
           }}
         >
           {title}
         </Text>
       </View>
-      <IconSymbol name="chevron.right" size={16} color={CHEVRON_MUTED} />
+      <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={`rgba(${fg},0.4)`} />
     </Pressable>
   );
 }

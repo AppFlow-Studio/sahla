@@ -1,12 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
+import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 type OnboardingScaffoldProps = {
   step: number;
@@ -16,9 +17,11 @@ type OnboardingScaffoldProps = {
   children?: React.ReactNode;
   primaryLabel: string;
   onPrimary: () => void;
+  primaryDisabled?: boolean;
   secondaryLabel?: string;
   onSecondary?: () => void;
   footerNote?: string;
+  scrollable?: boolean;
 };
 
 export function OnboardingScaffold({
@@ -29,13 +32,41 @@ export function OnboardingScaffold({
   children,
   primaryLabel,
   onPrimary,
+  primaryDisabled = false,
   secondaryLabel,
   onSecondary,
-  footerNote = 'By continuing you agree to our Terms of Service',
+  footerNote,
+  scrollable = false,
 }: OnboardingScaffoldProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const config = useMasjidConfig();
-  const accentHex = `rgb(${config.colors.onboardingAccent.replace(/ /g, ',')})`;
+  const fonts = useFontFamily();
+  const surfaceRgb = `rgba(${config.colors.onboardingSurface.replace(/ /g, ',')}, 0.6)`;
+  const resolvedFooterNote = footerNote ?? t('onboarding.footerTerms');
+
+  const content = (
+    <>
+      <View style={{ marginTop: 48 }}>
+        <Text
+          className="text-onboarding-surface"
+          style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', lineHeight: 36 }}
+        >
+          {title}
+        </Text>
+        {body && (
+          <Text
+            className="text-onboarding-surface/80 mt-6"
+            style={{ fontSize: 11, lineHeight: 15 }}
+          >
+            {body}
+          </Text>
+        )}
+      </View>
+      {children}
+    </>
+  );
 
   return (
     <View className="flex-1 bg-onboarding-bg z-100">
@@ -48,9 +79,10 @@ export function OnboardingScaffold({
           <Pressable
             onPress={() => router.back()}
             hitSlop={12}
-            className="mr-3 h-6 w-6 items-center justify-center"
+            className="me-3 h-6 w-6 items-center justify-center"
+            style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
           >
-            <Ionicons name="arrow-back" size={20} color="rgba(255,251,242,0.6)" />
+            <Icon name="arrow-back" size={20} color={surfaceRgb} />
           </Pressable>
           <View className="flex-1 flex-row" style={{ gap: 6 }}>
             {Array.from({ length: totalSteps }).map((_, i) => (
@@ -61,55 +93,50 @@ export function OnboardingScaffold({
               />
             ))}
           </View>
-          <Text className="text-onboarding-surface/40 ml-3" style={{ fontSize: 8 }}>
-            STEP {step} OF {totalSteps}
+          <Text className="text-onboarding-surface/40 ms-3" style={{ fontSize: 8 }}>
+            {t('onboarding.stepOf', { step, total: totalSteps })}
           </Text>
         </View>
 
-        <View className="flex-1 px-5">
-          <View className="mt-48">
-            <Text
-              className="text-onboarding-surface"
-              style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', lineHeight: 36 }}
-            >
-              {title}
-            </Text>
-            {body && (
-              <Text
-                className="text-onboarding-surface/80 mt-6"
-                style={{ fontSize: 11, lineHeight: 15 }}
-              >
-                {body}
-              </Text>
-            )}
-            {children}
+        {scrollable ? (
+          <ScrollView
+            className="flex-1 px-5"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 24 }}
+          >
+            {content}
+          </ScrollView>
+        ) : (
+          <View className="flex-1 px-5">
+            {content}
+            <View className="flex-1" />
           </View>
+        )}
 
-          <View className="flex-1" />
-
-          <View className="pb-6" style={{ paddingHorizontal: 36 }}>
-            <Pressable
-              onPress={onPrimary}
-              className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90"
-            >
-              <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
-                {primaryLabel}
+        <View className="px-5 pb-6" style={{ paddingHorizontal: 36 }}>
+          <Pressable
+            onPress={onPrimary}
+            disabled={primaryDisabled}
+            className="h-[43px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90"
+            style={{ opacity: primaryDisabled ? 0.4 : 1 }}
+          >
+            <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
+              {primaryLabel}
+            </Text>
+          </Pressable>
+          {secondaryLabel && onSecondary && (
+            <Pressable onPress={onSecondary} className="mt-4 items-center active:opacity-70">
+              <Text className="text-onboarding-surface" style={{ fontSize: 14 }}>
+                {secondaryLabel}
               </Text>
             </Pressable>
-            {secondaryLabel && onSecondary && (
-              <Pressable onPress={onSecondary} className="mt-4 items-center active:opacity-70">
-                <Text className="text-onboarding-surface" style={{ fontSize: 14 }}>
-                  {secondaryLabel}
-                </Text>
-              </Pressable>
-            )}
-            <Text
-              className="text-onboarding-surface/20 mt-6 text-center"
-              style={{ fontSize: 10 }}
-            >
-              {footerNote}
-            </Text>
-          </View>
+          )}
+          <Text
+            className="text-onboarding-surface/20 mt-6 text-center"
+            style={{ fontSize: 10 }}
+          >
+            {resolvedFooterNote}
+          </Text>
         </View>
       </SafeAreaView>
     </View>

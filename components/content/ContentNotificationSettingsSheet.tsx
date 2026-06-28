@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import {
   Gesture,
   GestureDetector,
@@ -18,20 +19,12 @@ import {
   NOTIF_OFFSET_OPTIONS,
   useSaveContentNotifSettings,
 } from '@/src/hooks/use-content-notification-settings';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
-const BUSH = '#0A261E';
-const SURFACE = '#FFFBF2';
-const MUTED = 'rgba(10,38,30,0.55)';
-const DIVIDER = 'rgba(10,38,30,0.08)';
-const SHEET_RADIUS = 28;
+const SHEET_RADIUS = 40;
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 800;
-
-const platformUiFont = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
 
 type Props = {
   visible: boolean;
@@ -48,6 +41,16 @@ export function ContentNotificationSettingsSheet({
   mosqueId,
   initialOffsets,
 }: Props) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
+  const { colors } = useMasjidConfig();
+  const fg = colors.foreground.replace(/ /g, ',');
+  const BUSH = `rgb(${fg})`;
+  const SURFACE = `rgb(${colors.background.replace(/ /g, ',')})`;
+  const ACCENT = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const MUTED = `rgba(${fg},0.55)`;
+  const DIVIDER = `rgba(${fg},0.08)`;
+
   const [mounted, setMounted] = useState(visible);
   const translateY = useSharedValue(600);
   const backdropOpacity = useSharedValue(0);
@@ -162,7 +165,7 @@ export function ContentNotificationSettingsSheet({
                   width: 40,
                   height: 5,
                   borderRadius: 999,
-                  backgroundColor: 'rgba(10,38,30,0.18)',
+                  backgroundColor: `rgba(${fg},0.18)`,
                   marginTop: 10,
                 }}
               />
@@ -170,23 +173,23 @@ export function ContentNotificationSettingsSheet({
               <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 6 }}>
                 <Text
                   style={{
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.bodySemibold,
                     fontSize: 18,
                     fontWeight: '700',
                     color: BUSH,
                   }}
                 >
-                  Reminder timing
+                  {t('content.reminderTiming')}
                 </Text>
                 <Text
                   style={{
                     marginTop: 4,
-                    fontFamily: platformUiFont,
+                    fontFamily: fonts.body,
                     fontSize: 13,
                     color: MUTED,
                   }}
                 >
-                  Pick when you want to be reminded. Clear all to use this masjid&rsquo;s default.
+                  {t('content.reminderTimingHint')}
                 </Text>
               </View>
 
@@ -214,11 +217,11 @@ export function ContentNotificationSettingsSheet({
                           height: 22,
                           borderRadius: 6,
                           borderWidth: 1.5,
-                          borderColor: isOn ? BUSH : 'rgba(10,38,30,0.3)',
-                          backgroundColor: isOn ? BUSH : 'transparent',
+                          borderColor: isOn ? ACCENT : `rgba(${fg},0.3)`,
+                          backgroundColor: isOn ? ACCENT : 'transparent',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          marginRight: 12,
+                          marginEnd: 12,
                         }}
                       >
                         {isOn ? (
@@ -228,7 +231,7 @@ export function ContentNotificationSettingsSheet({
                       <Text
                         style={{
                           flex: 1,
-                          fontFamily: platformUiFont,
+                          fontFamily: isOn ? fonts.bodySemibold : fonts.body,
                           fontSize: 15,
                           fontWeight: isOn ? '600' : '400',
                           color: BUSH,
@@ -259,18 +262,18 @@ export function ContentNotificationSettingsSheet({
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
-                    borderColor: 'rgba(10,38,30,0.15)',
+                    borderColor: `rgba(${fg},0.15)`,
                   }}
                 >
                   <Text
                     style={{
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.bodySemibold,
                       fontSize: 15,
                       fontWeight: '600',
                       color: BUSH,
                     }}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -282,7 +285,7 @@ export function ContentNotificationSettingsSheet({
                     borderRadius: 14,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: BUSH,
+                    backgroundColor: ACCENT,
                     opacity: save.isPending ? 0.6 : 1,
                   }}
                 >
@@ -291,13 +294,13 @@ export function ContentNotificationSettingsSheet({
                   ) : (
                     <Text
                       style={{
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.bodySemibold,
                         fontSize: 15,
                         fontWeight: '700',
                         color: SURFACE,
                       }}
                     >
-                      Save
+                      {t('common.save')}
                     </Text>
                   )}
                 </Pressable>
