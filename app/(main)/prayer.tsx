@@ -464,22 +464,34 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
             )}
           </Text>
           <Pressable
-            style={{ alignSelf: 'flex-start', marginTop: 14 }}
             onPress={onContinueReading}
+            style={({ pressed }) => ({
+              alignSelf: 'flex-start',
+              marginTop: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              paddingLeft: 16,
+              paddingRight: 14,
+              paddingVertical: 11,
+              borderRadius: 999,
+              backgroundColor: c.text,
+              borderWidth: 1.5,
+              borderColor: c.gold,
+              shadowColor: c.gold,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.55,
+              shadowRadius: 12,
+              elevation: 6,
+              opacity: pressed ? 0.9 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            })}
           >
-            <GlassView
-              glassEffectStyle="regular"
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 7,
-                borderRadius: 999,
-                overflow: 'hidden',
-              }}
-            >
-              <Text style={{ color: c.text, fontSize: 12, fontWeight: '500' }}>
-                Continue Reading
-              </Text>
-            </GlassView>
+            <MaterialCommunityIcons name="book-open-variant" size={15} color={c.depth} />
+            <Text style={{ color: c.depth, fontSize: 13.5, fontWeight: '700', letterSpacing: 0.2 }}>
+              Continue Reading
+            </Text>
+            <MaterialCommunityIcons name="arrow-right" size={15} color={c.gold} />
           </Pressable>
         </View>
 

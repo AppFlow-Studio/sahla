@@ -28,7 +28,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import {
-  getMushafPage,
   getPageForAyah,
   TOTAL_MUSHAF_PAGES,
   type Surah,
@@ -413,26 +412,24 @@ export function MorphingFooter({
 }
 
 function useSurahForPage(page: number, surahs: Surah[]) {
-  const [surah, setSurah] = useState<Surah | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    getMushafPage(page)
-      .then((lines) => {
-        if (cancelled || lines.length === 0) return;
-        // Find the primary surah for the page: prefer surah_name line,
-        // otherwise any line's surah_number (ayah lines don't carry it, so
-        // we fall back to the first surah_name occurrence).
-        const surahLine = lines.find((l) => l.surah_number != null);
-        if (surahLine?.surah_number) {
-          setSurah(surahs[surahLine.surah_number - 1] ?? null);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+  // Synchronous range lookup: the surah containing `page` is the latest
+  // surah whose first ayah's page is ≤ `page`. Surahs are sorted by
+  // surah_number, and their first pages are monotonically increasing, so a
+  // single pass is enough. This works for *any* mushaf page — not just
+  // pages that happen to carry a `surah_name` line — so resuming mid-surah
+  // (Continue Reading) and swiping across surah boundaries both stay in
+  // sync without depending on the async page-content read.
+  return useMemo(() => {
+    if (surahs.length === 0) return null;
+    let candidate: Surah | null = null;
+    for (const s of surahs) {
+      const first = getPageForAyah(s.surah_number, 1);
+      if (first == null) continue;
+      if (first <= page) candidate = s;
+      else break;
+    }
+    return candidate;
   }, [page, surahs]);
-  return surah;
 }
 
 const MUSHAF_ZOOM = 1.5;
