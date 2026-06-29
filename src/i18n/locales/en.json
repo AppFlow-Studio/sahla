@@ -547,6 +547,8 @@
     "continue": "Continue",
     "complete": "Complete",
     "saving": "Saving…",
+    "languageTitle": "Choose your language",
+    "languageBody": "Pick the language for the app. You can change this anytime in your profile.",
     "enter": "Enter",
     "selectAllThatApply": "Select all that apply.",
     "stepOf": "STEP {{step}} OF {{total}}",
