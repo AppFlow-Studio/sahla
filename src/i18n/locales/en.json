@@ -503,6 +503,7 @@
   "home": {
     "greeting": "Assalamu Alaikum",
     "prayerTypeIn": "{{type}} in {{time}}",
+    "timeUntil": "Time until {{name}}",
     "supportYourMasjid": "Support Your Masjid",
     "donate": "Donate",
     "donateCta": "DONATE",

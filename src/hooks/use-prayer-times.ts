@@ -76,6 +76,15 @@ function formatCountdownClock(totalSeconds: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/** 'H:MM:SS' second-resolution countdown, e.g. '1:52:45' (for the countdown header). */
+function formatCountdownClockFull(totalSeconds: number): string {
+  if (totalSeconds <= 0) return '0:00:00';
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 function getNowInTimezone(timeZone: string): {
   hour: number;
   minute: number;
@@ -171,6 +180,10 @@ export type UsePrayerTimesResult = {
   countdownLabel: string | null;
   /** 'HH:MM' clock-style countdown to next iqamah, or null when no next prayer. */
   countdownClock: string | null;
+  /** 'H:MM:SS' second-resolution countdown (countdown header), or null. */
+  countdownClockFull: string | null;
+  /** Raw seconds until the next iqamah/Fajr, or null when no next prayer. */
+  secondsToIqamah: number | null;
   /** Decimal hours-of-day in mosque tz, used by the prayer screen ring. */
   nowHours: number;
   status: 'idle' | 'loading' | 'success' | 'error';
@@ -312,6 +325,8 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
       secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;
     const countdownClock =
       secondsToIqamah !== null ? formatCountdownClock(secondsToIqamah) : null;
+    const countdownClockFull =
+      secondsToIqamah !== null ? formatCountdownClockFull(secondsToIqamah) : null;
 
     const prayers: SimplePrayer[] = items.map((p) => ({
       name: p.name,
@@ -344,6 +359,8 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
       hijriDate: getHijriDate(),
       countdownLabel,
       countdownClock,
+      countdownClockFull,
+      secondsToIqamah,
       nowHours: now.hours,
     };
     // `tick` re-runs the memo every second so countdown / status / clock stay live.
