@@ -2,7 +2,7 @@ import { useNotificationStatusStore } from '@/src/stores/notification-status-sto
 import { useTutorialStore } from '@/src/stores/tutorial-store';
 
 export type ProfileNudges = {
-  /** User skipped/denied notifications and they're still off. */
+  /** Notifications aren't enabled (OS permission not granted, once known). */
   notifications: boolean;
   /** User was shown the tour but didn't finish it. */
   tutorial: boolean;
@@ -13,21 +13,21 @@ export type ProfileNudges = {
 };
 
 /**
- * The first-run "go back and finish setting up" nudges, surfaced as dots on the
- * Profile tab and the relevant Profile rows. A nudge only fires AFTER the user
- * has skipped the step in question, so we never badge something they were never
- * offered. Fully reactive — dots clear the moment the user resolves a step.
+ * The "finish setting up" nudges surfaced on the Profile screen:
+ *   - `notifications` — notifications aren't enabled (drives the Profile enable
+ *     card); shows whenever the OS permission isn't granted.
+ *   - `tutorial` — the tour was shown but not finished.
+ * Fully reactive — each clears the moment the user resolves it (enables
+ * notifications / finishes the tour).
  */
 export function useProfileNudges(): ProfileNudges {
-  const promptSeen = useNotificationStatusStore((s) => s.promptSeen);
   const permission = useNotificationStatusStore((s) => s.permission);
   const seen = useTutorialStore((s) => s.seen);
   const completed = useTutorialStore((s) => s.completed);
 
-  // Notifications: they answered the soft prompt but notifications still aren't
-  // on. `unknown` means we haven't read the OS status yet — don't badge on a guess.
-  const notifications =
-    promptSeen && permission !== 'granted' && permission !== 'unknown';
+  // Notifications: simply not enabled. `unknown` means we haven't read the OS
+  // status yet — don't show on a guess, only once we know they're off.
+  const notifications = permission !== 'granted' && permission !== 'unknown';
   // Tutorial: they've been shown the tour but didn't reach the end.
   const tutorial = seen && !completed;
 
