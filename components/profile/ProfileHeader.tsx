@@ -212,13 +212,13 @@ export default function ProfileHeader() {
                 borderWidth: 0.75,
                 // When the profile is complete this is the only button, so make
                 // it a prominent, centered standalone action.
-                paddingHorizontal: isProfileComplete ? 28 : 11,
-                paddingVertical: isProfileComplete ? 8 : 4,
+                paddingHorizontal: isProfileComplete ? 18 : 11,
+                paddingVertical: isProfileComplete ? 5 : 4,
               }}
             >
               <Text
                 className="text-primary-foreground"
-                style={{ fontSize: isProfileComplete ? 13 : 9, fontWeight: '500' }}
+                style={{ fontSize: isProfileComplete ? 10.5 : 9, fontWeight: '500' }}
               >
                 {t('profile.editProfile')}
               </Text>
