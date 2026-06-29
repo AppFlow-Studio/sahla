@@ -46,9 +46,11 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
   const { colors, displayName, logoUrl, timezone } = useMasjidConfig();
   const { nextPrayer, countdownClockFull, hijriDate } = usePrayerTimes();
 
-  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  const accent = colors.accent.replace(/ /g, ',');
+  const accentRgb = `rgb(${accent})`;
+  const accentSoft = `rgba(${accent},0.8)`; // "Time until" label (Figma: B8922A @ 0.8)
   const fg = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
-  const fgMuted = `rgba(${colors.primaryForeground.replace(/ /g, ',')},0.6)`;
+  const dateColor = `rgba(${colors.primaryForeground.replace(/ /g, ',')},0.8)`;
 
   const gregorian = formatGregorian(timezone);
   const alignItems = align === 'center' ? 'center' : 'flex-start';
@@ -64,38 +66,38 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
           {logoUrl ? (
             <Image
               source={{ uri: logoUrl }}
-              style={{ width: 26, height: 26, borderRadius: 7 }}
+              style={{ width: 18, height: 18, borderRadius: 5 }}
               contentFit="cover"
             />
           ) : (
-            <MasjidLogo width={24} height={24} />
+            <MasjidLogo width={18} height={18} />
           )}
           <Text
             numberOfLines={1}
-            style={{ color: fg, fontSize: 16, fontWeight: '700', fontFamily: fonts.bodySemibold }}
+            style={{ color: fg, fontSize: 13, fontWeight: '600', fontFamily: fonts.bodySemibold }}
           >
             {displayName}
           </Text>
         </View>
         <Pressable
-          hitSlop={10}
+          hitSlop={12}
           onPress={() => router.push('/profile/notification-center')}
           accessibilityRole="button"
           accessibilityLabel={t('home.notifications', { defaultValue: 'Notifications' })}
         >
-          <Icon name="bell" size={22} color={fg} />
+          <Icon name="bell" size={16} color={fg} />
         </Pressable>
       </View>
 
       {/* Hero: countdown label + live H:MM:SS timer + date. Alignment per variant. */}
-      <View className="px-5" style={{ marginTop: 28, alignItems }}>
+      <View className="px-5" style={{ marginTop: 30, alignItems }}>
         {nextPrayer ? (
           <Text
             style={{
-              color: accentRgb,
+              color: accentSoft,
               fontSize: 11,
               fontWeight: '700',
-              letterSpacing: 1.5,
+              letterSpacing: 0.55,
               textTransform: 'uppercase',
               textAlign,
             }}
@@ -107,10 +109,10 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
         <Text
           style={{
             color: fg,
-            fontSize: 52,
-            lineHeight: 60,
-            letterSpacing: -1,
-            marginTop: 6,
+            fontSize: 38,
+            lineHeight: 52,
+            letterSpacing: -2,
+            marginTop: 2,
             fontFamily: fonts.displayRegular,
             textAlign,
           }}
@@ -118,13 +120,27 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
           {countdownClockFull ?? '—'}
         </Text>
 
-        <Text style={{ color: fgMuted, fontSize: 13, fontWeight: '500', marginTop: 6, textAlign }}>
-          {gregorian}
-          {hijriDate ? `  ·  ${hijriDate}` : ''}
-        </Text>
+        <View
+          style={{
+            marginTop: 4,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: align === 'center' ? 'center' : 'flex-start',
+          }}
+        >
+          <Text style={{ color: dateColor, fontSize: 13 }}>{gregorian}</Text>
+          {hijriDate ? (
+            <>
+              <View
+                style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: accentRgb, marginHorizontal: 7 }}
+              />
+              <Text style={{ color: dateColor, fontSize: 13 }}>{hijriDate}</Text>
+            </>
+          ) : null}
+        </View>
       </View>
 
-      <View className="mt-7 pb-6">
+      <View style={{ marginTop: 34 }} className="pb-6">
         <PrayerTimesBar />
       </View>
     </View>
