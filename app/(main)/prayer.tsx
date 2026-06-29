@@ -533,7 +533,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
             })}
           >
             <Icon name="book-open-variant" size={15} color={c.depth} />
-            <Text style={{ color: c.depth, fontSize: 13.5, fontWeight: '700', letterSpacing: 0.2 }}>
+            <Text style={{ color: c.depth, fontSize: 13, fontWeight: '700', letterSpacing: 0.2 }}>
               {hasRead ? t('prayer.continueReading') : t('prayer.startReading')}
             </Text>
             <Icon name={isRTL ? 'arrow-back' : 'arrow-forward'} size={15} color={c.gold} />
@@ -1275,7 +1275,7 @@ export default function PrayerScreen() {
                       {selectedDateFormatted}
                     </Text>
                     {!isToday && (
-                      <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
+                      <Text style={{ color: c.gold, fontSize: 11, marginTop: 2, letterSpacing: 1 }}>
                         {t('prayer.tapToReturnToday')}
                       </Text>
                     )}
