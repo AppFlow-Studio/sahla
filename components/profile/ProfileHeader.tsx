@@ -210,11 +210,16 @@ export default function ProfileHeader() {
               className="items-center justify-center rounded-full border-primary-foreground/50 active:opacity-80"
               style={{
                 borderWidth: 0.75,
-                paddingHorizontal: 11,
-                paddingVertical: 4,
+                // When the profile is complete this is the only button, so make
+                // it a prominent, centered standalone action.
+                paddingHorizontal: isProfileComplete ? 28 : 11,
+                paddingVertical: isProfileComplete ? 8 : 4,
               }}
             >
-              <Text className="text-primary-foreground" style={{ fontSize: 9, fontWeight: '500' }}>
+              <Text
+                className="text-primary-foreground"
+                style={{ fontSize: isProfileComplete ? 13 : 9, fontWeight: '500' }}
+              >
                 {t('profile.editProfile')}
               </Text>
             </Pressable>
