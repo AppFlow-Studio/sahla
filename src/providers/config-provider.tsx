@@ -19,7 +19,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('mosques')
         .select(
-          'id, name, app_name, logo_url, brand_color, accent_color, secondary_color, timezone, calculation_method, clerk_org_id, font_theme',
+          'id, name, app_name, logo_url, brand_color, accent_color, secondary_color, timezone, calculation_method, clerk_org_id, font_theme, header_style',
         )
         .eq('slug', config.id)
         .maybeSingle();
@@ -46,6 +46,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
           data.calculation_method != null ? String(data.calculation_method) : undefined,
         clerkOrgId: data.clerk_org_id ?? undefined,
         fontTheme: data.font_theme ?? undefined,
+        headerStyle: data.header_style ?? undefined,
         colors: {
           ...(primary ? { primary } : {}),
           ...(accent ? { accent } : {}),

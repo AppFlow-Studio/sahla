@@ -69,6 +69,12 @@ export type MasjidConfig = {
    * Set by the masjid admin; defaults to "classic" when absent/unknown.
    */
   fontTheme?: string;
+  /**
+   * Home-screen header style key — one of the keys in
+   * `src/theme/header-style.ts` (HEADER_STYLES). Set by the masjid admin;
+   * defaults to "classic" when absent/unknown.
+   */
+  headerStyle?: string;
 };
 
 /**
