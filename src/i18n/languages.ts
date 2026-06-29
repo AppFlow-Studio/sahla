@@ -1,5 +1,3 @@
-import { getLocales } from 'expo-localization';
-
 import { getMasjidConfig } from '@/src/stores/config-store';
 import { storage } from '@/src/lib/mmkv';
 
@@ -33,6 +31,24 @@ function isSupported(code: string | null | undefined): code is LanguageCode {
 }
 
 /**
+ * Read the device's first preferred language code via `expo-localization`.
+ * Loaded lazily and guarded so a stale native build (missing the
+ * `ExpoLocalization` module after the i18n upgrade) degrades to the next
+ * fallback instead of crashing every screen at import time. Rebuild the
+ * native app (`pod install` + `expo run:ios`/`run:android`) to restore real
+ * device-locale detection.
+ */
+function getDeviceLanguageCode(): string | undefined {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getLocales } = require('expo-localization') as typeof import('expo-localization');
+    return getLocales()?.[0]?.languageCode ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Resolve the language to boot with, in priority order:
  *   1. the user's persisted choice (MMKV)
  *   2. the device's first preferred locale (expo-localization)
@@ -43,7 +59,7 @@ export function resolveInitialLanguage(): LanguageCode {
   const stored = storage.getString(LANGUAGE_MMKV_KEY);
   if (isSupported(stored)) return stored;
 
-  const device = getLocales()?.[0]?.languageCode ?? undefined;
+  const device = getDeviceLanguageCode();
   if (isSupported(device)) return device;
 
   const masjid = getMasjidConfig().locale?.split('-')[0];

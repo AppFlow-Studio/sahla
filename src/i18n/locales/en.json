@@ -813,7 +813,8 @@
     "nothingInThisWindow": "Nothing in this window",
     "noSavedClipsBody": "Tap the bookmark on any reel in\nWatch to save it here.",
     "nothingInWindowBody": "No clips saved in the selected\nwindow — try \"All\".",
-    "noSavedClips": "No saved clips"
+    "noSavedClips": "No saved clips",
+    "replayTutorial": "Replay app tour"
   },
   "watch": {
     "notInterested": "Not interested",
@@ -851,5 +852,33 @@
     "noConnectionBody": "Check your internet connection\nand try again",
     "tryAgain": "Try again",
     "noReels": "No reels yet"
+  },
+  "tutorial": {
+    "next": "Next",
+    "back": "Back",
+    "skip": "Skip",
+    "done": "Get started",
+    "steps": {
+      "home": {
+        "title": "Your masjid, at a glance",
+        "body": "Prayer times, the next jummah and today's highlights — all waiting on your home screen."
+      },
+      "discover": {
+        "title": "Discover what’s on",
+        "body": "Browse classes, halaqas and events. Tap the heart to save any of them to your library."
+      },
+      "watch": {
+        "title": "Watch & be reminded",
+        "body": "Short videos and reminders from your community — tap to play, swipe for the next."
+      },
+      "prayer": {
+        "title": "Never miss a prayer",
+        "body": "Accurate prayer and iqamah times, with a gentle notification when it’s time."
+      },
+      "profile": {
+        "title": "Make it yours",
+        "body": "Manage saved items, notifications, language and your account — all from your profile."
+      }
+    }
   }
 }

@@ -5,6 +5,7 @@ import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useTutorialSeen } from "@/src/hooks/use-tutorial-seen";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
 import { useUpdatesActions } from "@/src/providers/updates-provider";
 import { useAuth } from "@clerk/clerk-expo";
@@ -33,6 +34,7 @@ const EVENTS_ICON = "calendar-outline";
 const MAS_BAG_ICON = "shopping-bag";
 const APPLICATION_ICON = "file-text";
 const CHECK_STATUS_ICON = "clipboard-check";
+const REPLAY_TUTORIAL_ICON = "compass";
 const MANAGE_SUBS_ICON = "repeat";
 const FEEDBACK_ICON = "message-outline";
 const ADMIN_ICON = "shield";
@@ -137,6 +139,7 @@ export default function ProfileBody({
   const appVersion = useAppVersion();
   const updates = useAppUpdates();
   const { checkAndNotify } = useUpdatesActions();
+  const { replay: replayTutorial } = useTutorialSeen();
 
   const handleInviteFriends = useCallback(async () => {
     try {
@@ -247,6 +250,11 @@ export default function ProfileBody({
         <SectionHeader title={t('profile.sectionApp')} />
         <View>
           <LanguageRow />
+          <RowItem
+            icon={REPLAY_TUTORIAL_ICON}
+            title={t('profile.replayTutorial')}
+            onPress={replayTutorial}
+          />
           {updates.isReady ? (
             <RowItem
               icon={APPLICATION_ICON}
