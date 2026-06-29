@@ -26,10 +26,11 @@ export function ProfileTabDot() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  // Gate on profile-field completeness only (name + phone + photo), matching the
-  // header "Complete Profile" CTA. The native badge is the only tab indicator on
-  // Android; this overlay is tuned for the iOS floating bar, so keep it iOS-only.
-  if (setup.profile || Platform.OS !== 'ios') return null;
+  // Show whenever ANY setup step is outstanding (profile, personalization, or
+  // notifications) — so notifications being off lights up the Profile tab too.
+  // (The header "Complete Profile" CTA is the one gated to profile fields only.)
+  // The overlay is tuned for the iOS floating bar, so keep it iOS-only.
+  if (setup.incompleteCount === 0 || Platform.OS !== 'ios') return null;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
