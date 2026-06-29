@@ -40,9 +40,10 @@ CREATE INDEX IF NOT EXISTS idx_engagement_nudges_sent_sent_at
 --    The 15-minute granularity lets us hit each mosque's send-window edges
 --    (08:00 local) precisely enough.
 --
--- URL points at the prod project (rpepxdgdiqeirdqsazuc), matching the
--- existing send-prayer-notifications cron convention. When applying to
--- staging, swap the host to mwlhipljkvthhccqodum manually.
+-- URL points at the staging project (rpepxdgdiqeirdqsazuc) — that's where
+-- all dev happens per the team workflow. Matches the existing
+-- send-prayer-notifications cron convention. When promoting to prod
+-- (arlvxsoeecvfhkepalna / main branch), swap the host accordingly.
 
 SELECT cron.unschedule('send-engagement-nudges-every-15-min')
 WHERE EXISTS (
