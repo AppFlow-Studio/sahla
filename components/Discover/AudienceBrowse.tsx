@@ -70,7 +70,6 @@ function FilterPills({
   const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
   const pillTrackBg = `rgba(${fg}, 0.06)`;
-  const pillTrackBorder = `rgba(${fg}, 0.4)`;
 
   // Up to 4 pills fit the full-width segmented look; beyond that, scroll.
   const scrollable = filters.length > 4;
@@ -103,12 +102,12 @@ function FilterPills({
     );
   };
 
+  // No outline, and no inner padding — so the active pill fills the whole track
+  // (a clean stadium-in-stadium), clipped to the rounded ends.
   const trackStyle = {
     backgroundColor: pillTrackBg,
     borderRadius: 999,
-    padding: 3,
-    borderWidth: 0.5,
-    borderColor: pillTrackBorder,
+    overflow: 'hidden',
   } as const;
 
   if (scrollable) {
