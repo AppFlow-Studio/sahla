@@ -9,6 +9,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
+import { useNotificationStatusStore } from '@/src/stores/notification-status-store';
 import { HomeHeaderBackdrop } from './home-header-backdrop';
 import { PrayerTimesBar } from './prayer-times-bar';
 
@@ -45,6 +46,8 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
   const fonts = useFontFamily();
   const { colors, displayName, logoUrl, timezone } = useMasjidConfig();
   const { nextPrayer, countdownClockFull, hijriDate } = usePrayerTimes();
+  // Bell reflects notification permission: filled-accent when on, outline when off.
+  const notifGranted = useNotificationStatusStore((s) => s.permission) === 'granted';
 
   const accent = colors.accent.replace(/ /g, ',');
   const accentRgb = `rgb(${accent})`;
@@ -85,7 +88,12 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
           accessibilityRole="button"
           accessibilityLabel={t('home.notifications', { defaultValue: 'Notifications' })}
         >
-          <Icon name="bell" size={16} color={fg} />
+          <Icon
+            name="bell"
+            size={16}
+            color={notifGranted ? accentRgb : fg}
+            fill={notifGranted ? accentRgb : 'none'}
+          />
         </Pressable>
       </View>
 
