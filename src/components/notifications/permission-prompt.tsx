@@ -22,9 +22,10 @@ import { requestAndRegisterToken } from '@/src/hooks/use-register-push-token';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { storage } from '@/src/lib/mmkv';
 import { useConfigStore } from '@/src/stores/config-store';
-
-/** Set once the user has seen (allowed or dismissed) the soft prompt. */
-const SHOWN_KEY = 'notifications.prompt.v1';
+import {
+  NOTIF_PROMPT_SEEN_KEY as SHOWN_KEY,
+  useNotificationStatusStore,
+} from '@/src/stores/notification-status-store';
 
 /** "10 38 30" -> "rgb(10, 38, 30)" */
 function rgb(triplet: string) {
@@ -316,6 +317,10 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
   const mosqueId = useConfigStore((s) => s.mosqueUuid);
   const config = useMasjidConfig();
   const insets = useSafeAreaInsets();
+  // Reactive notification state — marking the prompt seen / refreshing permission
+  // here drives the Profile nudge dots without a relaunch.
+  const markPromptSeen = useNotificationStatusStore((s) => s.markPromptSeen);
+  const refreshPermission = useNotificationStatusStore((s) => s.refresh);
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -348,7 +353,7 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
         // already granted/denied at the OS level there's nothing to ask.
         if (status === 'undetermined') setVisible(true);
         else {
-          storage.set(SHOWN_KEY, true);
+          markPromptSeen();
           onResolved?.();
         }
       } catch {
@@ -359,7 +364,7 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
     return () => {
       active = false;
     };
-  }, [onResolved]);
+  }, [onResolved, markPromptSeen]);
 
   // The backdrop is solid the instant we show (animationType="none"); we animate
   // the *content* in ourselves so when the prompt does appear it covers
@@ -380,14 +385,14 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
   }));
 
   const dismiss = useCallback(() => {
-    storage.set(SHOWN_KEY, true);
+    markPromptSeen();
     // Release the tutorial first — it fades in over this prompt's green backdrop.
     // We stay mounted a beat longer so the green never lifts to the live app
     // between the two takeovers; once the tutorial has covered us, we hide
     // (instantly, behind it). 380ms comfortably outlasts the tutorial's fade-in.
     onResolved?.();
     setTimeout(() => setVisible(false), 380);
-  }, [onResolved]);
+  }, [onResolved, markPromptSeen]);
 
   const onAllow = useCallback(async () => {
     if (busy) return;
@@ -401,10 +406,13 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
         await getNotificationsModule()?.requestPermissionsAsync();
       }
     } finally {
+      // Re-read the OS status so the Profile notifications nudge clears
+      // immediately if the user just granted permission.
+      await refreshPermission();
       setBusy(false);
       dismiss();
     }
-  }, [busy, userId, mosqueId, supabase, dismiss]);
+  }, [busy, userId, mosqueId, supabase, dismiss, refreshPermission]);
 
   if (!visible) return null;
 

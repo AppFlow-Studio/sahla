@@ -3,13 +3,15 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import { useDonation } from "@/src/providers/donation-provider";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Linking, Platform, ScrollView, View } from "react-native";
+import { Platform, ScrollView, View } from "react-native";
 
+import { useEnableNotifications } from "@/src/hooks/use-notification-status";
 import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 
 export default function ProfileScreen() {
   const { open: openDonate } = useDonation();
   const router = useRouter();
+  const enableNotifications = useEnableNotifications();
 
   useStatusBarStyle("dark");
 
@@ -41,7 +43,7 @@ export default function ProfileScreen() {
           <ProfileHeader />
           <ProfileBody
             onPressPersonalized={() => router.push("/(personalization)/reasons")}
-            onPressNotifications={() => Linking.openSettings()}
+            onPressNotifications={enableNotifications}
           />
         </View>
       </ScrollView>

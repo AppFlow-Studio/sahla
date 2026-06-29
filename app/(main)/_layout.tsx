@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 
 import { NotificationPermissionPrompt } from '@/src/components/notifications/permission-prompt';
 import { AppTutorial } from '@/src/components/onboarding/app-tutorial';
+import { ProfileTabDot } from '@/src/components/profile-tab-dot';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useNotificationStatusWatcher } from '@/src/hooks/use-notification-status';
 import { useRegisterPushToken } from '@/src/hooks/use-register-push-token';
 
 // Each tab uses a matched Ionicons outline/filled pair so the active tab simply
@@ -15,6 +17,9 @@ import { useRegisterPushToken } from '@/src/hooks/use-register-push-token';
 export default function TabLayout() {
   // Register/refresh push token on mount + every foreground event
   useRegisterPushToken();
+  // Keep the cached notification-permission status fresh — drives the in-Profile
+  // nudge dots (notifications card + tutorial row), refreshed on every foreground.
+  useNotificationStatusWatcher();
   const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   // `accent` (gold marigold) is the app's highlight color — used for the donate
@@ -76,6 +81,9 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
       </NativeTabs>
+      {/* Small custom dot over the Profile tab — the sized-down alternative to
+          the native badge. Non-interactive, so it never blocks tab taps. */}
+      <ProfileTabDot />
     </>
   );
 }

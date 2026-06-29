@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/src/components/ui/icon";
+import { NudgeDot } from "@/src/components/ui/nudge-dot";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
@@ -28,7 +29,10 @@ export default function Notifications({ onEnablePress }: Props) {
       }}
     >
       <View className="min-w-0 flex-1 flex-row items-center gap-2 pe-2">
-        <Icon name="bell" size={14} color={accentRgb} fill={accentRgb} />
+        <View>
+          <Icon name="bell" size={14} color={accentRgb} fill={accentRgb} />
+          <NudgeDot size={6} style={{ position: 'absolute', top: -2, right: -3 }} />
+        </View>
         <Text
           numberOfLines={1}
           style={{

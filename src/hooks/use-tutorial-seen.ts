@@ -5,15 +5,17 @@ import { useTutorialStore } from '@/src/stores/tutorial-store';
  * mutators. Thin wrapper over `tutorial-store` so call sites read like the rest
  * of the hooks layer:
  *
- *   const { seen, markSeen, replay } = useTutorialSeen();
+ *   const { seen, completed, complete, skip, replay } = useTutorialSeen();
  *
- * `seen` is reactive — flipping it (via `replay()` from the Profile row, or
- * `markSeen()` when the tour finishes) re-renders any subscribed component,
- * including the mounted `AppTutorial` overlay.
+ * Everything is reactive — flipping `seen` (via `replay()` from the Profile
+ * row, or `complete()`/`skip()` when the tour ends) re-renders any subscribed
+ * component, including the mounted `AppTutorial` overlay and the nudge dots.
  */
 export function useTutorialSeen() {
   const seen = useTutorialStore((s) => s.seen);
-  const markSeen = useTutorialStore((s) => s.markSeen);
+  const completed = useTutorialStore((s) => s.completed);
+  const complete = useTutorialStore((s) => s.complete);
+  const skip = useTutorialStore((s) => s.skip);
   const replay = useTutorialStore((s) => s.replay);
-  return { seen, markSeen, replay };
+  return { seen, completed, complete, skip, replay };
 }

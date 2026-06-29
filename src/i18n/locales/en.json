@@ -815,7 +815,8 @@
     "noSavedClipsBody": "Tap the bookmark on any reel in\nWatch to save it here.",
     "nothingInWindowBody": "No clips saved in the selected\nwindow — try \"All\".",
     "noSavedClips": "No saved clips",
-    "replayTutorial": "Replay app tour"
+    "replayTutorial": "Replay app tour",
+    "finishTutorial": "Finish app tour"
   },
   "watch": {
     "notInterested": "Not interested",

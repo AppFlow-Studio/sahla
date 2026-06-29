@@ -4,6 +4,7 @@ import { useAppVersion } from "@/src/hooks/use-app-version";
 import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useProfileNudges } from "@/src/hooks/use-profile-nudges";
 import { useSupabase } from "@/src/hooks/use-supabase";
 import { useTutorialSeen } from "@/src/hooks/use-tutorial-seen";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
@@ -140,6 +141,7 @@ export default function ProfileBody({
   const updates = useAppUpdates();
   const { checkAndNotify } = useUpdatesActions();
   const { replay: replayTutorial } = useTutorialSeen();
+  const nudges = useProfileNudges();
 
   const handleInviteFriends = useCallback(async () => {
     try {
@@ -220,7 +222,10 @@ export default function ProfileBody({
       {/* NOTIFICATIONS */}
       <View className="flex-col gap-2">
         <SectionHeader title={t('profile.sectionNotifications')} />
-        <Notifications onEnablePress={onPressNotifications} />
+        {/* The "enable" card doubles as the in-profile notifications nudge — only
+            shown while notifications are actually off (and the soft prompt has
+            been answered). */}
+        {nudges.notifications && <Notifications onEnablePress={onPressNotifications} />}
         <View className="flex-col">
           <RowItem
             icon={PRAYER_ALERTS_ICON}
@@ -252,8 +257,9 @@ export default function ProfileBody({
           <LanguageRow />
           <RowItem
             icon={REPLAY_TUTORIAL_ICON}
-            title={t('profile.replayTutorial')}
+            title={nudges.tutorial ? t('profile.finishTutorial') : t('profile.replayTutorial')}
             onPress={replayTutorial}
+            showDot={nudges.tutorial}
           />
           {updates.isReady ? (
             <RowItem

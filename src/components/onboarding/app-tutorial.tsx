@@ -126,7 +126,7 @@ export function AppTutorial({ enabled = true }: Props) {
   const fonts = useFontFamily();
   const config = useMasjidConfig();
   const insets = useSafeAreaInsets();
-  const { seen, markSeen } = useTutorialSeen();
+  const { seen, complete, skip } = useTutorialSeen();
 
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
@@ -222,8 +222,14 @@ export function AppTutorial({ enabled = true }: Props) {
   }));
   const bodyStyle = useAnimatedStyle(() => ({ minHeight: 66 - 28 * morph.value }));
 
-  const finish = () => {
-    markSeen();
+  // Reaching the end (the final step's "Done") counts as completing the tour;
+  // skipping or dismissing early leaves the "finish your tour" nudge armed.
+  const completeTour = () => {
+    complete();
+    setVisible(false);
+  };
+  const skipTour = () => {
+    skip();
     setVisible(false);
   };
   const go = (nextStep: number) => {
@@ -231,7 +237,7 @@ export function AppTutorial({ enabled = true }: Props) {
     setStep(nextStep);
   };
   const next = () => {
-    if (step >= STEPS.length - 1) finish();
+    if (step >= STEPS.length - 1) completeTour();
     else go(step + 1);
   };
   const back = () => {
@@ -247,7 +253,7 @@ export function AppTutorial({ enabled = true }: Props) {
   const accent = rgb(config.colors.accent);
 
   return (
-    <Modal transparent visible animationType="fade" statusBarTranslucent onRequestClose={finish}>
+    <Modal transparent visible animationType="fade" statusBarTranslucent onRequestClose={skipTour}>
       <View
         style={{ flex: 1, backgroundColor: green }}
         onLayout={(e) => {
@@ -385,7 +391,7 @@ export function AppTutorial({ enabled = true }: Props) {
               </Pressable>
             ) : null}
             {!isLast ? (
-              <Pressable onPress={finish} hitSlop={12} style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
+              <Pressable onPress={skipTour} hitSlop={12} style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
                 <Text style={{ color: green, opacity: 0.6, fontSize: 15, fontWeight: '600' }}>
                   {t('tutorial.skip')}
                 </Text>
