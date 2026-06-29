@@ -818,7 +818,9 @@
     "nothingInWindowBody": "No clips saved in the selected\nwindow — try \"All\".",
     "noSavedClips": "No saved clips",
     "replayTutorial": "Replay app tour",
-    "finishTutorial": "Finish app tour"
+    "finishTutorial": "Finish app tour",
+    "completeYourProfile": "Complete your profile",
+    "completeYourProfileSubtitle": "Add your details to finish setting up"
   },
   "watch": {
     "notInterested": "Not interested",

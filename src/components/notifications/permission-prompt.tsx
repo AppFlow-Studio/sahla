@@ -22,10 +22,9 @@ import { requestAndRegisterToken } from '@/src/hooks/use-register-push-token';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { storage } from '@/src/lib/mmkv';
 import { useConfigStore } from '@/src/stores/config-store';
-import {
-  NOTIF_PROMPT_SEEN_KEY as SHOWN_KEY,
-  useNotificationStatusStore,
-} from '@/src/stores/notification-status-store';
+
+/** MMKV key: set once the soft prompt has been shown/answered. */
+const SHOWN_KEY = 'notifications.prompt.v1';
 
 /** "10 38 30" -> "rgb(10, 38, 30)" */
 function rgb(triplet: string) {
@@ -317,17 +316,13 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
   const mosqueId = useConfigStore((s) => s.mosqueUuid);
   const config = useMasjidConfig();
   const insets = useSafeAreaInsets();
-  // Reactive notification state — marking the prompt seen / refreshing permission
-  // here drives the Profile nudge dots without a relaunch.
-  const markPromptSeen = useNotificationStatusStore((s) => s.markPromptSeen);
-  const refreshPermission = useNotificationStatusStore((s) => s.refresh);
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Real permission gating (restored from temur-dev, the canonical latest): only
-  // nudge when the OS prompt is still `undetermined` and we haven't shown the
-  // soft-prompt before. Every terminal path also calls `onResolved` so the
-  // first-run tutorial is released whether or not this prompt actually shows.
+  // Real permission gating: only nudge when the OS prompt is still `undetermined`
+  // and we haven't shown the soft-prompt before. Every terminal path also calls
+  // `onResolved` so the first-run tutorial is released whether or not this prompt
+  // actually shows.
   useEffect(() => {
     if (Platform.OS === 'web') {
       onResolved?.();
@@ -353,7 +348,7 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
         // already granted/denied at the OS level there's nothing to ask.
         if (status === 'undetermined') setVisible(true);
         else {
-          markPromptSeen();
+          storage.set(SHOWN_KEY, true);
           onResolved?.();
         }
       } catch {
@@ -364,7 +359,7 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
     return () => {
       active = false;
     };
-  }, [onResolved, markPromptSeen]);
+  }, [onResolved]);
 
   // The backdrop is solid the instant we show (animationType="none"); we animate
   // the *content* in ourselves so when the prompt does appear it covers
@@ -385,14 +380,14 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
   }));
 
   const dismiss = useCallback(() => {
-    markPromptSeen();
+    storage.set(SHOWN_KEY, true);
     // Release the tutorial first — it fades in over this prompt's green backdrop.
     // We stay mounted a beat longer so the green never lifts to the live app
     // between the two takeovers; once the tutorial has covered us, we hide
     // (instantly, behind it). 380ms comfortably outlasts the tutorial's fade-in.
     onResolved?.();
     setTimeout(() => setVisible(false), 380);
-  }, [onResolved, markPromptSeen]);
+  }, [onResolved]);
 
   const onAllow = useCallback(async () => {
     if (busy) return;
@@ -406,13 +401,10 @@ export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () =
         await getNotificationsModule()?.requestPermissionsAsync();
       }
     } finally {
-      // Re-read the OS status so the Profile notifications nudge clears
-      // immediately if the user just granted permission.
-      await refreshPermission();
       setBusy(false);
       dismiss();
     }
-  }, [busy, userId, mosqueId, supabase, dismiss, refreshPermission]);
+  }, [busy, userId, mosqueId, supabase, dismiss]);
 
   if (!visible) return null;
 

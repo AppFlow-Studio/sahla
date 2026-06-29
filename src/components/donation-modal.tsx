@@ -322,8 +322,18 @@ export function DonationModal({
       // Dismissed without completing → release the in-flight intent.
       if (step !== 'thanks') cancelPendingIntent(clientSecret);
       Keyboard.dismiss();
-      Animated.timing(backdrop, { toValue: 0, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-      Animated.timing(sheetY, { toValue: SCREEN_H, duration: 550, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }).start(() => {
+      // Close glides down with a gentle, low-stiffness spring so the
+      // sheet picks up speed gradually instead of snapping off the
+      // bottom of the screen. Overdamped (no bounce) but with a longer
+      // settle so the descent feels relaxed rather than fired.
+      Animated.timing(backdrop, { toValue: 0, duration: 620, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      Animated.spring(sheetY, {
+        toValue: SCREEN_H,
+        damping: 28,
+        stiffness: 95,
+        mass: 1.2,
+        useNativeDriver: false,
+      }).start(() => {
         resetState();
       });
     }

@@ -293,7 +293,7 @@ function PaymentCard({
 
           <View style={{ alignItems: 'flex-end' }}>
             <View style={{ backgroundColor: status.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 4 }}>
-              <Text style={{ fontSize: 9, fontWeight: '700', color: status.color, letterSpacing: 0.5 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: status.color, letterSpacing: 0.5 }}>
                 {status.badge}
               </Text>
             </View>

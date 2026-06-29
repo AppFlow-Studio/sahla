@@ -2,7 +2,7 @@ import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NudgeDot } from '@/src/components/ui/nudge-dot';
-import { useProfileNudges } from '@/src/hooks/use-profile-nudges';
+import { useSetupCompleteness } from '@/src/hooks/use-setup-completeness';
 
 // ── Position tuning for the iOS 26 floating tab bar ──────────────────────────
 // Profile is the 5th of 5 tabs, so the dot sits near the right edge, at the
@@ -22,13 +22,14 @@ const DOT_SIZE = 9;
  * Mounted as a sibling of `<NativeTabs>` in `(main)/_layout`.
  */
 export function ProfileTabDot() {
-  const nudges = useProfileNudges();
+  const setup = useSetupCompleteness();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  // The native badge is the only tab indicator on Android; this overlay is tuned
-  // for the iOS floating bar, so keep it iOS-only.
-  if (!nudges.any || Platform.OS !== 'ios') return null;
+  // Gate on profile-field completeness only (name + phone + photo), matching the
+  // header "Complete Profile" CTA. The native badge is the only tab indicator on
+  // Android; this overlay is tuned for the iOS floating bar, so keep it iOS-only.
+  if (setup.profile || Platform.OS !== 'ios') return null;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

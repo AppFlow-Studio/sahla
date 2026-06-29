@@ -6,10 +6,9 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/src/components/ui/icon';
-import { useEnableNotifications } from '@/src/hooks/use-notification-status';
+import { useEnableNotifications, useNotificationStatus } from '@/src/hooks/use-notification-status';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useConfigStore } from '@/src/stores/config-store';
-import { useNotificationStatusStore } from '@/src/stores/notification-status-store';
 
 import { NotificationTabs } from './NotificationTabs';
 import { NotificationsEmpty } from './NotificationsEmpty';
@@ -43,7 +42,7 @@ export function NotificationsScreen({ items = [], initialTab, onPressSettings }:
   const fonts = useFontFamily();
   const masjidName = useConfigStore((s) => s.config.displayName);
   const accent = useConfigStore((s) => s.config.colors.accent);
-  const notifGranted = useNotificationStatusStore((s) => s.permission) === 'granted';
+  const notifGranted = useNotificationStatus().enabled;
   const enableNotifications = useEnableNotifications();
   const gold = `rgb(${accent.replace(/ /g, ',')})`;
   const [activeTab, setActiveTab] = useState<NotificationTab>(initialTab ?? 'All');

@@ -1,8 +1,11 @@
+import EditProfileSheet from "@/components/profile/EditProfileSheet";
 import ProfileBody from "@/components/profile/ProfileBody";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { useDonation } from "@/src/providers/donation-provider";
+import { useSetupCompleteness } from "@/src/hooks/use-setup-completeness";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 
 import { useEnableNotifications } from "@/src/hooks/use-notification-status";
@@ -11,9 +14,36 @@ import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 export default function ProfileScreen() {
   const { open: openDonate } = useDonation();
   const router = useRouter();
+  const setup = useSetupCompleteness();
   const enableNotifications = useEnableNotifications();
+  // EditProfileSheet lifted from ProfileHeader so both the header's
+  // Edit/Complete buttons and the body's Profile setup row drive one instance.
+  const [editVisible, setEditVisible] = useState(false);
 
   useStatusBarStyle("dark");
+
+  const openPersonalization = useCallback(
+    () => router.push("/(personalization)/reasons"),
+    [router],
+  );
+  const openEditProfile = useCallback(() => setEditVisible(true), []);
+
+  // "Complete Profile" header CTA routes to the first outstanding step in
+  // priority order: profile fields → personalization → notifications. (The CTA
+  // itself gates on profile fields, so in practice this hits the profile case.)
+  const handlePressCompleteProfile = useCallback(() => {
+    switch (setup.firstIncomplete) {
+      case 'personalization':
+        openPersonalization();
+        return;
+      case 'notifications':
+        void enableNotifications();
+        return;
+      case 'profile':
+      default:
+        openEditProfile();
+    }
+  }, [setup.firstIncomplete, openEditProfile, openPersonalization, enableNotifications]);
 
   return (
     <View className="flex-1 bg-depth">
@@ -40,13 +70,18 @@ export default function ProfileScreen() {
         }
       >
         <View className="w-full ">
-          <ProfileHeader />
+          <ProfileHeader
+            onPressEdit={openEditProfile}
+            onPressCompleteProfile={handlePressCompleteProfile}
+          />
           <ProfileBody
-            onPressPersonalized={() => router.push("/(personalization)/reasons")}
+            onPressPersonalized={openPersonalization}
             onPressNotifications={enableNotifications}
+            onPressCompleteProfile={openEditProfile}
           />
         </View>
       </ScrollView>
+      <EditProfileSheet visible={editVisible} onClose={() => setEditVisible(false)} />
     </View>
   );
 }
