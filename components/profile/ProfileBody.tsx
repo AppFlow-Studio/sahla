@@ -5,6 +5,7 @@ import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useTutorialSeen } from "@/src/hooks/use-tutorial-seen";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
 import { useUpdatesActions } from "@/src/providers/updates-provider";
 import { useAuth } from "@clerk/clerk-expo";
@@ -16,8 +17,10 @@ import DonateCard from "./DonateCard";
 import LanguageRow from "./LanguageRow";
 import Notifications from "./Notifications";
 import PersonalizedCard from "./PersonalizedCard";
+import ProfileSetupRow from "./ProfileSetupRow";
 import RowItem from "./RowItem";
 import SectionHeader from "./SectionHeader";
+import { useSetupCompleteness } from "@/src/hooks/use-setup-completeness";
 
 const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: replace with real App Store URL
 
@@ -33,6 +36,7 @@ const EVENTS_ICON = "calendar-outline";
 const MAS_BAG_ICON = "shopping-bag";
 const APPLICATION_ICON = "file-text";
 const CHECK_STATUS_ICON = "clipboard-check";
+const REPLAY_TUTORIAL_ICON = "compass";
 const MANAGE_SUBS_ICON = "repeat";
 const FEEDBACK_ICON = "message-outline";
 const ADMIN_ICON = "shield";
@@ -40,6 +44,9 @@ const ADMIN_ICON = "shield";
 type Props = {
   onPressPersonalized: () => void;
   onPressNotifications: () => void;
+  /** Open the EditProfile sheet — lifted to the parent so the header CTA and
+   *  the new Profile setup row trigger the same instance. */
+  onPressCompleteProfile: () => void;
 };
 
 function SectionRule() {
@@ -128,6 +135,7 @@ function DeleteAccountButton() {
 export default function ProfileBody({
   onPressPersonalized,
   onPressNotifications,
+  onPressCompleteProfile,
 }: Props) {
   const { t } = useTranslation();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -137,6 +145,12 @@ export default function ProfileBody({
   const appVersion = useAppVersion();
   const updates = useAppUpdates();
   const { checkAndNotify } = useUpdatesActions();
+  const setup = useSetupCompleteness();
+  const { seen: tutorialSeen, completed: tutorialCompleted, replay: replayTutorial } =
+    useTutorialSeen();
+  // Tutorial is a separate "finish setting up" nudge (not part of setup
+  // completeness): shown once they've seen the tour but didn't reach the end.
+  const tutorialIncomplete = tutorialSeen && !tutorialCompleted;
 
   const handleInviteFriends = useCallback(async () => {
     try {
@@ -161,7 +175,16 @@ export default function ProfileBody({
         ...(Platform.OS === "android" ? { elevation: 3 } : {}),
       }}
     >
-      <PersonalizedCard onPress={onPressPersonalized} />
+      {/* Setup affordances — each row disappears once the user has completed
+          it, and the IncompleteBadge clears in-session via useSetupCompleteness. */}
+      {!setup.profile ? (
+        <View style={{ marginBottom: 12 }}>
+          <ProfileSetupRow onPress={onPressCompleteProfile} />
+        </View>
+      ) : null}
+      {!setup.personalization ? (
+        <PersonalizedCard onPress={onPressPersonalized} incomplete />
+      ) : null}
 
       {/* COMMUNITY */}
       <View className="flex-col">
@@ -217,7 +240,11 @@ export default function ProfileBody({
       {/* NOTIFICATIONS */}
       <View className="flex-col gap-2">
         <SectionHeader title={t('profile.sectionNotifications')} />
-        <Notifications onEnablePress={onPressNotifications} />
+        {/* The "enable" card doubles as the in-profile notifications nudge —
+            shown only while notifications aren't actually live. */}
+        {!setup.notifications ? (
+          <Notifications onEnablePress={onPressNotifications} incomplete />
+        ) : null}
         <View className="flex-col">
           <RowItem
             icon={PRAYER_ALERTS_ICON}
@@ -247,6 +274,12 @@ export default function ProfileBody({
         <SectionHeader title={t('profile.sectionApp')} />
         <View>
           <LanguageRow />
+          <RowItem
+            icon={REPLAY_TUTORIAL_ICON}
+            title={tutorialIncomplete ? t('profile.finishTutorial') : t('profile.replayTutorial')}
+            onPress={replayTutorial}
+            showDot={tutorialIncomplete}
+          />
           {updates.isReady ? (
             <RowItem
               icon={APPLICATION_ICON}

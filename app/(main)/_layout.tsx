@@ -1,8 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { NotificationPermissionPrompt } from '@/src/components/notifications/permission-prompt';
+import { AppTutorial } from '@/src/components/onboarding/app-tutorial';
+import { ProfileTabDot } from '@/src/components/profile-tab-dot';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useRegisterPushToken } from '@/src/hooks/use-register-push-token';
 
@@ -19,9 +22,14 @@ export default function TabLayout() {
   // button, prayer chips, dates, etc. `primary` is a near-black green, too dark
   // to read as an active-tab tint.
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
+  // Sequence the two first-run takeovers: the coach-mark tour waits until the
+  // notification soft-prompt resolves so they never stack on first launch.
+  const [notifResolved, setNotifResolved] = useState(false);
+  const onNotifResolved = useCallback(() => setNotifResolved(true), []);
   return (
     <>
-      <NotificationPermissionPrompt />
+      <NotificationPermissionPrompt onResolved={onNotifResolved} />
+      <AppTutorial enabled={notifResolved} />
       <NativeTabs tintColor={accentRgb}>
         <NativeTabs.Trigger name="index">
           <Label>{t('tabs.home')}</Label>
@@ -69,6 +77,9 @@ export default function TabLayout() {
           />
         </NativeTabs.Trigger>
       </NativeTabs>
+      {/* Small custom dot over the Profile tab — the sized-down alternative to
+          the native badge. Non-interactive, so it never blocks tab taps. */}
+      <ProfileTabDot />
     </>
   );
 }

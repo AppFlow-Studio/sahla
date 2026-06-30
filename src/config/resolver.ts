@@ -49,6 +49,7 @@ export function mergeConfig(
       overrides.prayerCalculationMethod ?? base.prayerCalculationMethod,
     clerkOrgId: overrides.clerkOrgId ?? base.clerkOrgId,
     fontTheme: overrides.fontTheme ?? base.fontTheme,
+    headerStyle: overrides.headerStyle ?? base.headerStyle,
     colors: mergedColors,
     features: { ...base.features, ...(overrides.features ?? {}) },
   };

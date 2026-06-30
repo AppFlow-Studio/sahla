@@ -86,7 +86,7 @@ function ActionButton({
     <Pressable onPress={onPress} className="items-center active:opacity-70">
       <Icon name={icon} size={28} color={color} fill={fill} />
       {label ? (
-        <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
+        <Text style={{ fontSize: 11, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
           {label}
         </Text>
       ) : null}
@@ -134,7 +134,7 @@ function LikeButton({
           fill={liked ? '#FF0005' : 'none'}
         />
       </Animated.View>
-      <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
+      <Text style={{ fontSize: 11, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
         {count}
       </Text>
     </Pressable>
@@ -325,7 +325,7 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
                   style={{ marginEnd: 2 }}
                 />
               ))}
-              <Text style={{ fontSize: 10, color: 'rgba(10,38,30,0.6)', marginStart: 4 }}>4.9</Text>
+              <Text style={{ fontSize: 11, color: 'rgba(10,38,30,0.6)', marginStart: 4 }}>4.9</Text>
             </View>
           </View>
           <Pressable
@@ -934,7 +934,7 @@ export function ReelItem({
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#ffffff' }}>
                 {reel.title ?? masjidName}
               </Text>
-              <Text style={{ fontSize: 10, color: '#ffffff' }}>{masjidName}</Text>
+              <Text style={{ fontSize: 11, color: '#ffffff' }}>{masjidName}</Text>
             </View>
           </Pressable>
           {reel.caption ? (

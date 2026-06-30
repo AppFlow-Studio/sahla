@@ -1,4 +1,3 @@
-import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect } from 'expo-router';
 
@@ -301,8 +300,7 @@ function PrayerDots({
               borderColor: isNext ? c.gold : c.border20,
             }}
           >
-            <GlassView
-              glassEffectStyle="regular"
+            <View
               style={{
                 width: dotSize,
                 height: dotSize,
@@ -310,7 +308,7 @@ function PrayerDots({
                   ? c.muted
                   : isNext
                     ? c.goldGlass
-                    : 'transparent',
+                    : 'rgba(0, 0, 0, 0.18)',
               }}
             />
           </View>
@@ -435,6 +433,7 @@ const PERIOD_OPTIONS: { key: Period; shortKey: string; longKey: string }[] = [
 function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueReading?: () => void }) {
   const { t } = useTranslation();
   const fonts = useFontFamily();
+  const isRTL = useIsRTL();
   const [period, setPeriod] = useState<Period>('day');
   const version = useTrackerVersion();
 
@@ -451,7 +450,7 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
   }, [period, version, t]);
 
   const remaining = Math.max(0, goal - pages);
-  const ringSize = 64;
+  const ringSize = 78;
 
   // No saved last-viewed position → the user hasn't read yet, so prompt them to
   // "Start Reading" rather than "Continue Reading".
@@ -462,71 +461,39 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
       style={{
         borderRadius: 22,
         paddingHorizontal: 20,
-        paddingVertical: 20,
+        paddingVertical: 18,
         backgroundColor: c.depth30,
         marginTop: 20,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-        <GlassView
-          glassEffectStyle="regular"
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 17,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginEnd: 12,
-            overflow: 'hidden',
-          }}
-        >
-          <Icon name="book-open-page-variant" size={16} color={c.gold} />
-        </GlassView>
-        <Text style={{ color: c.text, fontSize: 24, fontFamily: fonts.displayRegular, fontWeight: '400' }}>
-          {t('prayer.quranGoal')}
-        </Text>
-      </View>
-
-      <PeriodToggle
-        c={c}
-        value={period}
-        onChange={setPeriod}
-      />
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: c.text, fontSize: 20, fontWeight: '700' }}>
-            {t('prayer.pagesProgress', { pages, goal })}
-          </Text>
-          <Text style={{ color: c.muted, fontSize: 12, marginTop: 6 }}>
-            {remaining === 0 ? (
-              <Text style={{ color: c.gold }}>{t('prayer.goalReached', { period: periodLabel })}</Text>
-            ) : (
-              <>
-                {periodLabel} <Text style={{ color: c.gold }}>{t('prayer.pagesLeft', { count: remaining })}</Text>
-              </>
-            )}
-          </Text>
-          <Pressable
-            style={{ alignSelf: 'flex-start', marginTop: 14 }}
-            onPress={onContinueReading}
+      {/* Header row: book icon + "Quran Goal" title on the left,
+          percent progress ring pinned top-right. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 4,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginEnd: 12,
+              backgroundColor: 'rgba(0, 0, 0, 0.18)',
+            }}
           >
-            <GlassView
-              glassEffectStyle="regular"
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 7,
-                borderRadius: 999,
-                overflow: 'hidden',
-              }}
-            >
-              <Text style={{ color: c.text, fontSize: 12, fontWeight: '500' }}>
-                {hasRead ? t('prayer.continueReading') : t('prayer.startReading')}
-              </Text>
-            </GlassView>
-          </Pressable>
+            <Icon name="book-open-page-variant" size={20} color={c.gold} />
+          </View>
+          <Text style={{ color: c.text, fontSize: 24, fontFamily: fonts.displayRegular, fontWeight: '400' }}>
+            {t('prayer.quranGoal')}
+          </Text>
         </View>
-
         <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
           <ProgressRing
             progress={percent}
@@ -535,20 +502,11 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
             color={c.gold}
             track={c.ringTrack}
           />
-          <View
-            style={{
-              position: 'absolute',
-              top: 2,
-              right: 10,
-            }}
-          >
-            <Sparkle size={6} color={c.gold} />
-          </View>
           <Text
             style={{
               position: 'absolute',
               color: c.text,
-              fontSize: 22,
+              fontSize: 24,
               fontFamily: fonts.displayRegular,
             }}
           >
@@ -557,11 +515,68 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
         </View>
       </View>
 
+      <PeriodToggle
+        c={c}
+        value={period}
+        onChange={setPeriod}
+      />
+
+      <View style={{ marginTop: 12 }}>
+        <Text style={{ color: c.text, fontSize: 20, fontWeight: '700' }}>
+          {t('prayer.pagesProgress', { pages, goal })}
+        </Text>
+        <Text style={{ color: c.muted, fontSize: 12, marginTop: 6 }}>
+          {remaining === 0 ? (
+            <Text style={{ color: c.gold }}>{t('prayer.goalReached', { period: periodLabel })}</Text>
+          ) : (
+            <>
+              {periodLabel} <Text style={{ color: c.gold }}>{t('prayer.pagesLeft', { count: remaining })}</Text>
+            </>
+          )}
+        </Text>
+        {/* Continue Reading — full-width rectangle CTA. marginTop on the
+            outer static View; Pressable's style-function form drops
+            layout props (same gotcha as the earlier alignSelf issue). */}
+        <View style={{ marginTop: 18 }}>
+          <Pressable
+            onPress={onContinueReading}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            })}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 13,
+                borderRadius: 14,
+                backgroundColor: '#FFFFFF',
+                borderWidth: 2,
+                borderColor: c.gold,
+                shadowColor: c.gold,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.55,
+                shadowRadius: 12,
+                elevation: 8,
+              }}
+            >
+              <Text style={{ color: '#0A1426', fontSize: 14, fontWeight: '700', letterSpacing: 0.3 }}>
+                {hasRead ? t('prayer.continueReading') : t('prayer.startReading')}
+              </Text>
+              <Icon name={isRTL ? 'arrow-back' : 'arrow-forward'} size={15} color={c.gold} />
+            </View>
+          </Pressable>
+        </View>
+      </View>
+
       <View
         style={{
           height: StyleSheet.hairlineWidth,
           backgroundColor: c.divider12,
-          marginTop: 22,
+          marginTop: 16,
           marginBottom: 4,
         }}
       />
@@ -679,7 +694,21 @@ function RemembranceItem({
 }) {
   return (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-      <Icon name={icon} size={18} color={c.gold} style={{ marginEnd: 10 }} />
+      {/* Dark blur badge — matches the book-icon treatment on the
+          Quran Goal header + the donate heart icon. */}
+      <View
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginEnd: 10,
+          backgroundColor: 'rgba(0, 0, 0, 0.18)',
+        }}
+      >
+        <Icon name={icon} size={18} color={c.gold} />
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.text, fontSize: 13, fontWeight: '600' }}>{title}</Text>
         <Text style={{ color: c.muted, fontSize: 11, marginTop: 2 }}>{meta}</Text>
@@ -1206,20 +1235,19 @@ export default function PrayerScreen() {
                   >
                     {countdownClock ?? '--'}
                   </Text>
-                  <GlassView
-                    glassEffectStyle="regular"
+                  <View
                     style={{
                       marginTop: 8,
                       paddingHorizontal: 14,
                       paddingVertical: 5,
                       borderRadius: 999,
-                      overflow: 'hidden',
+                      backgroundColor: 'rgba(0, 0, 0, 0.18)',
                     }}
                   >
                     <Text style={{ color: c.gold, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
                       {t('prayer.currentTime', { time: currentTime })}
                     </Text>
-                  </GlassView>
+                  </View>
                 </View>
               </View>
             </View>
@@ -1262,7 +1290,7 @@ export default function PrayerScreen() {
                       {selectedDateFormatted}
                     </Text>
                     {!isToday && (
-                      <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
+                      <Text style={{ color: c.gold, fontSize: 11, marginTop: 2, letterSpacing: 1 }}>
                         {t('prayer.tapToReturnToday')}
                       </Text>
                     )}

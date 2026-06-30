@@ -4,12 +4,15 @@ import { Icon } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { IncompleteBadge } from '@/src/components/profile/IncompleteBadge';
 
 type Props = {
   onEnablePress: () => void;
+  /** Show the red "1" pill — set by useSetupCompleteness when notifications are off. */
+  incomplete?: boolean;
 };
 
-export default function Notifications({ onEnablePress }: Props) {
+export default function Notifications({ onEnablePress, incomplete }: Props) {
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
@@ -49,6 +52,7 @@ export default function Notifications({ onEnablePress }: Props) {
         className="shrink-0 flex-row items-center gap-1.5"
         hitSlop={8}
       >
+        {incomplete ? <IncompleteBadge /> : null}
         <Text
           style={{
             fontFamily: fonts.body,

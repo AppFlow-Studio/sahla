@@ -30,6 +30,7 @@ import {
   type Goals,
 } from '../lib/quran-tracker';
 import { useTrackerVersion } from '../hooks/use-tracker';
+import { useUserPreferences } from '../hooks/use-user-preferences';
 import { useQuranPalette, type QuranPalette } from '../hooks/use-quran-palette';
 
 type Props = { onClose?: () => void };
@@ -40,6 +41,10 @@ export default function QuranTrackerScreen({ onClose }: Props) {
   const insets = useSafeAreaInsets();
   const [editing, setEditing] = useState(false);
   const version = useTrackerVersion();
+  // Pull the server-side goal mutation up here so the morphing editor at the
+  // bottom can fire it alongside the existing MMKV write — keeps the engagement
+  // -nudge scheduler in step with whatever the user chose in the UI.
+  const { upsertQuranDailyGoal } = useUserPreferences();
   const snapshot = useMemo(
     () => ({
       goals: getGoals(),
@@ -111,6 +116,7 @@ export default function QuranTrackerScreen({ onClose }: Props) {
         goals={snapshot.goals}
         palette={palette}
         styles={styles}
+        onSyncDailyGoal={(g) => upsertQuranDailyGoal.mutate(g)}
       />
     </View>
   );
@@ -280,6 +286,7 @@ function MorphingEditGoals({
   goals,
   palette,
   styles,
+  onSyncDailyGoal,
 }: {
   expanded: boolean;
   onExpand: () => void;
@@ -287,6 +294,10 @@ function MorphingEditGoals({
   goals: Goals;
   palette: QuranPalette;
   styles: TrackerStyles;
+  /** Best-effort push of the new daily goal to user_preferences.quran_daily_goal
+   *  so the NT-ENGAGE-01 scheduler honors it. Fired on Done; failure swallowed
+   *  (the local MMKV write is the source of truth for in-app UX). */
+  onSyncDailyGoal: (dailyGoal: number) => void;
 }) {
   const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -338,6 +349,9 @@ function MorphingEditGoals({
   }
   function handleDone() {
     setGoals(draft);
+    // Only the daily goal drives engagement nudges today; week/month/year
+    // remain local-only and don't need a server-side counterpart yet.
+    if (draft.daily !== goals.daily) onSyncDailyGoal(draft.daily);
     onCollapse();
   }
 

@@ -11,9 +11,9 @@ import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useProfile } from '@/src/hooks/use-profile';
+import { useSetupCompleteness } from '@/src/hooks/use-setup-completeness';
 import { useUploadProfilePhoto } from '@/src/hooks/use-upload-profile-photo';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
-import EditProfileSheet from './EditProfileSheet';
 
 import {
   useFonts,
@@ -21,13 +21,23 @@ import {
   CormorantGaramond_600SemiBold,
 } from '@expo-google-fonts/cormorant-garamond';
 
-export default function ProfileHeader() {
+type Props = {
+  /** Lifted to the parent so the body's setup row + the header CTA both
+   *  trigger the same EditProfileSheet instance. */
+  onPressEdit: () => void;
+  /** Routes the user to whatever's outstanding when "Complete Profile" is tapped.
+   *  Parent decides based on `useSetupCompleteness().firstIncomplete`. */
+  onPressCompleteProfile: () => void;
+};
+
+export default function ProfileHeader({ onPressEdit, onPressCompleteProfile }: Props) {
   const { t } = useTranslation();
   const { profile, status, error } = useProfile();
   const { user } = useUser();
   const { clerkOrgId, colors } = useMasjidConfig();
   const fonts = useFontFamily();
   const insets = useSafeAreaInsets();
+  const setup = useSetupCompleteness();
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
   const primaryRgba0 = `rgba(${colors.primary.replace(/ /g, ',')}, 0)`;
@@ -36,7 +46,6 @@ export default function ProfileHeader() {
 
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const { takePhoto, chooseFromGallery, isUploading } = useUploadProfilePhoto();
-  const [editVisible, setEditVisible] = useState(false);
 
   const handlePhotoSource = useCallback(
     async (source: 'camera' | 'gallery') => {
@@ -94,13 +103,10 @@ export default function ProfileHeader() {
       ? new Date(user.createdAt).getFullYear()
       : undefined;
 
-  const nonEmpty = (s: string | null | undefined) => (s?.trim().length ?? 0) > 0;
-  const isProfileComplete =
-    nonEmpty(firstName) &&
-    nonEmpty(lastName) &&
-    nonEmpty(profile?.profile_email) &&
-    nonEmpty(profile?.phone_number) &&
-    hasPhoto;
+  // "Complete Profile" CTA gates on profile fields only (name + phone + photo) —
+  // personalization/notifications get their own ProfileBody rows. Once profile
+  // fields are done, only the (enlarged, centered) "Edit Profile" button shows.
+  const showCompleteCTA = !setup.profile;
 
   const initial = firstName?.charAt(0) ?? '?';
 
@@ -185,10 +191,12 @@ export default function ProfileHeader() {
             </Text>
           )}
 
-          {/* Action buttons */}
+          {/* Action buttons — when nothing's outstanding, only "Edit Profile"
+              shows so the row stays centered with no empty gap. */}
           <View className="mt-2.5 flex-row items-center justify-center gap-2">
-            {!isProfileComplete && (
+            {showCompleteCTA && (
               <Pressable
+                onPress={onPressCompleteProfile}
                 className="flex-row items-center justify-center rounded-full border-accent/50 active:opacity-80"
                 style={{
                   borderWidth: 0.75,
@@ -206,15 +214,20 @@ export default function ProfileHeader() {
               </Pressable>
             )}
             <Pressable
-              onPress={() => setEditVisible(true)}
+              onPress={onPressEdit}
               className="items-center justify-center rounded-full border-primary-foreground/50 active:opacity-80"
               style={{
                 borderWidth: 0.75,
-                paddingHorizontal: 11,
-                paddingVertical: 4,
+                // When the Complete CTA is hidden this is the only button, so
+                // make it a prominent, centered standalone action.
+                paddingHorizontal: !showCompleteCTA ? 18 : 11,
+                paddingVertical: !showCompleteCTA ? 5 : 4,
               }}
             >
-              <Text className="text-primary-foreground" style={{ fontSize: 9, fontWeight: '500' }}>
+              <Text
+                className="text-primary-foreground"
+                style={{ fontSize: !showCompleteCTA ? 10.5 : 9, fontWeight: '500' }}
+              >
                 {t('profile.editProfile')}
               </Text>
             </Pressable>
@@ -229,7 +242,6 @@ export default function ProfileHeader() {
         onChooseFromGallery={() => handlePhotoSource('gallery')}
         isUploading={isUploading}
       />
-      <EditProfileSheet visible={editVisible} onClose={() => setEditVisible(false)} />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
-import { Icon } from "@/src/components/ui/icon";
+import { PersonalizeIcon } from "@/src/components/ui/personalize-icon";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
@@ -75,7 +75,7 @@ function CustomizedPill({
       className="flex-row items-center rounded-full px-4 py-3"
       style={{ backgroundColor: pillBg }}
     >
-      <Icon name="fingerprint" size={18} color={accentRgb} />
+      <PersonalizeIcon size={20} color={accentRgb} />
       <View className="ms-3 flex-1">
         <Text
           style={{

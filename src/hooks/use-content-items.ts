@@ -31,7 +31,19 @@ const SELECT =
   'content_id, name, description, image, type, start_date, end_date, start_time, days, speakers, is_kids, is_fourteen_plus, is_young_professionals, is_pace, is_quran, is_weekly_program, recurrence_freq, recurrence_interval, recurrence_anchor, week_of_month' as const;
 
 // --- MOCK DATA: used when auth is bypassed ---
-const MOCK_CONTENT_ITEMS: ContentItem[] = [
+// Shared defaults for the audience/recurrence flags so each mock only declares
+// its distinguishing fields.
+const MOCK_BASE = {
+  speakers: null,
+  is_kids: null,
+  is_fourteen_plus: null,
+  is_young_professionals: false,
+  is_pace: false,
+  is_quran: false,
+  is_weekly_program: false,
+} satisfies Partial<ContentItem>;
+
+const MOCK_CONTENT_ITEMS: ContentItem[] = ([
   {
     content_id: 'mock-1',
     name: 'Advanced Tajweed & Recitation',
@@ -120,7 +132,7 @@ const MOCK_CONTENT_ITEMS: ContentItem[] = [
     start_time: '10:00',
     days: ['Saturday', 'Sunday'],
   },
-];
+] as Partial<ContentItem>[]).map((m) => ({ ...MOCK_BASE, ...m }) as ContentItem);
 
 export function useContentItems() {
   const supabase = useSupabase();

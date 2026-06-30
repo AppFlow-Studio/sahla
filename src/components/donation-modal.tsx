@@ -8,6 +8,7 @@ import {
   Easing,
   Keyboard,
   LayoutAnimation,
+  type LayoutAnimationConfig,
   Modal,
   Platform,
   Pressable,
@@ -90,6 +91,24 @@ export function DonationModal({
   const { confirmPayment } = useConfirmPayment();
   const { isPlatformPaySupported, confirmPlatformPayPayment } = usePlatformPay();
   const { setStripeAccountId } = useStripeAccount();
+
+  // `isPlatformPaySupported` from Stripe is an async function — resolve it once
+  // and gate the express-pay button on the result. (It was previously used as a
+  // boolean, so the Apple/Google Pay button always rendered.)
+  const [platformPaySupported, setPlatformPaySupported] = useState(false);
+  useEffect(() => {
+    let active = true;
+    isPlatformPaySupported()
+      .then((ok) => {
+        if (active) setPlatformPaySupported(ok);
+      })
+      .catch(() => {
+        if (active) setPlatformPaySupported(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isPlatformPaySupported]);
 
   const fg = colors.foreground.replace(/ /g, ',');
   const bg = colors.background.replace(/ /g, ',');
@@ -176,13 +195,13 @@ export function DonationModal({
   const transitioning = useRef(false);
 
   // LayoutAnimation config for smooth height changes
-  const heightAnim: LayoutAnimation.Config = {
+  const heightAnim: LayoutAnimationConfig = {
     duration: 550,
     update: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
   };
 
   // Collapse/expand the sheet chrome when the keyboard shows/hides.
-  const focusAnim: LayoutAnimation.Config = {
+  const focusAnim: LayoutAnimationConfig = {
     duration: 280,
     create: { type: LayoutAnimation.Types.easeOut, property: LayoutAnimation.Properties.opacity },
     update: { type: LayoutAnimation.Types.easeInEaseOut },
@@ -322,8 +341,18 @@ export function DonationModal({
       // Dismissed without completing → release the in-flight intent.
       if (step !== 'thanks') cancelPendingIntent(clientSecret);
       Keyboard.dismiss();
-      Animated.timing(backdrop, { toValue: 0, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-      Animated.timing(sheetY, { toValue: SCREEN_H, duration: 550, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }).start(() => {
+      // Close glides down with a gentle, low-stiffness spring so the
+      // sheet picks up speed gradually instead of snapping off the
+      // bottom of the screen. Overdamped (no bounce) but with a longer
+      // settle so the descent feels relaxed rather than fired.
+      Animated.timing(backdrop, { toValue: 0, duration: 620, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      Animated.spring(sheetY, {
+        toValue: SCREEN_H,
+        damping: 28,
+        stiffness: 95,
+        mass: 1.2,
+        useNativeDriver: false,
+      }).start(() => {
         resetState();
       });
     }
@@ -804,7 +833,7 @@ export function DonationModal({
               </View>
 
               {/* Express pay */}
-              {isPlatformPaySupported && (
+              {platformPaySupported && (
                 <>
                   <PlatformPayButton
                     type={

@@ -44,4 +44,5 @@ export const defaultConfig: MasjidConfig = {
   prayerCalculationMethod: "ISNA",
   clerkOrgId: "org_3CfxuY1bSbDRGv2y8LIcZRA6w7Q",
   fontTheme: "classic",
+  headerStyle: "classic",
 };

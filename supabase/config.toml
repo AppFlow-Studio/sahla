@@ -31,6 +31,9 @@ verify_jwt = false
 [functions.send-prayer-notifications]
 verify_jwt = false
 
+[functions.send-engagement-nudges]
+verify_jwt = false
+
 # Payment/management functions: the mobile app authenticates with Clerk and
 # these self-authenticate via user_id in the body + service role, so the edge
 # gateway must NOT enforce a native JWT. Without these entries the CLI defaults

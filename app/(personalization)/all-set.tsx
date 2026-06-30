@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -97,6 +98,19 @@ export default function AllSetScreen() {
     opacity: bottomOpacity.value,
   }));
 
+  // Tapping "Explore" fades a green layer (the same green the notification
+  // takeover uses) over this cream screen, THEN navigates — so the hand-off into
+  // `(main)` lands already-green and the onboarding reads as one continuous
+  // motion into the notifications prompt rather than a cream→green jump.
+  const leave = useSharedValue(0);
+  const leaveStyle = useAnimatedStyle(() => ({ opacity: leave.value }));
+  const goToApp = () => router.replace('/(main)/discover');
+  const onExplore = () => {
+    leave.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) }, (done) => {
+      if (done) runOnJS(goToApp)();
+    });
+  };
+
   return (
     <View className="flex-1 bg-onboarding-surface">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
@@ -154,7 +168,7 @@ export default function AllSetScreen() {
             {t('personalization.allSetSubtitle')}
           </Text>
           <Pressable
-            onPress={() => router.replace('/(main)/discover')}
+            onPress={onExplore}
             className="h-[43px] items-center justify-center rounded-full bg-onboarding-bg active:opacity-90"
           >
             <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '600' }}>
@@ -163,6 +177,14 @@ export default function AllSetScreen() {
           </Pressable>
         </Animated.View>
       </SafeAreaView>
+
+      {/* Green wipe that covers the cream screen on "Explore", so the next
+          surface (the notifications takeover) appears already-green. */}
+      <Animated.View
+        pointerEvents="none"
+        className="absolute inset-0 bg-onboarding-bg"
+        style={leaveStyle}
+      />
     </View>
   );
 }
