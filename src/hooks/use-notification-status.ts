@@ -2,7 +2,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { useFocusEffect } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
 
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
@@ -87,6 +87,7 @@ export function useNotificationStatus() {
     useCallback(() => {
       void refreshPermission();
       queryClient.invalidateQueries({ queryKey: tokenQueryKey });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [queryClient, refreshPermission, userId, mosqueId]),
   );
 
@@ -99,4 +100,27 @@ export function useNotificationStatus() {
     hasActiveToken,
     refresh: refreshPermission,
   };
+}
+
+/**
+ * Returns a handler that turns notifications on: if the OS prompt has never been
+ * answered we ask for permission inline; otherwise (already denied) we send the
+ * user to Settings, since iOS only shows the system prompt once. `useNotificationStatus`
+ * re-reads permission on focus/foreground, so the badge clears on its own.
+ */
+export function useEnableNotifications() {
+  return useCallback(async () => {
+    if (Platform.OS === 'web') return;
+    const Notifications = getNotificationsModule();
+    let status: string | undefined;
+    try {
+      const res = await Notifications?.requestPermissionsAsync();
+      status = res?.status;
+    } catch {
+      // Native module not ready — fall through to Settings.
+    }
+    // requestPermissionsAsync resolves without UI when already determined; if
+    // we still don't have permission, the only path left is Settings.
+    if (status !== 'granted') Linking.openSettings();
+  }, []);
 }

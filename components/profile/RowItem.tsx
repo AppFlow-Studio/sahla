@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 
 import { Icon, type IconName } from "@/src/components/ui/icon";
+import { NudgeDot } from "@/src/components/ui/nudge-dot";
 import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
@@ -13,6 +14,8 @@ type Props = {
    *  like the personalization sunburst emblem. */
   renderIcon?: () => React.ReactNode;
   onPress: () => void;
+  /** Show an attention dot beside the title (e.g. an unfinished setup step). */
+  showDot?: boolean;
 };
 
 export default function RowItem({ title, icon, renderIcon, onPress }: Props) {
@@ -43,6 +46,7 @@ export default function RowItem({ title, icon, renderIcon, onPress }: Props) {
         >
           {title}
         </Text>
+        {showDot && <NudgeDot size={7} style={{ marginStart: 2 }} />}
       </View>
       <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={`rgba(${fg},0.4)`} />
     </Pressable>

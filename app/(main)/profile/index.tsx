@@ -6,17 +6,18 @@ import { useSetupCompleteness } from "@/src/hooks/use-setup-completeness";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Linking, Platform, ScrollView, View } from "react-native";
+import { Platform, ScrollView, View } from "react-native";
 
+import { useEnableNotifications } from "@/src/hooks/use-notification-status";
 import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 
 export default function ProfileScreen() {
   const { open: openDonate } = useDonation();
   const router = useRouter();
   const setup = useSetupCompleteness();
+  const enableNotifications = useEnableNotifications();
   // EditProfileSheet lifted from ProfileHeader so both the header's
-  // Edit/Complete buttons and the body's new Profile setup row drive a
-  // single instance.
+  // Edit/Complete buttons and the body's Profile setup row drive one instance.
   const [editVisible, setEditVisible] = useState(false);
 
   useStatusBarStyle("dark");
@@ -25,30 +26,24 @@ export default function ProfileScreen() {
     () => router.push("/(personalization)/reasons"),
     [router],
   );
-  const openNotificationSettings = useCallback(
-    () => Linking.openSettings(),
-    [],
-  );
   const openEditProfile = useCallback(() => setEditVisible(true), []);
 
   // "Complete Profile" header CTA routes to the first outstanding step in
-  // priority order: profile fields → personalization → notifications.
+  // priority order: profile fields → personalization → notifications. (The CTA
+  // itself gates on profile fields, so in practice this hits the profile case.)
   const handlePressCompleteProfile = useCallback(() => {
     switch (setup.firstIncomplete) {
-      case 'profile':
-        openEditProfile();
-        return;
       case 'personalization':
         openPersonalization();
         return;
       case 'notifications':
-        openNotificationSettings();
+        void enableNotifications();
         return;
+      case 'profile':
       default:
-        // All complete — CTA shouldn't be visible, but guard anyway.
         openEditProfile();
     }
-  }, [setup.firstIncomplete, openEditProfile, openPersonalization, openNotificationSettings]);
+  }, [setup.firstIncomplete, openEditProfile, openPersonalization, enableNotifications]);
 
   return (
     <View className="flex-1 bg-depth">
@@ -81,7 +76,7 @@ export default function ProfileScreen() {
           />
           <ProfileBody
             onPressPersonalized={openPersonalization}
-            onPressNotifications={openNotificationSettings}
+            onPressNotifications={enableNotifications}
             onPressCompleteProfile={openEditProfile}
           />
         </View>

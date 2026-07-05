@@ -46,7 +46,7 @@ export function NotificationsEmpty({ masjidName, onEnablePress }: Props) {
           textAlign: 'center',
         }}
       >
-        You'll get updates here for prayer times, events you RSVP to, and
+        You&apos;ll get updates here for prayer times, events you RSVP to, and
         community announcements from {masjidName}.
       </Text>
 

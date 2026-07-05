@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon } from '@/src/components/ui/icon';
+import { useEnableNotifications, useNotificationStatus } from '@/src/hooks/use-notification-status';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useConfigStore } from '@/src/stores/config-store';
 
@@ -39,6 +41,10 @@ export function NotificationsScreen({ items = [], initialTab, onPressSettings }:
   const insets = useSafeAreaInsets();
   const fonts = useFontFamily();
   const masjidName = useConfigStore((s) => s.config.displayName);
+  const accent = useConfigStore((s) => s.config.colors.accent);
+  const notifGranted = useNotificationStatus().enabled;
+  const enableNotifications = useEnableNotifications();
+  const gold = `rgb(${accent.replace(/ /g, ',')})`;
   const [activeTab, setActiveTab] = useState<NotificationTab>(initialTab ?? 'All');
 
   const filterCategory = TAB_TO_CATEGORY[activeTab];
@@ -112,6 +118,43 @@ export function NotificationsScreen({ items = [], initialTab, onPressSettings }:
           onChange={setActiveTab}
         />
       </View>
+
+      {/* Permission nudge: only while notifications are actually off. Enabling
+          here (OS prompt, or Settings if previously denied) refreshes the status
+          and the banner disappears. */}
+      {!notifGranted && (
+        <View style={{ paddingHorizontal: 24, marginTop: 12 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              borderRadius: 16,
+              backgroundColor: INK,
+              paddingVertical: 14,
+              paddingHorizontal: 16,
+            }}
+          >
+            <Icon name="bell" size={18} color={gold} fill={gold} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: SURFACE, fontFamily: fonts.bodySemibold, fontWeight: '600', fontSize: 13 }}>
+                Notifications are off
+              </Text>
+              <Text style={{ color: 'rgba(255,251,242,0.7)', fontSize: 11, lineHeight: 15, marginTop: 2 }}>
+                Turn them on for prayer times, events, and reminders.
+              </Text>
+            </View>
+            <Pressable
+              onPress={enableNotifications}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={{ backgroundColor: gold, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 16 }}
+            >
+              <Text style={{ color: INK, fontWeight: '700', fontSize: 12 }}>Enable</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {isEmpty ? (
         <View style={{ flex: 1, marginTop: 32 }}>

@@ -103,10 +103,10 @@ export default function ProfileHeader({ onPressEdit, onPressCompleteProfile }: P
       ? new Date(user.createdAt).getFullYear()
       : undefined;
 
-  // CT-PROFILE-01: gate on overall setup completeness — the "Complete Profile"
-  // CTA covers profile fields + personalization + notifications, not just
-  // profile fields, so users with all setup done see only "Edit Profile".
-  const showCompleteCTA = setup.incompleteCount > 0;
+  // "Complete Profile" CTA gates on profile fields only (name + phone + photo) —
+  // personalization/notifications get their own ProfileBody rows. Once profile
+  // fields are done, only the (enlarged, centered) "Edit Profile" button shows.
+  const showCompleteCTA = !setup.profile;
 
   const initial = firstName?.charAt(0) ?? '?';
 
@@ -218,11 +218,16 @@ export default function ProfileHeader({ onPressEdit, onPressCompleteProfile }: P
               className="items-center justify-center rounded-full border-primary-foreground/50 active:opacity-80"
               style={{
                 borderWidth: 0.75,
-                paddingHorizontal: 11,
-                paddingVertical: 4,
+                // When the Complete CTA is hidden this is the only button, so
+                // make it a prominent, centered standalone action.
+                paddingHorizontal: !showCompleteCTA ? 18 : 11,
+                paddingVertical: !showCompleteCTA ? 5 : 4,
               }}
             >
-              <Text className="text-primary-foreground" style={{ fontSize: 9, fontWeight: '500' }}>
+              <Text
+                className="text-primary-foreground"
+                style={{ fontSize: !showCompleteCTA ? 10.5 : 9, fontWeight: '500' }}
+              >
                 {t('profile.editProfile')}
               </Text>
             </Pressable>

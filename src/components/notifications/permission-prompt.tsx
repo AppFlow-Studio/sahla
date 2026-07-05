@@ -23,7 +23,7 @@ import { useSupabase } from '@/src/hooks/use-supabase';
 import { storage } from '@/src/lib/mmkv';
 import { useConfigStore } from '@/src/stores/config-store';
 
-/** Set once the user has seen (allowed or dismissed) the soft prompt. */
+/** MMKV key: set once the soft prompt has been shown/answered. */
 const SHOWN_KEY = 'notifications.prompt.v1';
 
 /** "10 38 30" -> "rgb(10, 38, 30)" */
@@ -303,8 +303,13 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
  * choice marks the soft prompt as seen so it never reappears.
  *
  * Mount once near the root of the authenticated tree (e.g. `(main)/_layout`).
+ *
+ * `onResolved` fires once the prompt reaches a terminal state — shown then
+ * answered, or skipped because it doesn't apply (web / already seen / OS prompt
+ * already answered). The layout uses it to release the first-run tutorial so the
+ * two full-screen takeovers don't stack.
  */
-export function NotificationPermissionPrompt() {
+export function NotificationPermissionPrompt({ onResolved }: { onResolved?: () => void } = {}) {
   const { userId } = useAuth();
   const fonts = useFontFamily();
   const supabase = useSupabase();
@@ -314,12 +319,25 @@ export function NotificationPermissionPrompt() {
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Real permission gating: only nudge when the OS prompt is still `undetermined`
+  // and we haven't shown the soft-prompt before. Every terminal path also calls
+  // `onResolved` so the first-run tutorial is released whether or not this prompt
+  // actually shows.
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-    if (storage.getBoolean(SHOWN_KEY)) return;
+    if (Platform.OS === 'web') {
+      onResolved?.();
+      return;
+    }
+    if (storage.getBoolean(SHOWN_KEY)) {
+      onResolved?.();
+      return;
+    }
 
     const Notifications = getNotificationsModule();
-    if (!Notifications) return;
+    if (!Notifications) {
+      onResolved?.();
+      return;
+    }
 
     let active = true;
     void (async () => {
@@ -329,20 +347,47 @@ export function NotificationPermissionPrompt() {
         // Only nudge when the OS prompt hasn't been answered yet. If the user
         // already granted/denied at the OS level there's nothing to ask.
         if (status === 'undetermined') setVisible(true);
-        else storage.set(SHOWN_KEY, true);
+        else {
+          storage.set(SHOWN_KEY, true);
+          onResolved?.();
+        }
       } catch {
         // Native module not ready (pre-EAS build) — skip silently.
+        onResolved?.();
       }
     })();
     return () => {
       active = false;
     };
-  }, []);
+  }, [onResolved]);
+
+  // The backdrop is solid the instant we show (animationType="none"); we animate
+  // the *content* in ourselves so when the prompt does appear it covers
+  // immediately (no Discover flash) and rises into place rather than popping.
+  const enter = useSharedValue(0);
+  useEffect(() => {
+    if (!visible) return;
+    enter.value = 0;
+    enter.value = withTiming(1, { duration: 540, easing: Easing.bezier(0.16, 1, 0.3, 1) });
+  }, [visible, enter]);
+  const phoneEnter = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: (1 - enter.value) * 22 }],
+  }));
+  const sheetEnter = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: (1 - enter.value) * 30 }],
+  }));
 
   const dismiss = useCallback(() => {
     storage.set(SHOWN_KEY, true);
-    setVisible(false);
-  }, []);
+    // Release the tutorial first — it fades in over this prompt's green backdrop.
+    // We stay mounted a beat longer so the green never lifts to the live app
+    // between the two takeovers; once the tutorial has covered us, we hide
+    // (instantly, behind it). 380ms comfortably outlasts the tutorial's fade-in.
+    onResolved?.();
+    setTimeout(() => setVisible(false), 380);
+  }, [onResolved]);
 
   const onAllow = useCallback(async () => {
     if (busy) return;
@@ -367,25 +412,28 @@ export function NotificationPermissionPrompt() {
   const green = rgb(config.colors.onboardingBackground);
   const muted = rgba(config.colors.onboardingBackground, 0.55);
   return (
-    <Modal transparent visible animationType="fade" statusBarTranslucent onRequestClose={dismiss}>
+    <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={dismiss}>
       <View style={{ flex: 1, backgroundColor: green }}>
         {/* ── Top: an iPhone mockup with notifications cascading onto it ── */}
-        <View style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
+        <Animated.View style={[{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: 16 }, phoneEnter]}>
           <PhoneFrame>
             <NotificationFeed config={config} />
           </PhoneFrame>
-        </View>
+        </Animated.View>
 
         {/* ── Bottom: cream sheet with copy + actions ── */}
-        <View
-          style={{
-            backgroundColor: cream,
-            borderTopLeftRadius: 32,
-            borderTopRightRadius: 32,
-            paddingHorizontal: 32,
-            paddingTop: 44,
-            paddingBottom: insets.bottom + 28,
-          }}
+        <Animated.View
+          style={[
+            {
+              backgroundColor: cream,
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              paddingHorizontal: 32,
+              paddingTop: 44,
+              paddingBottom: insets.bottom + 28,
+            },
+            sheetEnter,
+          ]}
         >
           <Text
             style={{
@@ -435,7 +483,7 @@ export function NotificationPermissionPrompt() {
               Don&apos;t Allow
             </Text>
           </Pressable>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

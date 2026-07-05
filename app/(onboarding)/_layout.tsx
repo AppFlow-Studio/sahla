@@ -9,7 +9,7 @@ export default function OnboardingLayout() {
   return (
     <OnboardingDraftProvider>
       <Stack
-        initialRouteName="life-stage"
+        initialRouteName="language"
         screenOptions={{
           headerShown: false,
           animation: 'fade',
