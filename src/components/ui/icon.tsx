@@ -66,6 +66,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   SignalHigh,
+  Search,
   Star,
   Store,
   UserPlus,
@@ -216,6 +217,9 @@ const ICONS: Record<string, ComponentType<LucideProps>> = {
   'wifi-outline': Wifi,
   cellular: SignalHigh,
   'battery-full': BatteryFull,
+
+  // actions cont.
+  search: Search,
 
   // profile menu rows
   'user-plus': UserPlus,

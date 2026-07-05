@@ -7,11 +7,15 @@ import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
   title: string;
-  icon: IconName;
+  icon?: IconName;
+  /** Custom SVG / component to render in place of a Lucide icon. Takes
+   *  precedence over `icon` when provided. Useful for one-off Figma glyphs
+   *  like the personalization sunburst emblem. */
+  renderIcon?: () => React.ReactNode;
   onPress: () => void;
 };
 
-export default function RowItem({ title, icon, onPress }: Props) {
+export default function RowItem({ title, icon, renderIcon, onPress }: Props) {
   const { colors } = useMasjidConfig();
   const fonts = useFontFamily();
   const isRTL = useIsRTL();
@@ -24,7 +28,9 @@ export default function RowItem({ title, icon, onPress }: Props) {
     >
       <View className="flex-row items-center gap-2">
         {/* Icon stroke follows the masjid theme foreground. */}
-        <Icon name={icon} size={16} color={fgRgb} />
+        {renderIcon ? renderIcon() : icon ? (
+          <Icon name={icon} size={16} color={fgRgb} />
+        ) : null}
         <Text
           className="text-foreground"
           style={{

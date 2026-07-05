@@ -15,6 +15,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, Share, Text, View } from
 import DonateCard from "./DonateCard";
 import LanguageRow from "./LanguageRow";
 import Notifications from "./Notifications";
+import { PersonalizeIcon } from "@/src/components/ui/personalize-icon";
 import PersonalizedCard from "./PersonalizedCard";
 import ProfileSetupRow from "./ProfileSetupRow";
 import RowItem from "./RowItem";
@@ -202,6 +203,19 @@ export default function ProfileBody({
       <View className="flex-col">
         <SectionHeader title={t('profile.sectionMyActivity')} />
         <View>
+          {/* Personalize preferences — the featured PersonalizedCard at the
+              top of the body hides itself once personalization is done, so
+              the entry point still lives here as a regular row for people
+              who want to revisit / update their picks. Uses the same
+              PersonalizeIcon sunburst as the featured card so the two
+              read as the same destination. */}
+          <RowItem
+            renderIcon={() => (
+              <PersonalizeIcon size={16} color={`rgb(${config.colors.foreground.replace(/ /g, ',')})`} />
+            )}
+            title={t('profile.personalizePreferences')}
+            onPress={onPressPersonalized}
+          />
           <RowItem
             icon={SAVED_PROGRAMS_AND_EVENTS_ICON}
             title={t('profile.savedProgramsEvents')}

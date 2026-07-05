@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { Icon } from "@/src/components/ui/icon";
+import { PersonalizeIcon } from "@/src/components/ui/personalize-icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
@@ -27,8 +28,8 @@ export default function PersonalizedCard({ onPress, incomplete }: Props) {
     onPress={onPress}
     >
         <View className="flex-row items-center gap-1">
-            {/* Themed vector (was a baked-in gold PNG) so it follows the masjid palette. */}
-            <Icon name="fingerprint" size={21} color={accent} />
+            {/* Themed personalization emblem (from Figma) — follows the masjid palette. */}
+            <PersonalizeIcon size={24} color={accent} />
             <View className="flex-col ms-2">
                 <Text
                 className="text-foreground"
