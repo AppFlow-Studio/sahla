@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -7,6 +7,7 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated";
 
+import { CalendarIcon, SearchIcon } from "./DiscoverIcons";
 import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
@@ -95,13 +96,13 @@ export default function DiscoverHeader({
                 hitSlop={12}
                 accessibilityRole="button"
                 accessibilityLabel="Search"
-                style={{ marginRight: 16 }}
+                style={{ marginRight: 16, marginTop: 4 }}
               >
-                <Image
-                  source={require("@/assets/images/search_icon.png")}
-                  style={{ width: 18, height: 18 }}
-                  resizeMode="contain"
-                />
+                {/* Bumped to 32pt so the visible magnifier glyph reads
+                    the same size as the 24pt calendar. The Figma
+                    export's 29×29 viewBox has ~40% empty padding around
+                    the glyph, so a straight 24pt size looks smaller. */}
+                <SearchIcon size={32} color={fgRgb} />
               </Pressable>
             </View>
           </Animated.View>
@@ -126,11 +127,7 @@ export default function DiscoverHeader({
               className="flex-1 flex-row items-center rounded-full px-3"
               style={{ backgroundColor: pillBg, height: 36 }}
             >
-              <Image
-                source={require("@/assets/images/search_icon.png")}
-                style={{ width: 16, height: 16, opacity: 0.6 }}
-                resizeMode="contain"
-              />
+              <SearchIcon size={18} color={mutedFgRgb} opacity={1} />
               <TextInput
                 ref={inputRef}
                 placeholder="Search..."
@@ -187,18 +184,18 @@ export default function DiscoverHeader({
           </Animated.View>
         </View>
 
-        {/* Calendar button — always in place */}
+        {/* Calendar button — always in place. Uses the exact Figma SVG
+            (node 343:1750) so it matches design pixel-for-pixel; the
+            search icon (Figma node 343:1641) matches likewise. Both are
+            tinted with the tenant foreground so they theme correctly
+            across masjids. */}
         <Pressable
           onPress={onPressCalendar}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Events calendar"
         >
-          <Image
-            source={require("@/assets/images/discover_calendar_icon_next_to_search_bar.png")}
-            style={{ width: 18, height: 18 }}
-            resizeMode="contain"
-          />
+          <CalendarIcon size={24} color={fgRgb} />
         </Pressable>
       </View>
 
@@ -210,7 +207,7 @@ export default function DiscoverHeader({
               <Text
                 style={{
                   fontFamily: isActive ? fonts.bodySemibold : fonts.bodyMedium,
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: isActive ? "600" : "500",
                   color: isActive ? fgRgb : mutedFgRgb,
                 }}
