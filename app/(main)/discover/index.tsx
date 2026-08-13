@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Haptics from "expo-haptics";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Text, View } from "react-native";
 import Animated, {
   runOnJS,
   SlideInLeft,
@@ -112,6 +112,14 @@ const TAB_INDEX: Record<DiscoverTab, number> = {
   Events: 2,
   Programs: 3,
 };
+
+/**
+ * `contentInset` / `contentOffset` are **iOS-only** ScrollView props — Android
+ * ignores them outright, which left the header rendering under the status bar
+ * with its top clipped. Android gets real `paddingTop` instead. It has to be
+ * one or the other: applying both would double the gap on iOS.
+ */
+const USE_CONTENT_INSET = Platform.OS === "ios";
 
 export default function DiscoverScreen() {
   const { t } = useTranslation();
@@ -243,6 +251,10 @@ export default function DiscoverScreen() {
     });
   }, [refetchItems, refetchRecs]);
 
+  // Where the scroll view sits at rest, which differs by platform because only
+  // iOS honours `contentInset` — see `USE_CONTENT_INSET`.
+  const restingOffset = USE_CONTENT_INSET ? insets.top : 0;
+
   // Custom pull-to-refresh: we drive the gesture ourselves (NO native
   // RefreshControl) so the ring spinner is the only indicator — the native
   // spinner can't be reliably hidden and kept showing as a second one.
@@ -251,9 +263,10 @@ export default function DiscoverScreen() {
   const pullProgress = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
-      // With contentInset.top the resting offset is -insets.top; anything
-      // more negative than that is an overscroll pull-down.
-      const pull = -(e.contentOffset.y + insets.top);
+      // Anything more negative than the resting offset is an overscroll
+      // pull-down. That resting point is -insets.top under `contentInset`,
+      // but plain 0 when the inset is faked with padding (see `USE_CONTENT_INSET`).
+      const pull = -(e.contentOffset.y + restingOffset);
       pullProgress.value = Math.min(Math.max(pull / PULL_THRESHOLD, 0), 1);
     },
     onEndDrag: () => {
@@ -452,11 +465,15 @@ export default function DiscoverScreen() {
       </Animated.View>
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        // Inset the content (instead of paddingTop) so it sits in the visible
-        // safe area — same approach as the Prayer screen.
-        contentInset={{ top: insets.top }}
-        contentOffset={{ x: 0, y: -insets.top }}
+        contentContainerStyle={{
+          paddingTop: USE_CONTENT_INSET ? 0 : insets.top,
+          paddingBottom: 120,
+        }}
+        // On iOS, inset the content (instead of paddingTop) so it sits in the
+        // visible safe area while still overscrolling into it — same approach
+        // as the Prayer screen. Android falls back to the padding above.
+        contentInset={USE_CONTENT_INSET ? { top: insets.top } : undefined}
+        contentOffset={USE_CONTENT_INSET ? { x: 0, y: -insets.top } : undefined}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >

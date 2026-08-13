@@ -8,15 +8,15 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 
+import { GlassSurface } from '@/src/components/ui/glass-surface';
 import { Icon } from '@/src/components/ui/icon';
 
 /**
  * Apple-style filter button that *morphs* into its options popover.
  *
  * Modelled on the Mushaf surah-picker morph (`src/screens/MushafPageScreen.tsx`
- * → `MorphingFooter`): a single `GlassView` whose size / corner radius animate
+ * → `MorphingFooter`): a single `GlassSurface` whose size / corner radius animate
  * from a small disc into a popover via one `progress` shared value, while two
  * content layers — the collapsed funnel glyph and the expanded options list —
  * cross-fade. Because the glyph and rows render *on top* of the glass, they stay
@@ -28,8 +28,6 @@ import { Icon } from '@/src/components/ui/icon';
  * header's top-right; the popover anchors its right edge there and expands down
  * and to the left.
  */
-
-const LIQUID_GLASS = isLiquidGlassAvailable();
 
 const DISC = 40; // collapsed diameter
 const W_OPEN = 248; // expanded popover width
@@ -180,15 +178,14 @@ export function FilterButton({
 
       {/* Morphing surface, anchored top-right. */}
       <Animated.View style={[styles.wrap, { top, right: RIGHT }, containerStyle]}>
-        {LIQUID_GLASS ? (
-          <GlassView glassEffectStyle="regular" style={styles.surface}>
-            {inner}
-          </GlassView>
-        ) : (
-          <View style={[styles.surface, { backgroundColor: cardRgb, borderWidth: StyleSheet.hairlineWidth, borderColor }]}>
-            {inner}
-          </View>
-        )}
+        <GlassSurface
+          glassEffectStyle="regular"
+          style={styles.surface}
+          fallbackColor={cardRgb}
+          fallbackBorderColor={borderColor}
+        >
+          {inner}
+        </GlassSurface>
       </Animated.View>
     </View>
   );

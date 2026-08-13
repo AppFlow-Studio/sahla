@@ -33,7 +33,6 @@ import ReAnimated, {
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-import { BlurView } from 'expo-blur';
 import {
   CardField,
   useConfirmPayment,
@@ -49,6 +48,7 @@ type CardDetails = { complete: boolean; brand?: string; last4?: string };
 // A reusable card returned by the get-payment-methods edge function.
 type SavedCard = { id: string; brand: string; last4: string; expMonth: number; expYear: number };
 const formatBrand = (b: string) => (b ? b.charAt(0).toUpperCase() + b.slice(1) : 'Card');
+import { AppBlurView } from '@/src/components/ui/blur-view';
 import { Icon } from '@/src/components/ui/icon';
 
 import { CardVisual } from './stripe-card-visual';
@@ -586,7 +586,7 @@ export function DonationModal({
             opacity: backdrop,
           }}
         >
-          <BlurView intensity={40} tint="dark" style={{ flex: 1 }}>
+          <AppBlurView intensity={40} tint="dark" style={{ flex: 1 }}>
             <Pressable
               style={{ flex: 1, backgroundColor: `rgba(${fg},0.15)` }}
               onPress={() => {
@@ -595,7 +595,7 @@ export function DonationModal({
                 else onClose();
               }}
             />
-          </BlurView>
+          </AppBlurView>
         </Animated.View>
 
         {/* Sheet */}
