@@ -2,6 +2,8 @@ import { useUser } from '@clerk/clerk-expo';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+
+import { BackButton } from '@/src/components/ui/back-button';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -282,8 +284,11 @@ export default function AdvertiseApplyScreen() {
           >
             {/* Header */}
             <View className="flex-row items-center px-5 pt-2">
-              <Pressable
+              <BackButton
+                color={fgRgb}
                 onPress={() => {
+                  // On the payment step this rewinds the wizard rather than
+                  // leaving the screen.
                   if (step === 'payment') {
                     setStep('form');
                     setStripeAccountId(undefined);
@@ -292,11 +297,8 @@ export default function AdvertiseApplyScreen() {
                     router.back();
                   }
                 }}
-                hitSlop={12}
-                className="h-8 w-8 items-center justify-center"
-              >
-                <Icon name={isRTL ? 'arrow-forward' : 'arrow-back'} size={22} color={fgRgb} />
-              </Pressable>
+                style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
+              />
               <Text className="ms-3 text-[16px] font-semibold text-foreground">
                 {step === 'payment' || step === 'processing'
                   ? t('ads.payment')

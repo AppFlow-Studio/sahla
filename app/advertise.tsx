@@ -10,6 +10,7 @@ import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const BENEFITS = [
   {
@@ -73,13 +74,7 @@ export default function AdvertiseScreen() {
           contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* Back button */}
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            className="ms-5 mt-2 h-8 w-8 items-center justify-center"
-          >
-            <Icon name="arrow-back" size={22} color={fgRgb} />
-          </Pressable>
+          <BackButton color={fgRgb} style={{ marginStart: 20, marginTop: 8, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }} />
 
           {/* Hero */}
           <View className="px-5 pt-4">

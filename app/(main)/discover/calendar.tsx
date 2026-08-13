@@ -1,8 +1,7 @@
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import EventsCalendar, {
@@ -12,6 +11,7 @@ import { useContentItems } from "@/src/hooks/use-content-items";
 import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { BackButton } from '@/src/components/ui/back-button';
 
 function toTitleCase(s: string): string {
   return s
@@ -82,11 +82,8 @@ export default function DiscoverCalendarScreen() {
             className="items-center justify-center"
             style={{ position: "relative" }}
           >
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.back")}
+            <BackButton
+              color={fgRgb}
               style={{
                 position: "absolute",
                 [isRTL ? "right" : "left"]: 0,
@@ -94,17 +91,7 @@ export default function DiscoverCalendarScreen() {
                 bottom: 0,
                 justifyContent: "center",
               }}
-            >
-              <Image
-                source={require("@/assets/images/left_arrow.png")}
-                style={{
-                  width: 16,
-                  height: 16,
-                  transform: [{ scaleX: isRTL ? -1 : 1 }],
-                }}
-                contentFit="contain"
-              />
-            </Pressable>
+            />
             <Text
               style={{
                 fontFamily: fonts.display,

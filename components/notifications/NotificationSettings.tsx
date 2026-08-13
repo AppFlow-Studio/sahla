@@ -11,6 +11,7 @@ import {
 } from '@/src/hooks/use-notification-settings';
 
 import { Toggle } from './Toggle';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const INK = '#0A261E';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
@@ -202,9 +203,7 @@ export function NotificationSettings({ onBack }: { onBack?: () => void }) {
           paddingTop: 12,
         }}
       >
-        <Pressable onPress={handleBack} hitSlop={12} style={{ marginBottom: 12 }}>
-          <Ionicons name="arrow-back" size={22} color={INK_MUTED} />
-        </Pressable>
+        <BackButton onPress={handleBack} color={INK_MUTED} style={{ marginBottom: 12 }} />
         <Text
           style={{
             fontFamily: fonts.display,

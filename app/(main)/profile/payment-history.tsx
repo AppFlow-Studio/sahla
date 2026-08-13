@@ -25,7 +25,7 @@ import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useConfigStore } from '@/src/stores/config-store';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { BackButton } from '@/src/components/ui/back-button';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -309,7 +309,6 @@ function PaymentCard({
 
 export default function PaymentHistoryScreen() {
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const supabase = useSupabase();
@@ -393,9 +392,7 @@ export default function PaymentHistoryScreen() {
           alignItems: 'center',
         }}
       >
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={{ marginEnd: 16 }}>
-          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={fgRgb} />
-        </TouchableOpacity>
+        <BackButton color={fgRgb} style={{ marginEnd: 16 }} />
         <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>{t('profile.paymentHistory')}</Text>
       </View>
 

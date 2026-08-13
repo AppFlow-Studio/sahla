@@ -7,13 +7,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import {
   useAdSubmissions,
   useAdDecision,
   type AdDecision,
   type AdSubmission,
 } from '@/src/hooks/use-ad-submissions';
+import { BackButton } from '@/src/components/ui/back-button';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -42,7 +42,6 @@ export default function AdminBusinessAds() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
@@ -103,9 +102,7 @@ export default function AdminBusinessAds() {
   return (
     <View className="flex-1 bg-card" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center px-5" style={{ height: 52 }}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={fgRgb} />
-        </Pressable>
+        <BackButton color={fgRgb} />
         <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
           {t('admin.businessAds')}
         </Text>

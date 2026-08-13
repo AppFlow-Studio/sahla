@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -17,6 +16,7 @@ import {
   type NotificationCategory,
   type NotificationItem,
 } from './NotificationsList';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const TAB_TO_CATEGORY: Record<NotificationTab, NotificationCategory | null> = {
   All: null,
@@ -65,11 +65,8 @@ export function NotificationsScreen({ items = [], initialTab, onPressSettings }:
           position: 'relative',
         }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+        <BackButton
+          color={INK}
           style={{
             position: 'absolute',
             left: 24,
@@ -77,13 +74,7 @@ export function NotificationsScreen({ items = [], initialTab, onPressSettings }:
             bottom: 0,
             justifyContent: 'center',
           }}
-        >
-          <Image
-            source={require('@/assets/images/left_arrow.png')}
-            style={{ width: 16, height: 16 }}
-            contentFit="contain"
-          />
-        </Pressable>
+        />
         <Text
           style={{
             fontFamily: fonts.display,

@@ -22,6 +22,7 @@ import {
   type SavedClipsFilter,
   type SavedReel,
 } from '@/src/hooks/use-saved-reels';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const COLUMNS = 3;
 const GAP = 2; // YouTube Shorts has thin gaps between cells
@@ -116,14 +117,10 @@ export default function SavedClipsScreen() {
           paddingVertical: 12,
         }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="active:opacity-60"
+        <BackButton
+          color={INK}
           style={{ position: 'absolute', [isRTL ? 'right' : 'left']: 12, padding: 4 }}
-        >
-          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={26} color={INK} />
-        </Pressable>
+        />
         <Text
           style={{
             color: INK,
