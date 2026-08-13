@@ -2,12 +2,13 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect } from 'expo-router';
 
 import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -44,6 +45,14 @@ function rgb(triplet: string, alpha = 1) {
   const [r, g, b] = triplet.split(' ');
   return alpha === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+/**
+ * `contentInset` / `contentOffset` are **iOS-only** ScrollView props — Android
+ * ignores them outright, which left the top of the page rendering under the
+ * status bar with its top clipped. Android gets real `paddingTop` instead. It
+ * has to be one or the other: applying both would double the gap on iOS.
+ */
+const USE_CONTENT_INSET = Platform.OS === 'ios';
 
 type Status = 'passed' | 'next' | 'upcoming';
 
@@ -840,7 +849,7 @@ function SupportMasjidCard({ c }: { c: Palette }) {
             backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
-          <Text style={{ color: c.gold, fontSize: 20, lineHeight: 22 }}>♥</Text>
+          <MaterialCommunityIcons name="heart" size={20} color={c.gold} />
         </View>
         <View>
           <Text style={{ color: c.text, fontSize: 14, fontWeight: '700' }}>
@@ -1176,13 +1185,17 @@ export default function PrayerScreen() {
 
   useStatusBarStyle('light');
 
+  // Where the scroll view sits at rest, which differs by platform because only
+  // iOS honours `contentInset` — see `USE_CONTENT_INSET`.
+  const topOffset = USE_CONTENT_INSET ? -insets.top : 0;
+
   // Always start the Prayer page at the top each time it's focused, rather than
   // restoring the previous scroll position.
   const scrollRef = useRef<ScrollView>(null);
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: -insets.top, animated: false });
-    }, [insets.top]),
+      scrollRef.current?.scrollTo({ y: topOffset, animated: false });
+    }, [topOffset]),
   );
 
   return (
@@ -1190,11 +1203,17 @@ export default function PrayerScreen() {
       <Stack.Screen options={{ headerShown: false }} />
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={{ paddingBottom: 160 }}
+          contentContainerStyle={{
+            paddingTop: USE_CONTENT_INSET ? 0 : insets.top,
+            paddingBottom: 160,
+          }}
           indicatorStyle="white"
           scrollEventThrottle={16}
-          contentInset={{ top: insets.top }}
-          contentOffset={{ x: 0, y: -insets.top }}
+          // On iOS, inset the content (instead of paddingTop) so it sits in the
+          // visible safe area while still overscrolling into it. Android falls
+          // back to the padding above.
+          contentInset={USE_CONTENT_INSET ? { top: insets.top } : undefined}
+          contentOffset={USE_CONTENT_INSET ? { x: 0, y: -insets.top } : undefined}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

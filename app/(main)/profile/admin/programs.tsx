@@ -26,7 +26,6 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useSpeakers } from '@/src/hooks/use-speakers';
 import {
   CONTENT_TYPES,
@@ -47,6 +46,7 @@ import {
   describeRecurrence,
   type RecurrenceFreq,
 } from '@/src/lib/recurrence';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -102,7 +102,6 @@ export default function ProgramsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ',');
@@ -169,9 +168,7 @@ export default function ProgramsScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={fgRgb} />
-          </Pressable>
+          <BackButton color={fgRgb} />
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
             {t('admin.programsEvents')}
           </Text>

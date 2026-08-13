@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type PersonalizationScaffoldProps = {
   step: number;
@@ -40,25 +39,16 @@ export function PersonalizationScaffold({
   const router = useRouter();
   const fonts = useFontFamily();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const progress = Math.max(0, Math.min(1, step / totalSteps));
 
   return (
     <View className="flex-1 bg-onboarding-surface">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center justify-between px-5 pt-2">
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            className="h-6 w-6 items-center justify-center"
-          >
-            <Icon
-              name="arrow-back"
-              size={20}
-              color="rgba(10,38,30,0.6)"
-              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-            />
-          </Pressable>
+          <BackButton
+            color="rgba(10,38,30,0.6)"
+            style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}
+          />
           {onSkip ? (
             <Pressable onPress={onSkip} hitSlop={12} className="active:opacity-60">
               <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)' }}>

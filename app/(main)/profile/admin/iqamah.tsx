@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -13,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { TimePicker, formatTimePreview } from '@/src/components/admin/time-picker';
 import {
   IQAMAH_PRAYERS,
@@ -24,6 +22,7 @@ import {
   type IqamahRuleInput,
 } from '@/src/hooks/use-iqamah';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type PrayerForm = { mode: IqamahMode; fixedTime: string; offsetMinutes: number };
 
@@ -44,7 +43,6 @@ export default function IqamahScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
@@ -132,9 +130,7 @@ export default function IqamahScreen() {
     <View className="flex-1 bg-card" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center px-5" style={{ height: 52 }}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={fgRgb} />
-        </Pressable>
+        <BackButton color={fgRgb} />
         <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
           {t('admin.iqamahTimes')}
         </Text>

@@ -7,6 +7,7 @@ import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
+import { LTR_ROW } from '@/src/i18n/ltr';
 import { HomeHeaderBackdrop } from './home-header-backdrop';
 import { PrayerTimesBar } from './prayer-times-bar';
 
@@ -14,6 +15,10 @@ import { PrayerTimesBar } from './prayer-times-bar';
  * The original home header (the default `classic` header style): a personalized
  * greeting, the big live clock, the Hijri date, the next-prayer iqamah line, and
  * the prayer-times row. Selected when `mosques.header_style` is `classic`.
+ *
+ * Like the countdown header, this block is pinned left-to-right in every
+ * language so the header keeps its designed layout under RTL; the text inside
+ * still translates.
  */
 export function ClassicHomeHeader() {
   const { t } = useTranslation();
@@ -44,6 +49,7 @@ export function ClassicHomeHeader() {
             fontWeight: '700',
             letterSpacing: 1.62,
             textTransform: 'uppercase',
+            textAlign: 'left',
           }}
         >
           {t('home.greeting')}{firstName ? ` ${firstName}` : ''}!
@@ -57,6 +63,7 @@ export function ClassicHomeHeader() {
             marginTop: 8,
             letterSpacing: -2,
             fontFamily: fonts.displayRegular,
+            textAlign: 'left',
           }}
         >
           {currentTime}
@@ -65,20 +72,22 @@ export function ClassicHomeHeader() {
         {hijriDate ? (
           <Text
             className="text-primary-foreground"
-            style={{ fontSize: 13, fontWeight: '600', marginTop: 4 }}
+            style={{ fontSize: 13, fontWeight: '600', marginTop: 4, textAlign: 'left' }}
           >
             {hijriDate}
           </Text>
         ) : null}
 
         {nextPrayer && (
-          <View className="mt-3 flex-row items-center">
-            <Text style={{ fontSize: 13 }}>
-              <Text className="text-primary-foreground/50">{nextPrayer.name}</Text>
+          <View className="mt-3 items-center" style={{ flexDirection: LTR_ROW }}>
+            <Text style={{ fontSize: 13, textAlign: 'left' }}>
+              <Text className="text-primary-foreground/50">
+                {t(`prayer.${nextPrayer.rawName}`, { defaultValue: nextPrayer.name })}
+              </Text>
               <Text className="text-primary-foreground/80">
                 {' '}
                 {t('home.prayerTypeIn', {
-                  type: nextPrayer.type,
+                  type: t(`prayer.${nextPrayer.type}`, { defaultValue: nextPrayer.type }),
                   time: nextPrayer.timeRemaining,
                 })}
               </Text>

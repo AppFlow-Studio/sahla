@@ -9,6 +9,9 @@
       "ios": {
         "resourceClass": "m-medium"
       },
+      "android": {
+        "buildType": "apk"
+      },
       "channel": "base"
     },
     "sahla-dev": {
@@ -30,6 +33,9 @@
       "extends": "base",
       "developmentClient": false,
       "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "MASJID_ID": "sahla"
       },
@@ -54,6 +60,9 @@
       "extends": "base",
       "developmentClient": false,
       "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "MASJID_ID": "mas-cnj"
       },
@@ -78,6 +87,9 @@
       "extends": "base",
       "developmentClient": false,
       "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "MASJID_ID": "mas-brooklyn-mqb18esx"
       },

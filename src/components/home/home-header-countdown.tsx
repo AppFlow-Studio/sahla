@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import MasjidLogo from '@/assets/masjid-logo.svg';
 import { Icon } from '@/src/components/ui/icon';
+import { LTR_ROW, LTR_START } from '@/src/i18n/ltr';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
@@ -13,23 +14,31 @@ import { useNotificationStatus } from '@/src/hooks/use-notification-status';
 import { HomeHeaderBackdrop } from './home-header-backdrop';
 import { PrayerTimesBar } from './prayer-times-bar';
 
-/** "Friday, March 15" in the masjid's timezone. */
-function formatGregorian(timeZone?: string): string {
+/**
+ * "Friday, March 15" in the masjid's timezone, in the active language. Digits
+ * are pinned to Latin (`-nu-latn`) to match the countdown clock and the prayer
+ * strip — see `formatTo12Hour` in `use-prayer-times`.
+ */
+function formatGregorian(timeZone: string | undefined, locale: string): string {
   const opts: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     ...(timeZone ? { timeZone } : {}),
   };
-  try {
-    return new Intl.DateTimeFormat('en-US', opts).format(new Date());
-  } catch {
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    }).format(new Date());
+  const tag = `${locale.split('-')[0] || 'en'}-u-nu-latn`;
+  for (const candidate of [tag, 'en-US']) {
+    try {
+      return new Intl.DateTimeFormat(candidate, opts).format(new Date());
+    } catch {
+      // Fall through: bad tag or unsupported timeZone.
+    }
   }
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date());
 }
 
 /**
@@ -39,9 +48,19 @@ function formatGregorian(timeZone?: string): string {
  * countdown header styles:
  *   - 'center' → `countdown-centered` (Figma "homepage final version 1")
  *   - 'left'   → `countdown-left`     (Figma "homepage final version 2")
+ *
+ * Layout is pinned left-to-right in every language (`LTR_ROW` / `LTR_START`):
+ * the branding bar and the Fajr → Isha strip keep their designed positions
+ * under RTL. Only the text inside translates.
  */
+/** Masjid mark in the branding bar. Sized against the name beside it. */
+const LOGO_SIZE = 26;
+
+/** Masjid name in the branding bar. */
+const NAME_SIZE = 15;
+
 export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | 'left' }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const fonts = useFontFamily();
   const { colors, displayName, logoUrl, timezone } = useMasjidConfig();
@@ -55,29 +74,38 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
   const fg = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
   const dateColor = `rgba(${colors.primaryForeground.replace(/ /g, ',')},0.8)`;
 
-  const gregorian = formatGregorian(timezone);
-  const alignItems = align === 'center' ? 'center' : 'flex-start';
+  const gregorian = formatGregorian(timezone, i18n.language);
+  const alignItems = align === 'center' ? 'center' : LTR_START;
   const textAlign = align === 'center' ? 'center' : 'left';
 
   return (
     <View className="overflow-hidden bg-primary" style={{ paddingTop: insets.top + 12 }}>
-      <HomeHeaderBackdrop />
+      <HomeHeaderBackdrop variant="band" />
 
       {/* Masjid identity bar: logo + name (left), notifications bell (right). */}
-      <View className="flex-row items-center justify-between px-5">
-        <View className="min-w-0 flex-1 flex-row items-center gap-2 pe-3">
+      <View className="items-center justify-between px-5" style={{ flexDirection: LTR_ROW }}>
+        <View
+          className="min-w-0 flex-1 items-center gap-2"
+          style={{ flexDirection: LTR_ROW, paddingRight: 12 }}
+        >
           {logoUrl ? (
             <Image
               source={{ uri: logoUrl }}
-              style={{ width: 18, height: 18, borderRadius: 5 }}
+              style={{ width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: 6 }}
               contentFit="cover"
             />
           ) : (
-            <MasjidLogo width={18} height={18} />
+            <MasjidLogo width={LOGO_SIZE} height={LOGO_SIZE} />
           )}
           <Text
             numberOfLines={1}
-            style={{ color: fg, fontSize: 13, fontWeight: '600', fontFamily: fonts.bodySemibold }}
+            style={{
+              color: fg,
+              fontSize: NAME_SIZE,
+              fontWeight: '600',
+              fontFamily: fonts.bodySemibold,
+              textAlign: 'left',
+            }}
           >
             {displayName}
           </Text>
@@ -110,7 +138,9 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
               textAlign,
             }}
           >
-            {t('home.timeUntil', { name: nextPrayer.name })}
+            {t('home.timeUntil', {
+              name: t(`prayer.${nextPrayer.rawName}`, { defaultValue: nextPrayer.name }),
+            })}
           </Text>
         ) : null}
 
@@ -131,7 +161,9 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
         <View
           style={{
             marginTop: 4,
-            flexDirection: 'row',
+            // LTR_ROW keeps Gregorian · Hijri in that order under RTL, where a
+            // plain 'row' would render the pair backwards.
+            flexDirection: LTR_ROW,
             alignItems: 'center',
             justifyContent: align === 'center' ? 'center' : 'flex-start',
           }}

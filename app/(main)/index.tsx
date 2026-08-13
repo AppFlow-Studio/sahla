@@ -83,7 +83,7 @@ export default function HomeScreen() {
           className="bg-background"
           style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
         >
-          <View className="gap-7 px-5 pt-5" style={{ paddingBottom: 160 }}>
+          <View className="gap-9 px-5 pt-5" style={{ paddingBottom: 160 }}>
             <DonateBanner />
             <TodaysEvents />
             <View className="h-px bg-foreground/10" />

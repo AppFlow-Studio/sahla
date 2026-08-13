@@ -212,9 +212,9 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
             elevation: 12,
           }}
         >
-          {/* Handle */}
+          {/* Handle — Figma v2 (node 365:3793) draws it 25px wide, not 40. */}
           <View className="items-center pb-2 pt-3">
-            <View className="h-1 w-10 rounded-full bg-foreground/20" />
+            <View className="h-1 rounded-full bg-foreground/20" style={{ width: 25 }} />
           </View>
 
           {/* Header */}
@@ -232,8 +232,10 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
             </Text>
           </View>
 
-          {/* Fields */}
-          <View className="px-6">
+          {/* Fields — v2 insets the labels/underlines 36px from the sheet edge
+              (Figma x=45..352 in a 385-wide sheet), wider than the 24px the
+              save button uses below. */}
+          <View style={{ paddingHorizontal: 36 }}>
             <Field
               label={t('profile.firstName')}
               value={firstName}
@@ -307,15 +309,15 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
             </View>
           </View>
 
-          {/* Save Button */}
-          <View className="px-6 pb-8 pt-4">
+          {/* Save Button — v2: 39px tall, inset 22px, 23px off the sheet bottom. */}
+          <View className="pt-4" style={{ paddingHorizontal: 22, paddingBottom: 23 }}>
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={handleSave}
               disabled={!hasChanges || updateProfile.isPending}
               className="items-center justify-center rounded-full bg-primary"
               style={{
-                height: 43,
+                height: 39,
                 opacity: hasChanges && !updateProfile.isPending ? 1 : 0.5,
               }}
             >

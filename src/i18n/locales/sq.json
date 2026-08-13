@@ -503,6 +503,7 @@
   "home": {
     "greeting": "Es-selamu alejkum",
     "prayerTypeIn": "{{type}} pas {{time}}",
+    "timeUntil": "Koha deri në {{name}}",
     "supportYourMasjid": "Mbështet xhaminë tënde",
     "donate": "Dhuro",
     "donateCta": "DHURO",
@@ -702,7 +703,13 @@
     "reminder30MinDesc": "Merr kujtues 30 minuta para kohës së namazit të radhës",
     "mute": "Heshto",
     "muteDesc": "Çaktivizo të gjitha njoftimet për këtë namaz",
-    "applyToAll": "Apliko për të gjitha namazet"
+    "applyToAll": "Apliko për të gjitha namazet",
+    "athan": "Ezani",
+    "iqamah": "Ikameti",
+    "countdownNow": "tani",
+    "countdownHm": "{{h}} o {{m}} min",
+    "countdownM": "{{m}} min",
+    "countdownUnderMinute": "<1 min"
   },
   "profile": {
     "sectionCommunity": "KOMUNITETI",

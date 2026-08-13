@@ -6,9 +6,9 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'rea
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/src/components/ui/icon';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useMyAds, useCancelAdSubscription, type MyAd } from '@/src/hooks/use-my-ads';
+import { BackButton } from '@/src/components/ui/back-button';
 
 // Primary status line shown to the advertiser, derived from subscription +
 // submission state.
@@ -39,7 +39,6 @@ function statusFor(ad: MyAd, t: TFunction): { label: string; tone: 'good' | 'war
 export default function AdvertiseStatusScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const insets = useSafeAreaInsets();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
@@ -73,9 +72,7 @@ export default function AdvertiseStatusScreen() {
     <View className="flex-1 bg-background">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="flex-row items-center px-5" style={{ height: 52 }}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={fgRgb} />
-          </Pressable>
+          <BackButton color={fgRgb} />
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
             {t('ads.myBusinessAds')}
           </Text>

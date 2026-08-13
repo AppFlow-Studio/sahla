@@ -4,7 +4,6 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   Text,
   useWindowDimensions,
   View,
@@ -12,8 +11,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { Icon } from '@/src/components/ui/icon';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { ReelItem } from '@/app/(main)/watch';
 import {
   filterSavedReels,
@@ -21,6 +18,7 @@ import {
   type SavedClipsFilter,
   type SavedReel,
 } from '@/src/hooks/use-saved-reels';
+import { BackButton } from '@/src/components/ui/back-button';
 
 /**
  * Full-screen player for the user's Saved Clips list — opened by tapping a
@@ -33,7 +31,6 @@ const VALID_FILTERS: SavedClipsFilter[] = ['all', 'today', 'week', 'month'];
 
 export default function SavedClipsPlayerScreen() {
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const { index, filter } = useLocalSearchParams<{ index?: string; filter?: string }>();
   // Floor + clamp the param so a malformed value can't break initialScrollIndex.
   const initialIndex = Math.max(0, Math.floor(Number(index ?? 0)) || 0);
@@ -118,22 +115,12 @@ export default function SavedClipsPlayerScreen() {
         edges={['top']}
         style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="active:opacity-70"
-          style={{
-            margin: 12,
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color="#ffffff" />
-        </Pressable>
+        <BackButton
+          color="#ffffff"
+          variant="circle"
+          circleColor="rgba(0,0,0,0.4)"
+          style={{ margin: 12 }}
+        />
       </SafeAreaView>
     </View>
   );

@@ -1,6 +1,5 @@
 import { useClerk, useSignUp } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
-import { Icon } from '@/src/components/ui/icon';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
@@ -8,16 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
+import { BackButton } from '@/src/components/ui/back-button';
 
 export default function SignUpScreen() {
   const { signUp, setActive, isLoaded } = useSignUp();
   const clerk = useClerk();
   const router = useRouter();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
@@ -108,18 +106,7 @@ export default function SignUpScreen() {
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-5 pt-2">
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            className="h-6 w-6 items-center justify-center"
-          >
-            <Icon
-              name="arrow-back"
-              size={20}
-              color={surfaceAlpha60}
-              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-            />
-          </Pressable>
+          <BackButton color={surfaceAlpha60} style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }} />
         </View>
 
         <View className="flex-1 justify-center px-6">

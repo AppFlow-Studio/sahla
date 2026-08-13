@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -22,6 +22,7 @@ import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useToggleSave } from '@/src/hooks/use-saved-content';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type SavedEvent = {
   content_id: string;
@@ -140,9 +141,8 @@ export default function Saved_Events() {
           contentContainerStyle={{ paddingBottom: 120 }}
         >
           <View className="px-6 pt-2">
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={12}
+            <BackButton
+              color={INK}
               style={{
                 width: 36,
                 height: 36,
@@ -150,9 +150,7 @@ export default function Saved_Events() {
                 justifyContent: 'center',
                 marginLeft: -8,
               }}
-            >
-              <Ionicons name="chevron-back" size={26} color={INK} />
-            </Pressable>
+            />
             <Text
               style={{
                 fontFamily: fonts.display,
@@ -239,7 +237,6 @@ function StatsCard({
   events: number;
   programs: number;
 }) {
-  const fonts = useFontFamily();
   return (
     <View className="mt-2 px-5">
       <View
@@ -257,17 +254,7 @@ function StatsCard({
             marginLeft: 15,
           }}
         >
-          <Text
-            style={{
-              color: GOLD,
-              textAlign: 'center',
-              fontFamily: fonts.body,
-              fontSize: 20,
-              fontWeight: '400',
-            }}
-          >
-            ♥
-          </Text>
+          <MaterialCommunityIcons name="heart" size={20} color={GOLD} />
         </View>
         <View style={{ marginLeft: 8 }}>
           <Stat label="TOTAL" value={total} />
@@ -546,17 +533,7 @@ function SavedRow({
           className="ms-2 items-center justify-center active:opacity-60"
           style={{ width: 36, height: 40 }}
         >
-          <Text
-            style={{
-              color: GOLD,
-              textAlign: 'center',
-              fontFamily: fonts.body,
-              fontSize: 20,
-              fontWeight: '400',
-            }}
-          >
-            ♥
-          </Text>
+          <MaterialCommunityIcons name="heart" size={20} color={GOLD} />
         </Pressable>
       </Pressable>
       {!isLast && <View style={{ height: 1, backgroundColor: DIVIDER }} />}

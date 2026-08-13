@@ -25,7 +25,6 @@ import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import {
   useCreateSpeaker,
   useDeleteSpeaker,
@@ -34,6 +33,7 @@ import {
   type SpeakerRow,
 } from '@/src/hooks/use-speakers';
 import { useUploadSpeakerPhoto } from '@/src/hooks/use-upload-speaker-photo';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -41,7 +41,6 @@ export default function SheikhsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
@@ -84,9 +83,7 @@ export default function SheikhsScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Icon name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={fgRgb} />
-          </Pressable>
+          <BackButton color={fgRgb} />
           <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
             {t('admin.sheikhs')}
           </Text>

@@ -503,6 +503,7 @@
   "home": {
     "greeting": "Esselamü Aleyküm",
     "prayerTypeIn": "{{type}} {{time}} içinde",
+    "timeUntil": "{{name}} vaktine kalan süre",
     "supportYourMasjid": "Mescidinizi Destekleyin",
     "donate": "Bağış Yap",
     "donateCta": "BAĞIŞ YAP",
@@ -702,7 +703,13 @@
     "reminder30MinDesc": "Bir sonraki namaz vaktinden 30 dakika önce hatırlatılın",
     "mute": "Sustur",
     "muteDesc": "Bu namaz için tüm bildirimleri devre dışı bırak",
-    "applyToAll": "Tüm Namazlara Uygula"
+    "applyToAll": "Tüm Namazlara Uygula",
+    "athan": "Ezan",
+    "iqamah": "Kamet",
+    "countdownNow": "şimdi",
+    "countdownHm": "{{h}} sa {{m}} dk",
+    "countdownM": "{{m}} dk",
+    "countdownUnderMinute": "<1 dk"
   },
   "profile": {
     "sectionCommunity": "TOPLULUK",

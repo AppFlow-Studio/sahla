@@ -503,6 +503,7 @@
   "home": {
     "greeting": "Assalamu Alaikum",
     "prayerTypeIn": "{{type}} en {{time}}",
+    "timeUntil": "Tiempo hasta {{name}}",
     "supportYourMasjid": "Apoya a tu masjid",
     "donate": "Donar",
     "donateCta": "DONAR",
@@ -702,7 +703,13 @@
     "reminder30MinDesc": "Recibe un recordatorio 30 minutos antes de la siguiente oración",
     "mute": "Silenciar",
     "muteDesc": "Desactiva todas las notificaciones de esta oración",
-    "applyToAll": "Aplicar a todas las oraciones"
+    "applyToAll": "Aplicar a todas las oraciones",
+    "athan": "Adhán",
+    "iqamah": "Iqama",
+    "countdownNow": "ahora",
+    "countdownHm": "{{h}} h {{m}} min",
+    "countdownM": "{{m}} min",
+    "countdownUnderMinute": "<1 min"
   },
   "profile": {
     "sectionCommunity": "COMUNIDAD",

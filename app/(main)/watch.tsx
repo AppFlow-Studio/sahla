@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +36,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { AppBlurView } from '@/src/components/ui/blur-view';
+import { LIQUID_GLASS } from '@/src/components/ui/glass-surface';
+import { TAB_BAR_CLEARANCE } from '@/src/components/navigation/tab-bar';
 import { useIsFocused } from '@react-navigation/native';
 import { useNetInfo } from '@react-native-community/netinfo';
 
@@ -620,6 +623,12 @@ export function ReelItem({
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const fonts = useFontFamily();
+  const insets = useSafeAreaInsets();
+  // The reel is full-bleed (`edges={['top']}`), so there's no bottom safe-area
+  // padding to inherit — the caption has to clear the tab bar itself. 90 is
+  // tuned for the iOS 26 native bar; the fallback bar floats higher (it sits
+  // above the inset and is taller), so it needs the real measurement.
+  const captionBottom = LIQUID_GLASS ? 90 : insets.bottom + TAB_BAR_CLEARANCE;
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -913,7 +922,7 @@ export function ReelItem({
           <ActionButton icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
 
-        <View style={{ paddingHorizontal: 20, paddingBottom: 90 }}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: captionBottom }}>
           <Pressable onPress={() => setSheetOpen(true)} className="flex-row items-center active:opacity-80">
             <View
               style={{
@@ -1134,7 +1143,7 @@ export default function WatchScreen() {
 
       {/* No-connection overlay — blurs the last-known reel + dark tint. */}
       {showNoConnection ? (
-        <BlurView
+        <AppBlurView
           intensity={60}
           tint="dark"
           style={{
@@ -1190,7 +1199,7 @@ export default function WatchScreen() {
               {t('watch.tryAgain')}
             </Text>
           </Pressable>
-        </BlurView>
+        </AppBlurView>
       ) : null}
     </View>
   );

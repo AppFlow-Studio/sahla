@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
@@ -50,23 +51,44 @@ function timeToSeconds(hhmmss: string | null | undefined): number {
   return Number(hh) * 3600 + Number(mm) * 60 + Number(ss);
 }
 
-function formatTo12Hour(hhmmss: string | null | undefined): string {
+/**
+ * Numerals are pinned to Latin digits (`-nu-latn`) in every locale. Arabic and
+ * Urdu would otherwise render Arabic-Indic digits here while the countdown
+ * clock — formatted by hand below — stays Latin, putting two numbering systems
+ * side by side in the same header. Only the AM/PM marker localizes.
+ */
+function localeTag(locale: string): string {
+  return `${locale.split('-')[0] || 'en'}-u-nu-latn`;
+}
+
+function formatTo12Hour(hhmmss: string | null | undefined, locale: string): string {
   if (typeof hhmmss !== 'string') return '';
   const [hh = '0', mm = '0'] = hhmmss.split(':');
   const h = Number(hh);
   const m = Number(mm);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
   const period = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+  const fallback = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`;
+  try {
+    return new Intl.DateTimeFormat(localeTag(locale), {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date(2000, 0, 1, h, m));
+  } catch {
+    return fallback;
+  }
 }
 
-function formatCountdown(totalSeconds: number): string {
-  if (totalSeconds <= 0) return 'now';
+type Translate = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatCountdown(totalSeconds: number, t: Translate): string {
+  if (totalSeconds <= 0) return t('prayer.countdownNow', { defaultValue: 'now' });
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return '<1m';
+  if (h > 0) return t('prayer.countdownHm', { h, m, defaultValue: '{{h}}h {{m}}m' });
+  if (m > 0) return t('prayer.countdownM', { m, defaultValue: '{{m}}m' });
+  return t('prayer.countdownUnderMinute', { defaultValue: '<1m' });
 }
 
 function formatCountdownClock(totalSeconds: number): string {
@@ -110,13 +132,18 @@ function getNowInTimezone(timeZone: string): {
   return { hour, minute, second, totalSeconds, hours };
 }
 
-function formatCurrentTimeInTz(timeZone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
+function formatCurrentTimeInTz(timeZone: string, locale: string): string {
+  const opts: Intl.DateTimeFormatOptions = {
     timeZone,
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  }).format(new Date());
+  };
+  try {
+    return new Intl.DateTimeFormat(localeTag(locale), opts).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat('en-US', opts).format(new Date());
+  }
 }
 
 function getTodayDateStringInTz(timeZone: string): string {
@@ -128,13 +155,22 @@ function getTodayDateStringInTz(timeZone: string): string {
   }).format(new Date());
 }
 
-function getHijriDate(): string | null {
+function getHijriDate(locale: string): string | null {
+  const base = locale.split('-')[0] || 'en';
+  const opts: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  };
+  const format = (tag: string) =>
+    new Intl.DateTimeFormat(tag, opts).formatToParts(new Date());
   try {
-    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).formatToParts(new Date());
+    let parts: Intl.DateTimeFormatPart[];
+    try {
+      parts = format(`${base}-u-ca-islamic-umalqura-nu-latn`);
+    } catch {
+      parts = format('en-u-ca-islamic-umalqura');
+    }
     const month = parts.find((p) => p.type === 'month')?.value ?? '';
     const day = parts.find((p) => p.type === 'day')?.value ?? '';
     const year = parts.find((p) => p.type === 'year')?.value ?? '';
@@ -154,14 +190,20 @@ const PRAYER_ICONS: Record<string, string> = {
 };
 
 export type SimplePrayer = {
+  /** Title-case English name — display via `t('prayer.' + rawName)` instead. */
   name: string;
+  /** Raw lowercase DB name, e.g. 'fajr'. Doubles as the `prayer.*` i18n key. */
+  rawName: string;
   time: string;
   icon: string;
   isActive: boolean;
 };
 
 export type NextPrayerInfo = {
+  /** Title-case English name — display via `t('prayer.' + rawName)` instead. */
   name: string;
+  /** Raw lowercase DB name, e.g. 'fajr'. Doubles as the `prayer.*` i18n key. */
+  rawName: string;
   type: string;
   timeRemaining: string;
 };
@@ -203,6 +245,8 @@ export type UsePrayerTimesResult = {
  */
 export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
   const supabase = useSupabase();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language || 'en';
   const config = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const timezone = config.timezone || 'UTC';
@@ -279,8 +323,8 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
       return {
         name: titleCase(r.prayer_name),
         rawName: r.prayer_name,
-        athan: formatTo12Hour(r.athan_time),
-        iqamah: formatTo12Hour(iqamahRaw),
+        athan: formatTo12Hour(r.athan_time, locale),
+        iqamah: formatTo12Hour(iqamahRaw, locale),
         athanTimeRaw: r.athan_time,
         iqamahTimeRaw: iqamahRaw,
         status,
@@ -322,7 +366,7 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
     }
 
     const countdownLabel =
-      secondsToIqamah !== null ? formatCountdown(secondsToIqamah) : null;
+      secondsToIqamah !== null ? formatCountdown(secondsToIqamah, t) : null;
     const countdownClock =
       secondsToIqamah !== null ? formatCountdownClock(secondsToIqamah) : null;
     const countdownClockFull =
@@ -330,21 +374,24 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
 
     const prayers: SimplePrayer[] = items.map((p) => ({
       name: p.name,
+      rawName: p.rawName.toLowerCase(),
       time: p.athan,
       icon: PRAYER_ICONS[p.rawName.toLowerCase()] ?? 'weather-sunny',
       isActive: p.status === 'next',
     }));
 
-    const currentTimeStr = formatCurrentTimeInTz(timezone);
+    const currentTimeStr = formatCurrentTimeInTz(timezone, locale);
     const nextPrayerInfo: NextPrayerInfo | null = countdownPrayer
       ? {
           name: countdownPrayer.name,
+          rawName: countdownPrayer.rawName.toLowerCase(),
           type: 'iqamah',
           timeRemaining: countdownLabel ?? '',
         }
       : fallbackToFajr
         ? {
             name: items[fajrIdx].name,
+            rawName: items[fajrIdx].rawName.toLowerCase(),
             type: 'athan',
             timeRemaining: countdownLabel ?? '',
           }
@@ -356,7 +403,7 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
       nextPrayer: nextPrayerInfo,
       currentTime: currentTimeStr,
       currentTimeFormatted: currentTimeStr,
-      hijriDate: getHijriDate(),
+      hijriDate: getHijriDate(locale),
       countdownLabel,
       countdownClock,
       countdownClockFull,
@@ -365,7 +412,7 @@ export function usePrayerTimes(dateOverride?: string): UsePrayerTimesResult {
     };
     // `tick` re-runs the memo every second so countdown / status / clock stay live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.data, timezone, tick, isToday, ruleMap]);
+  }, [query.data, timezone, tick, isToday, ruleMap, locale]);
 
   const status: UsePrayerTimesResult['status'] = !mosqueUuid
     ? 'idle'

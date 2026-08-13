@@ -1,18 +1,27 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon } from '../components/ui/icon';
+import { Tappable } from '../components/ui/tappable';
 import { useIsRTL } from '../hooks/use-is-rtl';
+import { CENTERED_GLYPH } from '../lib/text-styles';
 import TopOrnament from '../../assets/quran-top-ornament.svg';
 import {
   getPageForAyah,
@@ -130,6 +139,7 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
         visible={trackerOpen}
         animationType="slide"
         presentationStyle="overFullScreen"
+        statusBarTranslucent
         onRequestClose={() => setTrackerOpen(false)}
       >
         <QuranTrackerScreen onClose={() => setTrackerOpen(false)} />
@@ -140,6 +150,7 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
         visible={!!selected && viewMode === 'mushaf'}
         animationType="fade"
         presentationStyle="overFullScreen"
+        statusBarTranslucent
         onRequestClose={() => selectSurah(null)}
       >
         {selected ? (
@@ -156,6 +167,7 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
         visible={!!listViewing}
         animationType="fade"
         presentationStyle="overFullScreen"
+        statusBarTranslucent
         onRequestClose={() => selectSurah(null)}
       >
         {selected ? (
@@ -206,47 +218,31 @@ export default function QuranScreen({ onClose, initial }: Props = {}) {
                 <Text style={styles.title}>{t('quran.title')}</Text>
                 <Text style={styles.subtitle}>{t('quran.subtitle')}</Text>
               </View>
-              <Pressable
+              <Tappable
                 onPress={() => setTrackerOpen(true)}
                 hitSlop={10}
                 style={styles.trackerBtn}
               >
                 <Text style={styles.trackerBtnText}>{t('quran.tracker')}</Text>
-              </Pressable>
+              </Tappable>
               {onClose ? (
-                <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-                  <Text style={styles.closeBtnText}>✕</Text>
-                </Pressable>
+                <Tappable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
+                  <Icon name="close" size={14} color={palette.brandDark} />
+                </Tappable>
               ) : null}
             </View>
           </View>
 
-          <View style={styles.filterRow}>
-            <FilterPill label={t('quran.filterAll')} active={filter === 'all'} onPress={() => setFilter('all')} styles={styles} />
-            <FilterPill
-              label={t('quran.filterMakkan')}
-              active={filter === 'makkan'}
-              onPress={() => setFilter('makkan')}
-              styles={styles}
-            />
-            <FilterPill
-              label={t('quran.filterMadinan')}
-              active={filter === 'madinan'}
-              onPress={() => setFilter('madinan')}
-              styles={styles}
-            />
-            <View style={{ flex: 1 }} />
-            <SearchField value={query} onChange={setQuery} palette={palette} styles={styles} />
-            <Pressable
-              onPress={() => toggleView(viewMode === 'list' ? 'mushaf' : 'list')}
-              style={styles.modeToggle}
-              hitSlop={6}
-            >
-              <Text style={styles.modeToggleText}>
-                {viewMode === 'list' ? t('quran.mushaf') : t('quran.list')}
-              </Text>
-            </Pressable>
-          </View>
+          <SearchableFilterRow
+            filter={filter}
+            onFilter={setFilter}
+            query={query}
+            onQuery={setQuery}
+            viewMode={viewMode}
+            onToggleView={() => toggleView(viewMode === 'list' ? 'mushaf' : 'list')}
+            palette={palette}
+            styles={styles}
+          />
 
           <FlatList
             data={filteredSurahs}
@@ -274,41 +270,179 @@ function FilterPill({
   styles: ReturnType<typeof makeStyles>;
 }) {
   return (
-    <Pressable onPress={onPress} hitSlop={6} style={styles.filterPill}>
+    <Tappable onPress={onPress} hitSlop={6} style={styles.filterPill}>
       <Text style={[styles.filterText, active && styles.filterTextActive]}>{label}</Text>
       {active ? <View style={styles.filterUnderline} /> : null}
-    </Pressable>
+    </Tappable>
   );
 }
 
-function SearchField({
-  value,
-  onChange,
+/** Crossfade duration, matched to `components/Discover/DiscoverHeader.tsx`. */
+const SEARCH_DURATION = 250;
+
+/**
+ * The filter row, which morphs into a search bar — the same interaction as the
+ * Discover header, ported to the Quran palette.
+ *
+ * Two absolutely-stacked layers share one `progress` value: the browse layer
+ * (Makkan/Madinan pills, search icon, Mushaf/List toggle) fades out and slides
+ * away, while the search layer slides in from the trailing edge. Stacking them
+ * rather than swapping keeps the row's height fixed, so the surah list below
+ * never jumps. `Cancel` reverses it and clears the query.
+ */
+function SearchableFilterRow({
+  filter,
+  onFilter,
+  query,
+  onQuery,
+  viewMode,
+  onToggleView,
   palette,
   styles,
 }: {
-  value: string;
-  onChange: (v: string) => void;
+  filter: Filter;
+  onFilter: (f: Filter) => void;
+  query: string;
+  onQuery: (v: string) => void;
+  viewMode: ViewMode;
+  onToggleView: () => void;
   palette: QuranPalette;
   styles: ReturnType<typeof makeStyles>;
 }) {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const [isSearching, setIsSearching] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(isSearching ? 1 : 0, { duration: SEARCH_DURATION });
+    // Focus only once the bar has arrived, so the keyboard doesn't race the
+    // slide-in and jolt the row.
+    if (isSearching) {
+      const id = setTimeout(() => inputRef.current?.focus(), SEARCH_DURATION);
+      return () => clearTimeout(id);
+    }
+  }, [isSearching, progress]);
+
+  // Under RTL the row mirrors but translateX stays physical, so the slide has
+  // to be flipped by hand or the layers would animate the wrong way.
+  const dir = isRTL ? -1 : 1;
+
+  const browseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.4], [1, 0]),
+    transform: [{ translateX: interpolate(progress.value, [0, 1], [0, -20 * dir]) }],
+  }));
+
+  const searchStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0.3, 1], [0, 1]),
+    transform: [{ translateX: interpolate(progress.value, [0, 1], [40 * dir, 0]) }],
+  }));
+
   return (
-    <TextInput
-      value={value}
-      onChangeText={onChange}
-      placeholder={t('quran.search')}
-      placeholderTextColor={palette.mutedInk}
-      style={styles.search}
-    />
+    <View style={styles.filterRow}>
+      <View style={styles.searchSwap}>
+        {/* Browse layer */}
+        <Animated.View
+          style={[styles.searchLayer, browseStyle]}
+          pointerEvents={isSearching ? 'none' : 'auto'}
+        >
+          <FilterPill
+            label={t('quran.filterAll')}
+            active={filter === 'all'}
+            onPress={() => onFilter('all')}
+            styles={styles}
+          />
+          <FilterPill
+            label={t('quran.filterMakkan')}
+            active={filter === 'makkan'}
+            onPress={() => onFilter('makkan')}
+            styles={styles}
+          />
+          <FilterPill
+            label={t('quran.filterMadinan')}
+            active={filter === 'madinan'}
+            onPress={() => onFilter('madinan')}
+            styles={styles}
+          />
+          <View style={{ flex: 1 }} />
+          <Tappable
+            onPress={() => setIsSearching(true)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t('quran.search')}
+          >
+            <Image
+              source={require('@/assets/images/search_icon.png')}
+              style={styles.searchIcon}
+              resizeMode="contain"
+            />
+          </Tappable>
+          <Tappable onPress={onToggleView} style={styles.modeToggle} hitSlop={6}>
+            <Text style={styles.modeToggleText}>
+              {viewMode === 'list' ? t('quran.mushaf') : t('quran.list')}
+            </Text>
+          </Tappable>
+        </Animated.View>
+
+        {/* Search layer */}
+        <Animated.View
+          style={[styles.searchLayer, searchStyle]}
+          pointerEvents={isSearching ? 'auto' : 'none'}
+        >
+          <View style={styles.searchPill}>
+            <Image
+              source={require('@/assets/images/search_icon.png')}
+              style={[styles.searchIcon, { opacity: 0.6 }]}
+              resizeMode="contain"
+            />
+            <TextInput
+              ref={inputRef}
+              value={query}
+              onChangeText={onQuery}
+              onBlur={() => {
+                // An empty field collapses back to the pills; a typed query
+                // keeps the bar so results stay browsable without the keyboard.
+                if (!query) setIsSearching(false);
+              }}
+              placeholder={t('quran.search')}
+              placeholderTextColor={palette.placeholderText}
+              returnKeyType="search"
+              style={styles.searchInput}
+            />
+            {query.length > 0 ? (
+              <Tappable
+                onPress={() => onQuery('')}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+              >
+                <Icon name="close" size={13} color={palette.mutedInk} />
+              </Tappable>
+            ) : null}
+          </View>
+          <Tappable
+            onPress={() => {
+              setIsSearching(false);
+              onQuery('');
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+          >
+            <Text style={styles.searchCancel}>{t('common.cancel')}</Text>
+          </Tappable>
+        </Animated.View>
+      </View>
+    </View>
   );
 }
 
 function SurahRow({ surah, onPress, styles }: { surah: Surah; onPress: () => void; styles: ReturnType<typeof makeStyles> }) {
   const { t } = useTranslation();
   const isRTL = useIsRTL();
+  const palette = useQuranPalette();
   return (
-    <Pressable onPress={onPress} style={styles.row}>
+    <Tappable onPress={onPress} style={styles.row}>
       <View style={styles.badge}>
         <Text style={styles.badgeText}>{surah.surah_number}</Text>
       </View>
@@ -321,8 +455,13 @@ function SurahRow({ surah, onPress, styles }: { surah: Surah; onPress: () => voi
         </Text>
       </View>
       <Text style={styles.ayahCount}>{t('quran.ayahs', { count: surah.verses_count })}</Text>
-      <Text style={styles.chevron}>{isRTL ? '‹' : '›'}</Text>
-    </Pressable>
+      <Icon
+        name={isRTL ? 'chevron-back' : 'chevron-forward'}
+        size={18}
+        color={palette.mutedInk}
+        style={{ marginStart: 2 }}
+      />
+    </Tappable>
   );
 }
 
@@ -386,10 +525,6 @@ function makeStyles(p: QuranPalette) {
       marginTop: 4,
       marginStart: 8,
     },
-    closeBtnText: {
-      fontSize: 14,
-      color: p.brandDark,
-    },
     trackerBtn: {
       height: 32,
       paddingHorizontal: 12,
@@ -400,6 +535,7 @@ function makeStyles(p: QuranPalette) {
       marginTop: 4,
     },
     trackerBtnText: {
+      ...CENTERED_GLYPH,
       fontSize: 12,
       fontWeight: '600',
       color: p.cream,
@@ -428,6 +564,7 @@ function makeStyles(p: QuranPalette) {
       paddingVertical: 4,
     },
     filterText: {
+      ...CENTERED_GLYPH,
       fontSize: 12,
       fontWeight: '500',
       color: p.mutedInk,
@@ -443,16 +580,47 @@ function makeStyles(p: QuranPalette) {
       height: 1.5,
       backgroundColor: p.brandDark,
     },
-    search: {
-      width: 110,
-      height: 28,
-      paddingHorizontal: 10,
-      borderRadius: 14,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: p.divider,
+    // Fixed height so the two stacked layers occupy the same box and the list
+    // below never shifts as they crossfade.
+    searchSwap: {
+      flex: 1,
+      height: 32,
+      justifyContent: 'center',
+    },
+    searchLayer: {
+      position: 'absolute',
+      start: 0,
+      end: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    searchIcon: {
+      width: 16,
+      height: 16,
+    },
+    searchPill: {
+      flex: 1,
+      height: 32,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: p.track,
+    },
+    searchInput: {
+      ...CENTERED_GLYPH,
+      flex: 1,
+      marginStart: 8,
       color: p.brandDark,
+      fontSize: 13,
+      paddingVertical: 0,
+    },
+    searchCancel: {
+      ...CENTERED_GLYPH,
       fontSize: 12,
-      backgroundColor: 'transparent',
+      fontWeight: '500',
+      color: p.brandDark,
     },
     modeToggle: {
       paddingHorizontal: 10,
@@ -462,6 +630,7 @@ function makeStyles(p: QuranPalette) {
       borderColor: p.brandDark,
     },
     modeToggleText: {
+      ...CENTERED_GLYPH,
       fontSize: 11,
       fontWeight: '600',
       color: p.brandDark,
@@ -481,6 +650,7 @@ function makeStyles(p: QuranPalette) {
       justifyContent: 'center',
     },
     badgeText: {
+      ...CENTERED_GLYPH,
       fontFamily: 'PlayfairDisplay_500Medium',
       fontSize: 18,
       color: p.gold,
@@ -501,11 +671,6 @@ function makeStyles(p: QuranPalette) {
       fontSize: 11,
       color: p.mutedInk,
       marginEnd: 6,
-    },
-    chevron: {
-      fontSize: 18,
-      color: p.mutedInk,
-      marginStart: 2,
     },
     separator: {
       height: StyleSheet.hairlineWidth,
