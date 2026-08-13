@@ -36,7 +36,18 @@ import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import { useConfigStore } from "@/src/stores/config-store";
 import { useIsRTL } from "@/src/hooks/use-is-rtl";
 
-const SHEET_RADIUS = 40;
+// Layout constants from Figma `program-bottomsheet-v2` (node 365:3818, 402×874).
+// v2 floats the sheet inside the screen instead of running it full-bleed off the
+// bottom edge, so all four corners are rounded and the dimmed home screen shows
+// around it.
+const SHEET_RADIUS = 48; //     Rectangle 4231 corner radius
+const SHEET_INSET_X = 9; //     sheet left/right gap (9 → 385 wide in a 402 frame)
+const SHEET_BOTTOM = 13; //     874 - 23 - 838
+const CONTENT_PAD = 25; //      Frame 69 starts at x=34, sheet at x=9
+const COVER_RATIO = 385 / 259; // Mask group is 384×259 across the sheet width
+const SAVE_HEIGHT = 43; //      div.donate-banner
+const SAVE_RADIUS = 20;
+const SAVE_GAP = 12; //         --item-spacing/12 between the heart and the label
 
 // Colors come from the active masjid theme (`useMasjidConfig().colors`), which
 // stores each value as a `"R G B"` triplet. These helpers turn a triplet into a
@@ -70,29 +81,33 @@ function SkeletonPulse({ width, height, borderRadius = 8, style, color }: { widt
   );
 }
 
-function ContentSkeleton({ cardBg, pulseColor }: { cardBg: string; pulseColor: string }) {
-  const screenWidth = Dimensions.get("window").width;
+/** Loading placeholder — mirrors the v2 body order: cover, title, hairline,
+ *  speaker line, description lines. */
+function ContentSkeleton({ pulseColor }: { pulseColor: string }) {
+  const sheetWidth = Dimensions.get("window").width - SHEET_INSET_X * 2;
   return (
     <View style={{ flex: 1 }}>
-      {/* Image placeholder — 16:9 to match the banner cover crop */}
-      <SkeletonPulse color={pulseColor} width="100%" height={screenWidth * 9 / 16} borderRadius={0} style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }} />
+      <SkeletonPulse
+        color={pulseColor}
+        width="100%"
+        height={sheetWidth / COVER_RATIO}
+        borderRadius={0}
+        style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }}
+      />
 
-      <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
+      <View style={{ paddingHorizontal: CONTENT_PAD, paddingTop: 28 }}>
         {/* Title */}
-        <SkeletonPulse color={pulseColor} width="75%" height={28} borderRadius={6} style={{ marginBottom: 10 }} />
-        <SkeletonPulse color={pulseColor} width="50%" height={28} borderRadius={6} style={{ marginBottom: 20 }} />
+        <SkeletonPulse color={pulseColor} width="70%" height={20} borderRadius={6} style={{ marginBottom: 10 }} />
+        {/* Hairline */}
+        <SkeletonPulse color={pulseColor} width="100%" height={1} borderRadius={0} style={{ marginBottom: 11 }} />
+        {/* Speaker line */}
+        <SkeletonPulse color={pulseColor} width={150} height={18} borderRadius={4} style={{ marginBottom: 22 }} />
 
-        {/* Speaker chip */}
-        <SkeletonPulse color={pulseColor} width={140} height={36} borderRadius={18} style={{ marginBottom: 24 }} />
-
-        {/* Description card */}
-        <View style={{ backgroundColor: cardBg, borderRadius: 16, padding: 16 }}>
-          <SkeletonPulse color={pulseColor} width={60} height={10} borderRadius={4} style={{ marginBottom: 14 }} />
-          <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse color={pulseColor} width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse color={pulseColor} width="60%" height={12} borderRadius={4} />
-        </View>
+        {/* Description */}
+        <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+        <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+        <SkeletonPulse color={pulseColor} width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+        <SkeletonPulse color={pulseColor} width="60%" height={12} borderRadius={4} />
       </View>
     </View>
   );
@@ -142,13 +157,16 @@ export default function ContentDetailScreen() {
   const toastText = rgb(colors.background);
 
   // Themed palette (was a hardcoded green/gold set). Each maps to a theme token
-  // so the screen follows the active masjid's branding.
-  const BUSH = rgb(colors.foreground); //     primary text, icons, "Save to Library"
-  const SURFACE = rgb(colors.muted); //       image placeholder + card/button backgrounds
-  const CARD_BG = SURFACE;
+  // so the screen follows the active masjid's branding. The v2 Figma palette maps
+  // 1:1 onto these tokens: #0A261E → foreground, #FFFBF2 → background,
+  // #B8922A → accent, so nothing needs hardcoding.
+  const BUSH = rgb(colors.foreground); //     title text + save-button fill
+  const SURFACE = rgb(colors.muted); //       image placeholder / skeleton pulses
   const TRAY_BG = SURFACE;
-  const CHIP_BG = rgba(colors.accent, 0.16); // pale accent fill behind the speaker chip
-  const CHIP_TEXT = rgb(colors.accent); //     accent-colored speaker name
+  const SHEET_BG = rgb(colors.background); // #FFFBF2 sheet + save-button label
+  const ACCENT = rgb(colors.accent); //       #B8922A speaker name + save heart
+  const DIVIDER = rgba(colors.foreground, 0.12); // hairline under the title
+  const BODY_TEXT = rgba(colors.foreground, 0.6); // description (Figma 0.6 alpha)
   const MUTED = rgba(colors.foreground, 0.55); // muted/secondary text
   const [detail, setDetail] = useState<Detail | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -373,25 +391,34 @@ export default function ContentDetailScreen() {
         className="flex-1"
         style={[
           {
+            // v2 floats the sheet: inset on all four sides, fully rounded, with
+            // a fixed height that fills what's left between the safe area and
+            // the bottom gap. Figma's literal 23px top would tuck the cover (and
+            // the close button) under the status bar and dynamic island, so the
+            // top offset follows the safe area the way the previous sheet did.
             marginTop: Math.max(insets.top, 24) + 12,
-            borderTopLeftRadius: SHEET_RADIUS,
-            borderTopRightRadius: SHEET_RADIUS,
-            backgroundColor: "#FFFFFF",
+            marginHorizontal: SHEET_INSET_X,
+            marginBottom: SHEET_BOTTOM,
+            borderRadius: SHEET_RADIUS,
+            backgroundColor: SHEET_BG,
             overflow: "hidden",
           },
           sheetStyle,
         ]}
       >
         {status === "loading" ? (
-          <ContentSkeleton cardBg={CARD_BG} pulseColor={rgba(colors.foreground, 0.1)} />
+          <ContentSkeleton pulseColor={rgba(colors.foreground, 0.1)} />
         ) : status === "error" || !detail ? (
           <View className="flex-1 items-center justify-center px-6">
-            <Text style={{ color: BUSH }}>{error ?? t("content.notFound")}</Text>
+            <Text style={{ color: BUSH, textAlign: "center" }}>
+              {error ?? t("content.notFound")}
+            </Text>
           </View>
         ) : (
           <>
             <ScrollView
               showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
               contentContainerStyle={{ paddingBottom: 24 }}
             >
               <GestureDetector gesture={panGesture}>
@@ -399,7 +426,7 @@ export default function ContentDetailScreen() {
                 <View
                   style={{
                     width: "100%",
-                    aspectRatio: 16 / 9,
+                    aspectRatio: COVER_RATIO,
                     backgroundColor: TRAY_BG,
                     borderTopLeftRadius: SHEET_RADIUS,
                     borderTopRightRadius: SHEET_RADIUS,
@@ -415,10 +442,14 @@ export default function ContentDetailScreen() {
                   ) : null}
                 </View>
 
+                {/* v2 draws a bare `x` glyph here. Kept on the translucent disc:
+                    a bare glyph is unreadable over arbitrary cover art, and the
+                    disc preserves the 40pt tap target for the reminder controls
+                    the mock omits. */}
                 <View
                   style={{
                     position: "absolute",
-                    top: 28,
+                    top: 18,
                     left: 16,
                     right: 16,
                   }}
@@ -428,7 +459,7 @@ export default function ContentDetailScreen() {
                     onPress={dismiss}
                     accessibilityLabel={t("common.close")}
                   >
-                    <Icon name="close" size={16} color="#1A1A1A" />
+                    <Icon name="close" size={16} color={BUSH} />
                   </CircleButton>
                   <View className="flex-row items-center" style={{ gap: 8 }}>
                     {isNotifOptedIn && !isPast ? (
@@ -470,8 +501,8 @@ export default function ContentDetailScreen() {
                           <Icon
                             name={isNotifOptedIn ? "notifications" : "notifications-outline"}
                             size={16}
-                            color="#1A1A1A"
-                            fill={isNotifOptedIn ? "#1A1A1A" : "none"}
+                            color={BUSH}
+                            fill={isNotifOptedIn ? BUSH : "none"}
                           />
                         </CircleButton>
                         {hasCustomTimings && isNotifOptedIn ? (
@@ -497,44 +528,49 @@ export default function ContentDetailScreen() {
               </Animated.View>
               </GestureDetector>
 
-              <View className="px-5 pt-6">
+              {/* v2 body: title → hairline → accent speaker line → plain
+                  description. The old "ABOUT" card wrapper is gone. */}
+              <View style={{ paddingHorizontal: CONTENT_PAD, paddingTop: 28 }}>
                 <Text
                   style={{
-                    fontFamily: fonts.display,
-                    fontSize: 19,
-                    lineHeight: 24,
-                    fontWeight: "700",
+                    fontFamily: fonts.displayRegular,
+                    fontSize: 20,
+                    lineHeight: 26,
                     color: BUSH,
                   }}
                 >
                   {detail.name ?? t("content.untitled")}
                 </Text>
 
+                <View
+                  style={{ height: 1, marginTop: 10, backgroundColor: DIVIDER }}
+                />
+
                 {firstSpeaker ? (
                   <Pressable
                     onPress={() => setSpeakerModalOpen(true)}
                     accessibilityRole="button"
                     accessibilityLabel={t("content.viewBioFor", { name: firstSpeaker })}
-                    className="mt-4 flex-row items-center self-start rounded-full px-4 py-2"
-                    style={{ backgroundColor: CHIP_BG }}
+                    hitSlop={8}
+                    className="flex-row items-center self-start active:opacity-70"
+                    style={{ marginTop: 11 }}
                   >
-                    <Icon name="user" size={14} color={CHIP_TEXT} />
                     <Text
                       style={{
-                        marginStart: 8,
                         fontFamily: fonts.bodySemibold,
                         fontSize: 13,
-                        fontWeight: "700",
-                        color: CHIP_TEXT,
+                        lineHeight: 18,
+                        fontWeight: "600",
+                        color: ACCENT,
                       }}
                     >
                       {firstSpeaker}
                     </Text>
                     <Icon
                       name={isRTL ? "chevron-back" : "right"}
-                      size={12}
-                      color={CHIP_TEXT}
-                      style={{ marginStart: 6 }}
+                      size={9}
+                      color={ACCENT}
+                      style={{ marginStart: 8 }}
                     />
                   </Pressable>
                 ) : null}
@@ -553,70 +589,58 @@ export default function ContentDetailScreen() {
                 ) : null}
 
                 {detail.description ? (
-                  <View
-                    className="mt-5 rounded-2xl p-4"
-                    style={{ backgroundColor: CARD_BG }}
+                  <Text
+                    style={{
+                      marginTop: 22,
+                      fontFamily: fonts.body,
+                      fontSize: 12,
+                      lineHeight: 20,
+                      color: BODY_TEXT,
+                    }}
                   >
-                    <Text
-                      style={{
-                        fontFamily: fonts.bodySemibold,
-                        fontSize: 11,
-                        fontWeight: "700",
-                        letterSpacing: 1.4,
-                        textTransform: "uppercase",
-                        color: MUTED,
-                      }}
-                    >
-                      {t("content.about")}
-                    </Text>
-                    <Text
-                      style={{
-                        marginTop: 10,
-                        fontFamily: fonts.body,
-                        fontSize: 12,
-                        lineHeight: 18,
-                        color: BUSH,
-                      }}
-                    >
-                      {detail.description}
-                    </Text>
-                  </View>
+                    {detail.description}
+                  </Text>
                 ) : null}
               </View>
             </ScrollView>
 
+            {/* v2 pins a dark accent-hearted pill inside the sheet — no footer
+                bar, no divider, sitting on the sheet's own background. */}
             <View
               style={{
-                paddingHorizontal: 16,
+                paddingHorizontal: CONTENT_PAD,
                 paddingTop: 12,
-                paddingBottom: Math.max(insets.bottom - 8, 12),
-                backgroundColor: "#FFFFFF",
-                borderTopWidth: 1,
-                borderTopColor: rgba(colors.foreground, 0.08),
+                paddingBottom: 27,
+                backgroundColor: SHEET_BG,
               }}
             >
               <Pressable
                 onPress={handleToggleSave}
                 disabled={saveDisabled}
-                className="flex-row items-center justify-center rounded-2xl py-4 active:opacity-80"
-                style={{ backgroundColor: CARD_BG, opacity: saveDisabled ? 0.6 : 1 }}
+                className="flex-row items-center justify-center active:opacity-80"
+                style={{
+                  height: SAVE_HEIGHT,
+                  borderRadius: SAVE_RADIUS,
+                  backgroundColor: BUSH,
+                  opacity: saveDisabled ? 0.6 : 1,
+                }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSaved, disabled: saveDisabled }}
                 accessibilityLabel={isSaved ? t("content.removeFromLibrary") : t("content.saveToLibrary")}
               >
                 <Icon
                   name={isSaved ? "heart" : "heart-outline"}
-                  size={18}
-                  color={BUSH}
-                  fill={isSaved ? BUSH : "none"}
+                  size={17}
+                  color={ACCENT}
+                  fill={isSaved ? ACCENT : "none"}
                 />
                 <Text
                   style={{
-                    marginStart: 8,
+                    marginStart: SAVE_GAP,
                     fontFamily: fonts.bodySemibold,
-                    fontSize: 16,
-                    fontWeight: "700",
-                    color: BUSH,
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: SHEET_BG,
                   }}
                 >
                   {isSaved ? t("content.savedToLibrary") : t("content.saveToLibrary")}

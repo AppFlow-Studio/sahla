@@ -506,6 +506,7 @@
   "home": {
     "greeting": "Esselamu alejkum",
     "prayerTypeIn": "{{type}} za {{time}}",
+    "timeUntil": "Vrijeme do {{name}}",
     "supportYourMasjid": "Podrži svoj mesdžid",
     "donate": "Doniraj",
     "donateCta": "DONIRAJ",
@@ -707,7 +708,13 @@
     "reminder30MinDesc": "Budite podsjećeni 30 minuta prije sljedećeg namaza",
     "mute": "Utišaj",
     "muteDesc": "Onemogući sve obavijesti za ovaj namaz",
-    "applyToAll": "Primijeni na sve namaze"
+    "applyToAll": "Primijeni na sve namaze",
+    "athan": "Ezan",
+    "iqamah": "Ikamet",
+    "countdownNow": "sada",
+    "countdownHm": "{{h}} h {{m}} min",
+    "countdownM": "{{m}} min",
+    "countdownUnderMinute": "<1 min"
   },
   "profile": {
     "sectionCommunity": "ZAJEDNICA",

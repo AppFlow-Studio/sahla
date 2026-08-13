@@ -705,7 +705,13 @@
     "reminder30MinDesc": "Get reminded 30 minutes before the next prayer time",
     "mute": "Mute",
     "muteDesc": "Disable all notifications for this prayer",
-    "applyToAll": "Apply to All Prayers"
+    "applyToAll": "Apply to All Prayers",
+    "athan": "Athan",
+    "iqamah": "Iqamah",
+    "countdownNow": "now",
+    "countdownHm": "{{h}}h {{m}}m",
+    "countdownM": "{{m}}m",
+    "countdownUnderMinute": "<1m"
   },
   "profile": {
     "sectionCommunity": "COMMUNITY",

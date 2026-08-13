@@ -515,6 +515,7 @@
   "home": {
     "greeting": "السلام عليكم",
     "prayerTypeIn": "{{type}} بعد {{time}}",
+    "timeUntil": "الوقت المتبقي حتى {{name}}",
     "supportYourMasjid": "ادعم مسجدك",
     "donate": "تبرّع",
     "donateCta": "تبرّع",
@@ -722,7 +723,13 @@
     "reminder30MinDesc": "احصل على تذكير قبل 30 دقيقة من وقت الصلاة التالية",
     "mute": "كتم",
     "muteDesc": "إيقاف جميع الإشعارات لهذه الصلاة",
-    "applyToAll": "تطبيق على جميع الصلوات"
+    "applyToAll": "تطبيق على جميع الصلوات",
+    "athan": "الأذان",
+    "iqamah": "الإقامة",
+    "countdownNow": "الآن",
+    "countdownHm": "{{h}} س {{m}} د",
+    "countdownM": "{{m}} د",
+    "countdownUnderMinute": "أقل من دقيقة"
   },
   "profile": {
     "sectionCommunity": "المجتمع",

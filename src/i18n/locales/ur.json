@@ -503,6 +503,7 @@
   "home": {
     "greeting": "السلام علیکم",
     "prayerTypeIn": "{{type}} {{time}} میں",
+    "timeUntil": "{{name}} تک باقی وقت",
     "supportYourMasjid": "اپنی مسجد کی مدد کریں",
     "donate": "عطیہ دیں",
     "donateCta": "عطیہ دیں",
@@ -702,7 +703,13 @@
     "reminder30MinDesc": "اگلی نماز کے وقت سے 30 منٹ پہلے یاد دہانی پائیں",
     "mute": "خاموش کریں",
     "muteDesc": "اس نماز کے لیے تمام اطلاعات غیر فعال کریں",
-    "applyToAll": "تمام نمازوں پر لاگو کریں"
+    "applyToAll": "تمام نمازوں پر لاگو کریں",
+    "athan": "اذان",
+    "iqamah": "اقامہ",
+    "countdownNow": "ابھی",
+    "countdownHm": "{{h}} گھنٹے {{m}} منٹ",
+    "countdownM": "{{m}} منٹ",
+    "countdownUnderMinute": "<1 منٹ"
   },
   "profile": {
     "sectionCommunity": "کمیونٹی",
