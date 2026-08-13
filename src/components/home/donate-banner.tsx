@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useDonation } from '@/src/providers/donation-provider';
@@ -28,7 +29,7 @@ export function DonateBanner() {
             backgroundColor: containerBg,
           }}
         >
-          <Text style={{ color: accentRgb, fontSize: 20, lineHeight: 22 }}>♥</Text>
+          <MaterialCommunityIcons name="heart" size={20} color={accentRgb} />
         </View>
         <View>
           <Text className="text-[14px] font-bold text-primary-foreground">

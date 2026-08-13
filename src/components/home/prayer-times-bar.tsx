@@ -1,11 +1,19 @@
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Icon } from '@/src/components/ui/icon';
 import type { IconName } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
+import { LTR_ROW } from '@/src/i18n/ltr';
 
+/**
+ * The home header's prayer strip. Pinned to Fajr → Isha left-to-right in every
+ * language (`LTR_ROW`) so the header keeps its designed layout under RTL; only
+ * the prayer names translate.
+ */
 export function PrayerTimesBar() {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const { prayers } = usePrayerTimes();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
@@ -15,7 +23,7 @@ export function PrayerTimesBar() {
   if (prayers.length === 0) return null;
 
   return (
-    <View className="flex-row items-center px-5">
+    <View className="items-center px-5" style={{ flexDirection: LTR_ROW }}>
       {prayers.map((prayer, i) => {
         const isActive = prayer.isActive;
         return (
@@ -37,15 +45,17 @@ export function PrayerTimesBar() {
               }}
             >
               <Text
+                numberOfLines={1}
                 style={{
                   fontSize: 8,
                   fontWeight: '600',
                   color: isActive ? accentRgb : nameMuted,
                   letterSpacing: 0.4,
                   textTransform: 'uppercase',
+                  textAlign: 'center',
                 }}
               >
-                {prayer.name}
+                {t(`prayer.${prayer.rawName}`, { defaultValue: prayer.name })}
               </Text>
               <Icon
                 name={prayer.icon as IconName}
