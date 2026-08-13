@@ -25,11 +25,14 @@ export default function SectionTitle({
 
   return (
     <View className="px-5 pt-3">
-      <View className="flex-row items-center justify-between pb-3">
+      <View
+        className="flex-row items-center justify-between"
+        style={{ marginBottom: 5 }}
+      >
         <Text
           style={{
             fontFamily: fonts.bodySemibold,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: "600",
             letterSpacing: 0.5,
             textTransform: "uppercase",

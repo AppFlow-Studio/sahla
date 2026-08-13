@@ -12,6 +12,7 @@ import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Tex
 import Animated, {
   Easing,
   FadeIn,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -397,6 +398,8 @@ function StarField({ color }: { color: string }) {
   );
 }
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 function ProgressRing({
   progress,
   size = 72,
@@ -414,10 +417,27 @@ function ProgressRing({
   const cx = size / 2;
   const cy = size / 2;
   const circ = 2 * Math.PI * r;
+
+  // Animate strokeDashoffset from `circ` (empty ring) toward
+  // `circ * (1 - progress)` (target). Starts at circ on mount so we
+  // sweep in from 0% on first paint, then transitions between values
+  // when `progress` changes (e.g. Daily → Monthly toggle).
+  const offset = useSharedValue(circ);
+  useEffect(() => {
+    offset.value = withTiming(circ * (1 - progress), {
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [progress, circ, offset]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: offset.value,
+  }));
+
   return (
     <Svg width={size} height={size}>
       <Circle cx={cx} cy={cy} r={r} stroke={track} strokeWidth={stroke} fill="none" />
-      <Circle
+      <AnimatedCircle
         cx={cx}
         cy={cy}
         r={r}
@@ -426,7 +446,7 @@ function ProgressRing({
         fill="none"
         strokeLinecap="round"
         strokeDasharray={`${circ} ${circ}`}
-        strokeDashoffset={circ * (1 - progress)}
+        animatedProps={animatedProps}
         transform={`rotate(-90 ${cx} ${cy})`}
       />
     </Svg>
@@ -442,7 +462,6 @@ const PERIOD_OPTIONS: { key: Period; shortKey: string; longKey: string }[] = [
 function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueReading?: () => void }) {
   const { t } = useTranslation();
   const fonts = useFontFamily();
-  const isRTL = useIsRTL();
   const [period, setPeriod] = useState<Period>('day');
   const version = useTrackerVersion();
 
@@ -459,133 +478,168 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
   }, [period, version, t]);
 
   const remaining = Math.max(0, goal - pages);
-  const ringSize = 78;
-
-  // No saved last-viewed position → the user hasn't read yet, so prompt them to
-  // "Start Reading" rather than "Continue Reading".
+  const ringSize = 64;
   const hasRead = useMemo(() => getLastViewed() != null, [version]);
 
   return (
     <View
       style={{
-        borderRadius: 22,
-        paddingHorizontal: 20,
-        paddingVertical: 18,
+        borderRadius: 20,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 22,
         backgroundColor: c.depth30,
         marginTop: 20,
       }}
     >
-      {/* Header row: book icon + "Quran Goal" title on the left,
-          percent progress ring pinned top-right. */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 4,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 21,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginEnd: 12,
-              backgroundColor: 'rgba(0, 0, 0, 0.18)',
-            }}
-          >
-            <Icon name="book-open-page-variant" size={20} color={c.gold} />
-          </View>
-          <Text style={{ color: c.text, fontSize: 24, fontFamily: fonts.displayRegular, fontWeight: '400' }}>
-            {t('prayer.quranGoal')}
-          </Text>
+      {/* Header — book badge + "Quran Goal" title on the left, ring on
+          the right with the period-remaining subtitle stacked directly
+          beneath the ring. Book icon in our dark blur badge preserved. */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        <View
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginEnd: 10,
+            marginTop: 4,
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
+          }}
+        >
+          <Icon name="book-open-page-variant" size={16} color={c.gold} />
         </View>
-        <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
-          <ProgressRing
-            progress={percent}
-            size={ringSize}
-            stroke={4}
-            color={c.gold}
-            track={c.ringTrack}
-          />
+        <Text
+          style={{
+            color: c.text,
+            fontSize: 25,
+            fontFamily: fonts.displayRegular,
+            fontWeight: '400',
+            flex: 1,
+          }}
+        >
+          {t('prayer.quranGoal')}
+        </Text>
+        {/* Fixed-width wrapper so the ring position doesn't shift when the
+            subtitle text below it changes length. `alignItems: 'flex-end'`
+            pins the ring + subtitle to the RIGHT edge of the wrapper —
+            keeps the ring flush with the card's right side and the
+            subtitle right-aligned beneath it. */}
+        <View style={{ width: 130, alignItems: 'flex-end' }}>
+          <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
+            <ProgressRing
+              progress={percent}
+              size={ringSize}
+              stroke={3}
+              color={c.gold}
+              track={c.ringTrack}
+            />
+            {/* absoluteFill overlay + centered text keeps the percentage
+                pinned to the ring's visual center regardless of how many
+                digits it is (0%, 50%, 100% all sit on the same anchor).
+                The earlier `position: absolute` alone anchored to the
+                top-left corner, so as digit count grew the text shifted
+                right when switching Daily → Monthly → Yearly. */}
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { alignItems: 'center', justifyContent: 'center' },
+              ]}
+              pointerEvents="none"
+            >
+              <Text
+                style={{
+                  color: c.text,
+                  fontSize: 22,
+                  fontFamily: 'CormorantGaramond_400Regular',
+                  textAlign: 'center',
+                }}
+              >
+                {Math.round(percent * 100)}%
+              </Text>
+            </View>
+          </View>
           <Text
+            numberOfLines={1}
             style={{
-              position: 'absolute',
-              color: c.text,
-              fontSize: 24,
-              fontFamily: fonts.displayRegular,
+              color: 'rgba(255, 255, 255, 0.4)',
+              fontSize: 10,
+              letterSpacing: 0.18,
+              marginTop: 6,
+              textAlign: 'right',
             }}
           >
-            {Math.round(percent * 100)}%
+            {remaining === 0 ? (
+              <Text style={{ color: '#B8922A' }}>{t('prayer.goalReached', { period: periodLabel })}</Text>
+            ) : (
+              <>
+                {periodLabel}{' '}
+                <Text style={{ color: '#B8922A' }}>{t('prayer.pagesLeft', { count: remaining })}</Text>
+              </>
+            )}
           </Text>
         </View>
       </View>
 
-      <PeriodToggle
-        c={c}
-        value={period}
-        onChange={setPeriod}
-      />
+      <View style={{ marginTop: -32, marginStart: -8 }}>
+        <PeriodToggle c={c} value={period} onChange={setPeriod} />
+      </View>
 
-      <View style={{ marginTop: 12 }}>
-        <Text style={{ color: c.text, fontSize: 20, fontWeight: '700' }}>
-          {t('prayer.pagesProgress', { pages, goal })}
-        </Text>
-        <Text style={{ color: c.muted, fontSize: 12, marginTop: 6 }}>
-          {remaining === 0 ? (
-            <Text style={{ color: c.gold }}>{t('prayer.goalReached', { period: periodLabel })}</Text>
-          ) : (
-            <>
-              {periodLabel} <Text style={{ color: c.gold }}>{t('prayer.pagesLeft', { count: remaining })}</Text>
-            </>
-          )}
-        </Text>
-        {/* Continue Reading — full-width rectangle CTA. marginTop on the
-            outer static View; Pressable's style-function form drops
-            layout props (same gotcha as the earlier alignSelf issue). */}
-        <View style={{ marginTop: 18 }}>
-          <Pressable
-            onPress={onContinueReading}
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.92 : 1,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
-            })}
+      <Text
+        style={{
+          color: c.text,
+          fontSize: 13,
+          fontWeight: '600',
+          letterSpacing: 0.234,
+          marginTop: 14,
+        }}
+      >
+        {t('prayer.pagesProgress', { pages, goal })}
+      </Text>
+
+      {/* Continue Reading pill — Figma spec: 292×32, 0.5pt gold border, no
+          fill (transparent), SF Pro Semibold 8pt text with arrow.
+          marginTop lives on an outer static wrapper because Pressable's
+          style-function form has been dropping layout props on this
+          codebase's RN + New Arch (same gotcha as earlier). */}
+      <View style={{ marginTop: 24 }}>
+      <Pressable
+        onPress={onContinueReading}
+        style={({ pressed }) => ({
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        })}
+      >
+        <View
+          style={{
+            height: 32,
+            borderRadius: 20,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: c.gold,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              color: c.text,
+              fontSize: 10,
+              fontWeight: '600',
+              letterSpacing: 0.144,
+            }}
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                paddingVertical: 13,
-                borderRadius: 14,
-                backgroundColor: '#FFFFFF',
-                borderWidth: 2,
-                borderColor: c.gold,
-                shadowColor: c.gold,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.55,
-                shadowRadius: 12,
-                elevation: 8,
-              }}
-            >
-              <Text style={{ color: '#0A1426', fontSize: 14, fontWeight: '700', letterSpacing: 0.3 }}>
-                {hasRead ? t('prayer.continueReading') : t('prayer.startReading')}
-              </Text>
-              <Icon name={isRTL ? 'arrow-back' : 'arrow-forward'} size={15} color={c.gold} />
-            </View>
-          </Pressable>
+            {hasRead ? t('prayer.continueReading') : t('prayer.startReading')} →
+          </Text>
         </View>
+      </Pressable>
       </View>
 
       <View
         style={{
           height: StyleSheet.hairlineWidth,
           backgroundColor: c.divider12,
-          marginTop: 16,
+          marginTop: 22,
           marginBottom: 4,
         }}
       />
@@ -703,20 +757,23 @@ function RemembranceItem({
 }) {
   return (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-      {/* Dark blur badge — matches the book-icon treatment on the
-          Quran Goal header + the donate heart icon. */}
+      {/* Dark blur badge kept per feedback but sized down so its center
+          lines up with the title+meta stack center (was 34×34 which sat
+          ~4pt below the text center). 28×28 + 15pt icon + 8pt marginEnd
+          restores the "icon-next-to-title" alignment of the pre-badge
+          version. */}
       <View
         style={{
-          width: 34,
-          height: 34,
-          borderRadius: 17,
+          width: 28,
+          height: 28,
+          borderRadius: 14,
           alignItems: 'center',
           justifyContent: 'center',
-          marginEnd: 10,
+          marginEnd: 8,
           backgroundColor: 'rgba(0, 0, 0, 0.18)',
         }}
       >
-        <Icon name={icon} size={18} color={c.gold} />
+        <Icon name={icon} size={15} color={c.gold} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.text, fontSize: 13, fontWeight: '600' }}>{title}</Text>
