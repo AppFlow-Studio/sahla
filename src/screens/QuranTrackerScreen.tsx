@@ -8,7 +8,9 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { GlassView } from 'expo-glass-effect';
+import { GlassSurface } from '../components/ui/glass-surface';
+import { Tappable } from '../components/ui/tappable';
+import { CENTERED_GLYPH } from '../lib/text-styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -32,6 +34,7 @@ import {
 import { useTrackerVersion } from '../hooks/use-tracker';
 import { useUserPreferences } from '../hooks/use-user-preferences';
 import { useQuranPalette, type QuranPalette } from '../hooks/use-quran-palette';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type Props = { onClose?: () => void };
 
@@ -69,9 +72,7 @@ export default function QuranTrackerScreen({ onClose }: Props) {
         {/* Header */}
         <View style={styles.header}>
           {onClose ? (
-            <Pressable onPress={onClose} hitSlop={10} style={styles.backBtn}>
-              <Text style={styles.backArrow}>{'\u2190'}</Text>
-            </Pressable>
+            <BackButton onPress={onClose} color={palette.mutedInk} style={styles.backBtn} />
           ) : (
             <View style={{ width: 28 }} />
           )}
@@ -413,10 +414,12 @@ function MorphingEditGoals({
               onPress={expanded ? undefined : onExpand}
               style={{ flex: 1 }}
             >
-              <GlassView
+              <GlassSurface
                 glassEffectStyle="regular"
                 isInteractive
                 style={styles.morphInner}
+                fallbackColor={palette.cream}
+                fallbackBorderColor={palette.divider}
               >
                 <Animated.View style={[styles.morphRadius, innerRadiusStyle]} />
 
@@ -472,11 +475,11 @@ function MorphingEditGoals({
                     styles={styles}
                   />
 
-                  <Pressable onPress={handleDone} style={styles.doneBtn}>
+                  <Tappable onPress={handleDone} style={styles.doneBtn}>
                     <Text style={styles.doneBtnText}>Done</Text>
-                  </Pressable>
+                  </Tappable>
                 </Animated.View>
-              </GlassView>
+              </GlassSurface>
             </Pressable>
           </Animated.View>
         </GestureDetector>
@@ -502,13 +505,13 @@ function StepperRow({
     <View style={styles.stepperRow}>
       <Text style={styles.stepperLabel}>{label}</Text>
       <View style={styles.stepperControls}>
-        <Pressable onPress={onIncrement} hitSlop={8}>
+        <Tappable onPress={onIncrement} hitSlop={8}>
           <Text style={styles.stepperBtn}>+</Text>
-        </Pressable>
+        </Tappable>
         <Text style={styles.stepperValue}>{value}</Text>
-        <Pressable onPress={onDecrement} hitSlop={8}>
+        <Tappable onPress={onDecrement} hitSlop={8}>
           <Text style={styles.stepperBtn}>{'\u2013'}</Text>
-        </Pressable>
+        </Tappable>
       </View>
     </View>
   );
@@ -543,7 +546,6 @@ function makeStyles(p: QuranPalette) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    backArrow: { color: p.mutedInk, fontSize: 16 },
 
     todayBlock: {
       alignItems: 'center',
@@ -723,6 +725,7 @@ function makeStyles(p: QuranPalette) {
       justifyContent: 'center',
     },
     editBtnText: {
+      ...CENTERED_GLYPH,
       fontWeight: '600',
       fontSize: 14,
       color: p.brandDark,
@@ -767,6 +770,7 @@ function makeStyles(p: QuranPalette) {
       gap: 14,
     },
     stepperBtn: {
+      ...CENTERED_GLYPH,
       fontSize: 13,
       color: p.mutedLight,
     },
@@ -785,6 +789,7 @@ function makeStyles(p: QuranPalette) {
       alignSelf: 'center',
     },
     doneBtnText: {
+      ...CENTERED_GLYPH,
       color: p.cream,
       fontSize: 12,
     },

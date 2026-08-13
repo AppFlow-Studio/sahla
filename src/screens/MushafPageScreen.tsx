@@ -12,7 +12,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassView } from 'expo-glass-effect';
+import { GlassSurface } from '../components/ui/glass-surface';
+import { Icon } from '../components/ui/icon';
+import { Tappable } from '../components/ui/tappable';
+import { CENTERED_GLYPH } from '../lib/text-styles';
 import { SvgXml } from 'react-native-svg';
 import {
   PageTurnView,
@@ -36,6 +39,7 @@ import { useTrackPage } from '../hooks/use-track-page';
 import { useMushafPageSvg } from '../hooks/use-mushaf-page-svg';
 import { MUSHAF_PAGE_CONTENT_CENTER } from '../db/mushafSvgBBoxes';
 import { useQuranPalette, type QuranPalette } from '../hooks/use-quran-palette';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type Props = {
   initialPage: number;
@@ -138,9 +142,14 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
           toolbarAnimStyle,
         ]}
       >
-        <Pressable onPress={onBack} hitSlop={10} style={styles.backCircle}>
-          <Text style={styles.backArrow}>←</Text>
-        </Pressable>
+        <BackButton
+          onPress={onBack}
+          color={palette.brandDark}
+          size={18}
+          variant="circle"
+          circleColor={palette.cream}
+          circleBorderColor={palette.divider08}
+        />
         <View style={{ flex: 1 }} />
         <Text style={styles.pageCounter}>
           {currentPage} / {TOTAL_MUSHAF_PAGES}
@@ -281,10 +290,12 @@ export function MorphingFooter({
           onPress={expanded ? undefined : onExpand}
           style={{ flex: 1 }}
         >
-          <GlassView
+          <GlassSurface
             glassEffectStyle="regular"
             isInteractive
             style={styles.morphingInner}
+            fallbackColor={palette.cream}
+            fallbackBorderColor={palette.divider}
           >
             <Animated.View style={[styles.morphingRadius, innerRadiusStyle]} />
 
@@ -327,9 +338,9 @@ export function MorphingFooter({
               <View style={styles.sheetHeader}>
                 <View style={{ width: 24 }} />
                 <Text style={styles.sheetTitle}>Surahs</Text>
-                <Pressable onPress={onCollapse} hitSlop={8}>
-                  <Text style={styles.sheetClose}>✕</Text>
-                </Pressable>
+                <Tappable onPress={onCollapse} hitSlop={8}>
+                  <Icon name="close" size={18} color={palette.brandDark} />
+                </Tappable>
               </View>
 
               <FlatList
@@ -344,7 +355,7 @@ export function MorphingFooter({
                     currentSurah?.surah_number === item.surah_number;
                   const pageNum = getPageForAyah(item.surah_number, 1) ?? 1;
                   return (
-                    <Pressable
+                    <Tappable
                       style={styles.sheetRow}
                       onPress={() => onSelectSurah(item)}
                     >
@@ -377,22 +388,24 @@ export function MorphingFooter({
                       </View>
                       {isCurrent ? (
                         <View style={styles.sheetCheck}>
-                          <Text style={styles.sheetCheckMark}>✓</Text>
+                          <Icon name="checkmark" size={11} color={palette.cream} strokeWidth={3} />
                         </View>
                       ) : null}
                       <Text style={styles.sheetPage}>p. {pageNum}</Text>
-                      <Text style={styles.sheetChevron}>›</Text>
-                    </Pressable>
+                      <Icon name="chevron-forward" size={16} color={palette.mutedInk} />
+                    </Tappable>
                   );
                 }}
               />
 
-              <GlassView
+              <GlassSurface
                 glassEffectStyle="regular"
                 isInteractive
                 style={styles.sheetSearchWrap}
+                fallbackColor={palette.track}
+                fallbackBorderColor={palette.divider}
               >
-                <Text style={styles.sheetSearchIcon}>⌕</Text>
+                <Icon name="search" size={14} color={palette.mutedInk} />
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
@@ -402,9 +415,9 @@ export function MorphingFooter({
                   placeholderTextColor={palette.placeholderText}
                   style={styles.sheetSearchInput}
                 />
-              </GlassView>
+              </GlassSurface>
             </Animated.View>
-          </GlassView>
+          </GlassSurface>
         </Pressable>
       </Animated.View>
     </>
@@ -534,18 +547,7 @@ function makeStyles(p: QuranPalette) {
       // Sits over the mushaf — no background so the page colour shows through.
       backgroundColor: 'transparent',
     },
-    backCircle: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: p.cream,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: p.divider08,
-    },
-    backArrow: { color: p.brandDark, fontSize: 14 },
-    pageCounter: { color: p.mutedInk, fontSize: 12 },
+    pageCounter: { ...CENTERED_GLYPH, color: p.mutedInk, fontSize: 12 },
 
     pageScroll: {
       flex: 1,
@@ -654,6 +656,7 @@ function makeStyles(p: QuranPalette) {
       justifyContent: 'center',
     },
     footerBadgeText: {
+      ...CENTERED_GLYPH,
       color: p.cream,
       fontSize: 11,
       fontWeight: '600',
@@ -725,10 +728,6 @@ function makeStyles(p: QuranPalette) {
       fontWeight: '600',
       color: p.brandDark,
     },
-    sheetClose: {
-      fontSize: 18,
-      color: p.brandDark,
-    },
     sheetSeparator: {
       height: StyleSheet.hairlineWidth,
       backgroundColor: p.divider08,
@@ -752,6 +751,7 @@ function makeStyles(p: QuranPalette) {
       backgroundColor: p.brandDark,
     },
     sheetBadgeText: {
+      ...CENTERED_GLYPH,
       fontSize: 11,
       fontWeight: '600',
       color: p.brandDark,
@@ -785,19 +785,10 @@ function makeStyles(p: QuranPalette) {
       justifyContent: 'center',
       marginRight: 8,
     },
-    sheetCheckMark: {
-      color: p.cream,
-      fontSize: 11,
-      fontWeight: '700',
-    },
     sheetPage: {
       fontSize: 10,
       color: p.faintTextDarker,
       marginRight: 6,
-    },
-    sheetChevron: {
-      fontSize: 16,
-      color: p.mutedInk,
     },
     sheetSearchWrap: {
       flexDirection: 'row',
@@ -809,10 +800,6 @@ function makeStyles(p: QuranPalette) {
       height: 42,
       borderRadius: 20,
       overflow: 'hidden',
-    },
-    sheetSearchIcon: {
-      color: p.mutedInk,
-      fontSize: 14,
     },
     sheetSearchInput: {
       flex: 1,

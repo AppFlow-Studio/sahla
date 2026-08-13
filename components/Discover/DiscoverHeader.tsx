@@ -25,6 +25,8 @@ type Props = {
 
 const DURATION = 250;
 
+const CALENDAR_SIZE = 18;
+
 export default function DiscoverHeader({
   title = "Discover",
   active = "All",
@@ -66,6 +68,13 @@ export default function DiscoverHeader({
   const searchBarStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0.3, 1], [0, 1]),
     transform: [{ translateX: interpolate(progress.value, [0, 1], [40, 0]) }],
+  }));
+
+  // The calendar collapses its width (not just its opacity) so the search bar
+  // takes over the space instead of stopping short of the screen edge.
+  const calendarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.4], [1, 0]),
+    width: interpolate(progress.value, [0, 1], [CALENDAR_SIZE, 0]),
   }));
 
   return (
@@ -187,22 +196,29 @@ export default function DiscoverHeader({
           </Animated.View>
         </View>
 
-        {/* Calendar button — always in place */}
-        <Pressable
-          onPress={onPressCalendar}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Events calendar"
+        {/* Calendar button — collapses away while searching, returns on Cancel */}
+        <Animated.View
+          style={[{ height: CALENDAR_SIZE, overflow: "hidden" }, calendarStyle]}
+          pointerEvents={isSearching ? "none" : "auto"}
         >
-          <Image
-            source={require("@/assets/images/discover_calendar_icon_next_to_search_bar.png")}
-            style={{ width: 18, height: 18 }}
-            resizeMode="contain"
-          />
-        </Pressable>
+          <Pressable
+            onPress={onPressCalendar}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Events calendar"
+            accessibilityElementsHidden={isSearching}
+            importantForAccessibility={isSearching ? "no-hide-descendants" : "auto"}
+          >
+            <Image
+              source={require("@/assets/images/discover_calendar_icon_next_to_search_bar.png")}
+              style={{ width: CALENDAR_SIZE, height: CALENDAR_SIZE }}
+              resizeMode="contain"
+            />
+          </Pressable>
+        </Animated.View>
       </View>
 
-      <View className="mt-4 flex-row items-center gap-4">
+      <View className="mt-4 flex-row items-center gap-6">
         {TABS.map((tab) => {
           const isActive = tab === active;
           return (
