@@ -6,7 +6,7 @@ import Animated, {
   withTiming,
   interpolate,
 } from "react-native-reanimated";
-
+import { Image } from "expo-image";
 import { CalendarIcon, SearchIcon } from "./DiscoverIcons";
 import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
