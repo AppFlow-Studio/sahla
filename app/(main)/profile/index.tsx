@@ -1,4 +1,5 @@
 import EditProfileSheet from "@/components/profile/EditProfileSheet";
+import GuestProfile from "@/components/profile/GuestProfile";
 import ProfileBody from "@/components/profile/ProfileBody";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { useDonation } from "@/src/providers/donation-provider";
@@ -10,8 +11,10 @@ import { Platform, ScrollView, View } from "react-native";
 
 import { useEnableNotifications } from "@/src/hooks/use-notification-status";
 import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
+import { useGuestStore } from "@/src/stores/guest-store";
 
 export default function ProfileScreen() {
+  const isGuest = useGuestStore((s) => s.isGuest);
   const { open: openDonate } = useDonation();
   const router = useRouter();
   const setup = useSetupCompleteness();
@@ -21,6 +24,7 @@ export default function ProfileScreen() {
   const [editVisible, setEditVisible] = useState(false);
 
   useStatusBarStyle("dark");
+
 
   const openPersonalization = useCallback(
     () => router.push("/(personalization)/reasons"),
@@ -44,6 +48,12 @@ export default function ProfileScreen() {
         openEditProfile();
     }
   }, [setup.firstIncomplete, openEditProfile, openPersonalization, enableNotifications]);
+
+  // Guests get an explanation of what an account adds rather than an empty
+  // profile. Placed below every hook so the hook order stays identical across
+  // both branches — an early return above the useCallbacks would change the
+  // hook count the moment a guest signs in.
+  if (isGuest) return <GuestProfile />;
 
   return (
     <View className="flex-1 bg-depth">
