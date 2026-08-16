@@ -135,7 +135,27 @@ export function OnboardingScaffold({
             className="text-onboarding-surface/20 mt-6 text-center"
             style={{ fontSize: 10 }}
           >
-            {resolvedFooterNote}
+            {footerNote !== undefined ? (
+              resolvedFooterNote
+            ) : (
+              <>
+                {t('auth.agreeLead')}
+                <Text
+                  style={{ textDecorationLine: 'underline' }}
+                  onPress={() => router.push('/legal/terms')}
+                >
+                  {t('auth.agreeTerms')}
+                </Text>
+                {t('auth.agreeMid')}
+                <Text
+                  style={{ textDecorationLine: 'underline' }}
+                  onPress={() => router.push('/legal/privacy')}
+                >
+                  {t('auth.agreePrivacy')}
+                </Text>
+                {t('auth.agreeTail')}
+              </>
+            )}
           </Text>
         </View>
       </SafeAreaView>

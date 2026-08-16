@@ -260,8 +260,26 @@ export default function CreateAccountScreen() {
           </View>
 
           <View className="mt-8 items-center">
+            {/* Both documents are tappable — the sentence asserts agreement,
+                so the user has to be able to read what they're agreeing to. */}
             <Text className="text-onboarding-surface/20 text-center" style={{ fontSize: 10 }}>
-              {t('auth.termsNotice')}
+              {t('auth.agreeLead')}
+              <Text
+                className="text-onboarding-accent"
+                style={{ textDecorationLine: 'underline' }}
+                onPress={() => router.push('/legal/terms')}
+              >
+                {t('auth.agreeTerms')}
+              </Text>
+              {t('auth.agreeMid')}
+              <Text
+                className="text-onboarding-accent"
+                style={{ textDecorationLine: 'underline' }}
+                onPress={() => router.push('/legal/privacy')}
+              >
+                {t('auth.agreePrivacy')}
+              </Text>
+              {t('auth.agreeTail')}
             </Text>
             <View className="mt-1.5 flex-row">
               <Text className="text-onboarding-surface/60" style={{ fontSize: 10 }}>
