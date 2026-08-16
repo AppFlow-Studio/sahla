@@ -28,16 +28,15 @@ const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: 
 const COMMUNITY_ICON = "user-plus";
 const SAVED_PROGRAMS_AND_EVENTS_ICON = "calendar-heart";
 const SAVED_CLIPS_ICON = "clapperboard";
-const PAYMENT_HISTORY_ICON = "receipt-outline";
-const PAYMENT_METHODS_ICON = "card-outline";
+const TERMS_ICON = "file-text";
+// Also used by the "Check for Updates" row further down.
+const CHECK_STATUS_ICON = "clipboard-check";
 const PRAYER_ALERTS_ICON = "bell";
 const PROGRAMS_ICON = "graduation-cap";
 const EVENTS_ICON = "calendar-outline";
 const MAS_BAG_ICON = "shopping-bag";
 const APPLICATION_ICON = "file-text";
-const CHECK_STATUS_ICON = "clipboard-check";
 const REPLAY_TUTORIAL_ICON = "compass";
-const MANAGE_SUBS_ICON = "repeat";
 const FEEDBACK_ICON = "message-outline";
 const ADMIN_ICON = "shield";
 
@@ -219,16 +218,11 @@ export default function ProfileBody({
             title={t('profile.savedClips')}
             onPress={() => router.push("/profile/saved-clips" as Href)}
           />
-          <RowItem
-            icon={PAYMENT_HISTORY_ICON}
-            title={t('profile.paymentHistory')}
-            onPress={() => router.push('/profile/payment-history')}
-          />
-          <RowItem
-            icon={PAYMENT_METHODS_ICON}
-            title={t('profile.paymentMethods')}
-            onPress={() => router.push('/profile/payment-methods')}
-          />
+          {/* Payment History and Payment Methods are hidden while payments are
+              off — with no way to add a card or make a charge, both rows lead
+              to a permanently empty screen. The routes and their edge
+              functions are untouched; restore these two rows when giving is
+              turned back on. */}
         </View>
       </View>
 
@@ -337,15 +331,22 @@ export default function ProfileBody({
             title={t('profile.startAnApplication')}
             onPress={() => router.push("/advertise" as Href)}
           />
+          {/* Check the Status and Manage Subscriptions are hidden while ad
+              purchasing is off — no ad can exist, so both rows land on a
+              permanently empty screen whose only action is a live Stripe
+              cancel. Restore them with the payment step. */}
+        </View>
+        <SectionRule />
+      </View>
+
+      {/* LEGAL — reachable without signing up, which is where a reviewer looks. */}
+      <View className="flex-col">
+        <SectionHeader title={t('profile.sectionLegal')} />
+        <View>
           <RowItem
-            icon={CHECK_STATUS_ICON}
-            title={t('profile.checkTheStatus')}
-            onPress={() => router.push("/advertise-status" as Href)}
-          />
-          <RowItem
-            icon={MANAGE_SUBS_ICON}
-            title={t('profile.manageSubscriptions')}
-            onPress={() => router.push("/advertise-status" as Href)}
+            icon={TERMS_ICON}
+            title={t('profile.legalRow')}
+            onPress={() => router.push('/legal' as Href)}
           />
         </View>
         <SectionRule />
