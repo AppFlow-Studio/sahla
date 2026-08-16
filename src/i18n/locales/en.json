@@ -295,7 +295,12 @@
     "businessLabel": "Business",
     "paymentLabel": "Payment",
     "thankYouAdvertising": "Thank you for advertising with us",
-    "notChargedUntilConfirm": "You won't be charged until you confirm"
+    "notChargedUntilConfirm": "You won't be charged until you confirm",
+    "soonTitle": "Advertising is coming soon",
+    "soonBody": "Business listings aren't available in this version yet. We'll be in touch when they go live.",
+    "soonCta": "Got it",
+    "reachLine": "Advertise your business to 3,000+ community members through the app.",
+    "pricingComingSoon": "Pricing will be shared when advertising goes live."
   },
   "auth": {
     "devSignOutReset": "[DEV] Sign out & reset",
@@ -356,7 +361,29 @@
     "verify": "Verify",
     "verificationFailed": "Verification failed",
     "failedToSendEmail": "Failed to send verification email",
-    "failedToResendCode": "Failed to resend code"
+    "failedToResendCode": "Failed to resend code",
+    "browseAsGuest": "Browse without an account",
+    "gate": {
+      "saveTitle": "Sign in to save this",
+      "saveBody": "Saved programs, events and clips live in your profile, so you need an account to keep them.",
+      "likeTitle": "Sign in to like clips",
+      "likeBody": "Likes are tied to your account so your feed stays yours.",
+      "notifyTitle": "Sign in for reminders",
+      "notifyBody": "Prayer and program reminders are sent to your account, so we need to know who you are.",
+      "profileTitle": "Sign in to see your profile",
+      "profileBody": "Your profile keeps your saved items, reminders and giving history in one place.",
+      "genericTitle": "Sign in to continue",
+      "genericBody": "This part of the app needs an account.",
+      "signIn": "Sign in",
+      "notNow": "Not now",
+      "guestBanner": "You’re browsing as a guest"
+    },
+    "guestName": "Guest",
+    "agreeLead": "By continuing you agree to our ",
+    "agreeMid": " and ",
+    "agreeTail": ".",
+    "agreeTerms": "Terms of Use",
+    "agreePrivacy": "Privacy Policy"
   },
   "content": {
     "notFound": "Not found",
@@ -498,7 +525,10 @@
     "errorTitle": "Error",
     "somethingWentWrong": "Something went wrong.",
     "paymentNotCompleted": "Payment was not completed.",
-    "paymentFailedTitle": "Payment failed"
+    "paymentFailedTitle": "Payment failed",
+    "soonTitle": "Donations are coming soon",
+    "soonBody": "Giving isn't available in this version yet. We'll let you know as soon as it's live.",
+    "soonCta": "Got it"
   },
   "home": {
     "greeting": "Assalamu Alaikum",
@@ -826,7 +856,16 @@
     "replayTutorial": "Replay app tour",
     "finishTutorial": "Finish app tour",
     "completeYourProfile": "Complete your profile",
-    "completeYourProfileSubtitle": "Add your details to finish setting up"
+    "completeYourProfileSubtitle": "Add your details to finish setting up",
+    "guestSubtitle": "Sign in to get the most out of {{masjid}}.",
+    "perkSave": "Save programs, events and clips to your profile",
+    "perkRemind": "Get prayer and program reminders",
+    "perkPersonalize": "See programs picked for you",
+    "guestKeepBrowsing": "You can keep browsing without one.",
+    "termsRow": "Terms of Use",
+    "privacyRow": "Privacy Policy",
+    "sectionLegal": "Legal",
+    "legalRow": "Terms & Privacy"
   },
   "watch": {
     "notInterested": "Not interested",
@@ -892,5 +931,12 @@
         "body": "Manage saved items, notifications, language and your account — all from your profile."
       }
     }
+  },
+  "legal": {
+    "termsTitle": "Terms of Use",
+    "privacyTitle": "Privacy Policy",
+    "meta": "{{masjid}} · Effective {{date}} · Version {{version}}",
+    "hubTitle": "Legal",
+    "hubIntro": "The {{masjid}} app is provided by {{masjid}} and built on the Sahla platform. These documents explain how the app works and how your information is handled."
   }
 }

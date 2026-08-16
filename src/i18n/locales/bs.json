@@ -298,7 +298,12 @@
     "businessLabel": "Posao",
     "paymentLabel": "Uplata",
     "thankYouAdvertising": "Hvala što se oglašavate s nama",
-    "notChargedUntilConfirm": "Nećete biti naplaćeni dok ne potvrdite"
+    "notChargedUntilConfirm": "Nećete biti naplaćeni dok ne potvrdite",
+    "soonTitle": "Oglašavanje uskoro stiže",
+    "soonBody": "Poslovni oglasi još nisu dostupni u ovoj verziji. Javit ćemo vam kada budu aktivni.",
+    "soonCta": "U redu",
+    "reachLine": "Oglašavajte svoj posao za više od 3.000 članova zajednice putem aplikacije.",
+    "pricingComingSoon": "Cijene ćemo objaviti kada oglašavanje bude aktivno."
   },
   "auth": {
     "devSignOutReset": "[DEV] Odjava i resetovanje",
@@ -359,7 +364,29 @@
     "verify": "Potvrdi",
     "verificationFailed": "Verifikacija nije uspjela",
     "failedToSendEmail": "Slanje verifikacionog emaila nije uspjelo",
-    "failedToResendCode": "Ponovno slanje koda nije uspjelo"
+    "failedToResendCode": "Ponovno slanje koda nije uspjelo",
+    "browseAsGuest": "Pregledaj bez računa",
+    "gate": {
+      "saveTitle": "Prijavite se da sačuvate",
+      "saveBody": "Sačuvani programi, događaji i isječci nalaze se u vašem profilu, pa vam treba račun.",
+      "likeTitle": "Prijavite se da označite",
+      "likeBody": "Oznake su vezane za vaš račun kako bi vaš sadržaj ostao vaš.",
+      "notifyTitle": "Prijavite se za podsjetnike",
+      "notifyBody": "Podsjetnici za namaz i programe šalju se na vaš račun.",
+      "profileTitle": "Prijavite se za svoj profil",
+      "profileBody": "Vaš profil čuva sačuvane stavke, podsjetnike i historiju donacija na jednom mjestu.",
+      "genericTitle": "Prijavite se za nastavak",
+      "genericBody": "Ovaj dio aplikacije zahtijeva račun.",
+      "signIn": "Prijavi se",
+      "notNow": "Ne sada",
+      "guestBanner": "Pregledate kao gost"
+    },
+    "guestName": "Gost",
+    "agreeLead": "Nastavkom prihvatate naše ",
+    "agreeMid": " i ",
+    "agreeTail": ".",
+    "agreeTerms": "Uvjete korištenja",
+    "agreePrivacy": "Politiku privatnosti"
   },
   "content": {
     "notFound": "Nije pronađeno",
@@ -501,7 +528,10 @@
     "errorTitle": "Greška",
     "somethingWentWrong": "Nešto je pošlo po zlu.",
     "paymentNotCompleted": "Uplata nije dovršena.",
-    "paymentFailedTitle": "Uplata nije uspjela"
+    "paymentFailedTitle": "Uplata nije uspjela",
+    "soonTitle": "Donacije uskoro stižu",
+    "soonBody": "Doniranje još nije dostupno u ovoj verziji. Javit ćemo vam čim bude aktivno.",
+    "soonCta": "U redu"
   },
   "home": {
     "greeting": "Esselamu alejkum",
@@ -827,7 +857,16 @@
     "nothingInThisWindow": "Ništa u ovom periodu",
     "noSavedClipsBody": "Dodirnite oznaku na bilo kojem reelu u\nGledaj da ga sačuvate ovdje.",
     "nothingInWindowBody": "Nema isječaka sačuvanih u odabranom\nperiodu — pokušajte \"Sve\".",
-    "noSavedClips": "Nema sačuvanih isječaka"
+    "noSavedClips": "Nema sačuvanih isječaka",
+    "guestSubtitle": "Prijavite se da izvučete najviše iz {{masjid}}.",
+    "perkSave": "Sačuvajte programe, događaje i isječke u svoj profil",
+    "perkRemind": "Primajte podsjetnike za namaz i programe",
+    "perkPersonalize": "Vidite programe odabrane za vas",
+    "guestKeepBrowsing": "Možete nastaviti pregledavati i bez računa.",
+    "termsRow": "Uvjeti korištenja",
+    "privacyRow": "Politika privatnosti",
+    "sectionLegal": "Pravno",
+    "legalRow": "Uvjeti i privatnost"
   },
   "watch": {
     "notInterested": "Nisam zainteresovan",
@@ -865,5 +904,12 @@
     "noConnectionBody": "Provjerite svoju internet vezu\ni pokušajte ponovo",
     "tryAgain": "Pokušaj ponovo",
     "noReels": "Još nema reelova"
+  },
+  "legal": {
+    "termsTitle": "Uvjeti korištenja",
+    "privacyTitle": "Politika privatnosti",
+    "meta": "{{masjid}} · Važi od {{date}} · Verzija {{version}}",
+    "hubTitle": "Pravno",
+    "hubIntro": "Aplikaciju {{masjid}} pruža {{masjid}} i izgrađena je na Sahla platformi. Ovi dokumenti objašnjavaju kako aplikacija radi i kako se postupa s vašim podacima."
   }
 }
