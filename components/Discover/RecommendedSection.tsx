@@ -80,6 +80,12 @@ export default function RecommendedSection({
   onPressSeeAll,
 }: Props) {
   const { t } = useTranslation();
+
+  // Nothing to recommend means no section — a bare heading over an empty rail
+  // reads as a failed load. Guests hit this every time, since recommendations
+  // are personal and there is no one to personalise for.
+  if (items.length === 0) return null;
+
   return (
     <View>
       <SectionTitle
