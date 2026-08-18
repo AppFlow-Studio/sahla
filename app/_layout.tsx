@@ -61,6 +61,8 @@ import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { DonationProvider } from '@/src/providers/donation-provider';
+import { SignInPromptProvider } from '@/src/components/auth/sign-in-prompt';
+import { useGuestStore } from '@/src/stores/guest-store';
 import { StripeAccountProvider, useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
@@ -96,22 +98,32 @@ export const unstable_settings = {
 function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
   const onboardingComplete = useOnboardingStore((s) => s.complete);
+  const isGuest = useGuestStore((s) => s.isGuest);
+  const exitGuest = useGuestStore((s) => s.exitGuest);
   const devBypass = __DEV__ && env.DEV_BYPASS_AUTH;
+
+  // A real session supersedes guest mode — clear the flag so the app doesn't
+  // keep gating features for someone who has just signed in.
+  useEffect(() => {
+    if (isSignedIn && isGuest) exitGuest();
+  }, [isSignedIn, isGuest, exitGuest]);
 
   // Sync onboarding state from Clerk metadata (handles new-device scenario)
   useOnboardingSync();
 
-  console.log('[boot] RootNavigator', { isLoaded, isSignedIn, onboardingComplete, devBypass });
+  console.log('[boot] RootNavigator', { isLoaded, isSignedIn, onboardingComplete, devBypass, isGuest });
 
   if (!isLoaded) {
     // Returning null keeps the native splash visible until Clerk is ready.
     return null;
   }
 
-  const authenticated = !!isSignedIn || devBypass;
+  // Guests reach `(main)` without a session and without onboarding — the
+  // personalization questions all write to a profile they don't have.
+  const authenticated = !!isSignedIn || devBypass || isGuest;
   const showAuth = !authenticated;
-  const showOnboarding = authenticated && !onboardingComplete && !devBypass;
-  const showMain = authenticated && (onboardingComplete || devBypass);
+  const showOnboarding = authenticated && !onboardingComplete && !devBypass && !isGuest;
+  const showMain = authenticated && (onboardingComplete || devBypass || isGuest);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -175,6 +187,24 @@ function RootNavigator() {
       <Stack.Protected guard={showAuth}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      {/* Deliberately outside every guard: the sign-up screen asserts that the
+          user agrees to these documents, so they have to be readable before a
+          session exists — and a reviewer must be able to reach them without
+          creating an account. */}
+      <Stack.Screen
+        name="legal/index"
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="legal/[doc]"
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
     </Stack>
   );
 }
@@ -226,8 +256,10 @@ export default function RootLayout() {
                     <ThemeRoot>
                       <UpdatesProvider>
                         <DonationProvider>
-                          <RootNavigator />
-                          <StatusBar style="auto" />
+                          <SignInPromptProvider>
+                            <RootNavigator />
+                            <StatusBar style="auto" />
+                          </SignInPromptProvider>
                         </DonationProvider>
                       </UpdatesProvider>
                     </ThemeRoot>

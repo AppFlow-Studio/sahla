@@ -295,7 +295,12 @@
     "businessLabel": "İşletme",
     "paymentLabel": "Ödeme",
     "thankYouAdvertising": "Bizimle reklam verdiğiniz için teşekkürler",
-    "notChargedUntilConfirm": "Onaylayana kadar ücret alınmayacak"
+    "notChargedUntilConfirm": "Onaylayana kadar ücret alınmayacak",
+    "soonTitle": "Reklam yakında geliyor",
+    "soonBody": "İşletme ilanları bu sürümde henüz kullanılamıyor. Aktif olduğunda sizinle iletişime geçeceğiz.",
+    "soonCta": "Anladım",
+    "reachLine": "İşletmenizi uygulama üzerinden 3.000'den fazla topluluk üyesine tanıtın.",
+    "pricingComingSoon": "Fiyatlandırma, reklam hizmeti aktif olduğunda paylaşılacaktır."
   },
   "auth": {
     "devSignOutReset": "[DEV] Çıkış yap ve sıfırla",
@@ -356,7 +361,29 @@
     "verify": "Doğrula",
     "verificationFailed": "Doğrulama başarısız",
     "failedToSendEmail": "Doğrulama e-postası gönderilemedi",
-    "failedToResendCode": "Kod yeniden gönderilemedi"
+    "failedToResendCode": "Kod yeniden gönderilemedi",
+    "browseAsGuest": "Hesap olmadan göz at",
+    "gate": {
+      "saveTitle": "Kaydetmek için giriş yapın",
+      "saveBody": "Kaydedilen programlar, etkinlikler ve klipler profilinizde saklanır, bu yüzden bir hesap gerekir.",
+      "likeTitle": "Beğenmek için giriş yapın",
+      "likeBody": "Beğeniler hesabınıza bağlıdır, böylece akışınız size özel kalır.",
+      "notifyTitle": "Hatırlatmalar için giriş yapın",
+      "notifyBody": "Namaz ve program hatırlatmaları hesabınıza gönderilir.",
+      "profileTitle": "Profiliniz için giriş yapın",
+      "profileBody": "Profiliniz kaydettiklerinizi, hatırlatmalarınızı ve geçmişinizi tek yerde tutar.",
+      "genericTitle": "Devam etmek için giriş yapın",
+      "genericBody": "Uygulamanın bu bölümü hesap gerektirir.",
+      "signIn": "Giriş yap",
+      "notNow": "Şimdi değil",
+      "guestBanner": "Misafir olarak geziyorsunuz"
+    },
+    "guestName": "Misafir",
+    "agreeLead": "Devam ederek ",
+    "agreeMid": " ve ",
+    "agreeTail": " kabul etmiş olursunuz.",
+    "agreeTerms": "Kullanım Koşullarını",
+    "agreePrivacy": "Gizlilik Politikasını"
   },
   "content": {
     "notFound": "Bulunamadı",
@@ -498,7 +525,10 @@
     "errorTitle": "Hata",
     "somethingWentWrong": "Bir şeyler ters gitti.",
     "paymentNotCompleted": "Ödeme tamamlanmadı.",
-    "paymentFailedTitle": "Ödeme başarısız"
+    "paymentFailedTitle": "Ödeme başarısız",
+    "soonTitle": "Bağışlar yakında geliyor",
+    "soonBody": "Bağış yapma bu sürümde henüz kullanılamıyor. Aktif olur olmaz size haber vereceğiz.",
+    "soonCta": "Anladım"
   },
   "home": {
     "greeting": "Esselamü Aleyküm",
@@ -820,7 +850,16 @@
     "nothingInThisWindow": "Bu aralıkta bir şey yok",
     "noSavedClipsBody": "Buraya kaydetmek için İzle'deki herhangi\nbir reel üzerindeki yer imine dokunun.",
     "nothingInWindowBody": "Seçilen aralıkta kaydedilen klip\nyok — \"Tümü\"nü deneyin.",
-    "noSavedClips": "Kaydedilen klip yok"
+    "noSavedClips": "Kaydedilen klip yok",
+    "guestSubtitle": "{{masjid}} deneyiminden en iyi şekilde yararlanmak için giriş yapın.",
+    "perkSave": "Programları, etkinlikleri ve klipleri profilinize kaydedin",
+    "perkRemind": "Namaz ve program hatırlatmaları alın",
+    "perkPersonalize": "Size seçilmiş programları görün",
+    "guestKeepBrowsing": "Hesap olmadan da göz atmaya devam edebilirsiniz.",
+    "termsRow": "Kullanım Koşulları",
+    "privacyRow": "Gizlilik Politikası",
+    "sectionLegal": "Yasal",
+    "legalRow": "Koşullar ve Gizlilik"
   },
   "watch": {
     "notInterested": "İlgilenmiyorum",
@@ -858,5 +897,12 @@
     "noConnectionBody": "İnternet bağlantınızı kontrol edin\nve tekrar deneyin",
     "tryAgain": "Tekrar dene",
     "noReels": "Henüz reel yok"
+  },
+  "legal": {
+    "termsTitle": "Kullanım Koşulları",
+    "privacyTitle": "Gizlilik Politikası",
+    "meta": "{{masjid}} · Yürürlük {{date}} · Sürüm {{version}}",
+    "hubTitle": "Yasal",
+    "hubIntro": "{{masjid}} uygulaması {{masjid}} tarafından sunulur ve Sahla platformu üzerine kuruludur. Bu belgeler uygulamanın nasıl çalıştığını ve bilgilerinizin nasıl işlendiğini açıklar."
   }
 }

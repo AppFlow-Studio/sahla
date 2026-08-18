@@ -44,6 +44,11 @@ export function useRecommendation() {
   const query = useQuery({
     queryKey: ['recommendations', userId, config.id],
     queryFn: async (): Promise<RecommendationItem[]> => {
+      // `enabled` is not enough on its own: `refetch()` runs the query
+      // regardless, and Discover's pull-to-refresh calls it. The edge function
+      // 400s on a missing `user_id`, which surfaced to guests as a red
+      // "Couldn't load recommendations" banner.
+      if (!userId) return [];
       console.log('[useRecommendation] invoking recommend with:', { user_id: userId, mosque_slug: config.id });
       const { data, error } = await supabase.functions.invoke<EdgeResponse>('recommend', {
         body: { user_id: userId, mosque_slug: config.id, force: true },
@@ -74,11 +79,17 @@ export function useRecommendation() {
     recommendations: query.data ?? [],
     status: !isLoaded
       ? ('idle' as const)
-      : query.isPending
-        ? ('loading' as const)
-        : query.isError
-          ? ('error' as const)
-          : ('success' as const),
+      : // Signed out there is nothing to recommend, and that is a settled
+        // state rather than a pending one. Reporting 'loading' here would
+        // strand Discover on its skeleton forever, because a disabled query
+        // never leaves `isPending`.
+        !userId
+        ? ('success' as const)
+        : query.isPending
+          ? ('loading' as const)
+          : query.isError
+            ? ('error' as const)
+            : ('success' as const),
     error: query.error?.message ?? null,
     refetch: query.refetch,
   };

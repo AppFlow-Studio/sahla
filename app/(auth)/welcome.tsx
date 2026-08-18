@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, Text, View } from 'react-native';
 
+import { useGuestStore } from '@/src/stores/guest-store';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 import Animated, {
   Easing,
@@ -52,6 +53,7 @@ function Halo({
 }
 
 export default function WelcomeScreen() {
+  const enterGuest = useGuestStore((s) => s.enterGuest);
   const router = useRouter();
   const { t } = useTranslation();
   const config = useMasjidConfig();
@@ -198,6 +200,22 @@ export default function WelcomeScreen() {
               {t('auth.signIn')}
             </Link>
           </View>
+          {/* Browsing without an account: prayer times, programs, the reels
+              feed and the Quran all work signed out, so requiring registration
+              to see any of it would be gating features that don't need it. */}
+          <Pressable
+            onPress={enterGuest}
+            hitSlop={8}
+            accessibilityRole="button"
+            className="mt-5 items-center py-2 active:opacity-60"
+          >
+            <Text
+              className="text-onboarding-surface/60"
+              style={{ fontSize: 12, fontWeight: '500', textDecorationLine: 'underline' }}
+            >
+              {t('auth.browseAsGuest')}
+            </Text>
+          </Pressable>
         </Animated.View>
       </SafeAreaView>
     </View>

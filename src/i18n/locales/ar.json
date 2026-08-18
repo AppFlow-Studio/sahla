@@ -307,7 +307,12 @@
     "businessLabel": "النشاط التجاري",
     "paymentLabel": "الدفع",
     "thankYouAdvertising": "شكرًا لإعلانك معنا",
-    "notChargedUntilConfirm": "لن يتم خصم أي مبلغ حتى تؤكد"
+    "notChargedUntilConfirm": "لن يتم خصم أي مبلغ حتى تؤكد",
+    "soonTitle": "الإعلانات قادمة قريباً",
+    "soonBody": "إعلانات الأعمال غير متاحة في هذا الإصدار بعد. سنتواصل معك عند توفرها.",
+    "soonCta": "حسناً",
+    "reachLine": "أعلن عن عملك لأكثر من 3,000 فرد من أفراد المجتمع عبر التطبيق.",
+    "pricingComingSoon": "سيتم مشاركة الأسعار عند إطلاق خدمة الإعلانات."
   },
   "auth": {
     "devSignOutReset": "[DEV] تسجيل الخروج وإعادة التعيين",
@@ -368,7 +373,29 @@
     "verify": "تحقّق",
     "verificationFailed": "فشل التحقّق",
     "failedToSendEmail": "تعذّر إرسال بريد التحقّق",
-    "failedToResendCode": "تعذّر إعادة إرسال الرمز"
+    "failedToResendCode": "تعذّر إعادة إرسال الرمز",
+    "browseAsGuest": "تصفح بدون حساب",
+    "gate": {
+      "saveTitle": "سجّل الدخول للحفظ",
+      "saveBody": "البرامج والفعاليات والمقاطع المحفوظة تُخزَّن في ملفك الشخصي، لذا تحتاج إلى حساب.",
+      "likeTitle": "سجّل الدخول للإعجاب",
+      "likeBody": "الإعجابات مرتبطة بحسابك ليبقى محتواك خاصاً بك.",
+      "notifyTitle": "سجّل الدخول للتذكيرات",
+      "notifyBody": "تُرسَل تذكيرات الصلاة والبرامج إلى حسابك، لذا نحتاج إلى معرفتك.",
+      "profileTitle": "سجّل الدخول لعرض ملفك",
+      "profileBody": "يجمع ملفك الشخصي عناصرك المحفوظة وتذكيراتك وسجل تبرعاتك في مكان واحد.",
+      "genericTitle": "سجّل الدخول للمتابعة",
+      "genericBody": "هذا الجزء من التطبيق يتطلب حساباً.",
+      "signIn": "تسجيل الدخول",
+      "notNow": "ليس الآن",
+      "guestBanner": "أنت تتصفح كضيف"
+    },
+    "guestName": "ضيف",
+    "agreeLead": "بالمتابعة فإنك توافق على ",
+    "agreeMid": " و",
+    "agreeTail": ".",
+    "agreeTerms": "شروط الاستخدام",
+    "agreePrivacy": "سياسة الخصوصية"
   },
   "content": {
     "notFound": "غير موجود",
@@ -510,7 +537,10 @@
     "errorTitle": "خطأ",
     "somethingWentWrong": "حدث خطأ ما.",
     "paymentNotCompleted": "لم تكتمل عملية الدفع.",
-    "paymentFailedTitle": "فشل الدفع"
+    "paymentFailedTitle": "فشل الدفع",
+    "soonTitle": "التبرعات قادمة قريباً",
+    "soonBody": "التبرع غير متاح في هذا الإصدار بعد. سنعلمك فور توفره.",
+    "soonCta": "حسناً"
   },
   "home": {
     "greeting": "السلام عليكم",
@@ -848,7 +878,16 @@
     "nothingInThisWindow": "لا يوجد شيء في هذه الفترة",
     "noSavedClipsBody": "اضغط على علامة الحفظ في أي مقطع في\nالمشاهدة لحفظه هنا.",
     "nothingInWindowBody": "لا توجد مقاطع محفوظة في الفترة\nالمحددة — جرّب \"الكل\".",
-    "noSavedClips": "لا توجد مقاطع محفوظة"
+    "noSavedClips": "لا توجد مقاطع محفوظة",
+    "guestSubtitle": "سجّل الدخول للاستفادة الكاملة من {{masjid}}.",
+    "perkSave": "احفظ البرامج والفعاليات والمقاطع في ملفك الشخصي",
+    "perkRemind": "احصل على تذكيرات الصلاة والبرامج",
+    "perkPersonalize": "شاهد برامج مختارة لك",
+    "guestKeepBrowsing": "يمكنك متابعة التصفح بدون حساب.",
+    "termsRow": "شروط الاستخدام",
+    "privacyRow": "سياسة الخصوصية",
+    "sectionLegal": "قانوني",
+    "legalRow": "الشروط والخصوصية"
   },
   "watch": {
     "notInterested": "غير مهتم",
@@ -886,5 +925,12 @@
     "noConnectionBody": "تحقق من اتصالك بالإنترنت\nوحاول مرة أخرى",
     "tryAgain": "حاول مرة أخرى",
     "noReels": "لا توجد مقاطع بعد"
+  },
+  "legal": {
+    "termsTitle": "شروط الاستخدام",
+    "privacyTitle": "سياسة الخصوصية",
+    "meta": "{{masjid}} · ساري من {{date}} · الإصدار {{version}}",
+    "hubTitle": "قانوني",
+    "hubIntro": "تطبيق {{masjid}} مُقدَّم من {{masjid}} ومبني على منصة سهلة. توضح هذه المستندات كيفية عمل التطبيق وكيفية التعامل مع معلوماتك."
   }
 }

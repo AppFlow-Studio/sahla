@@ -43,28 +43,19 @@ export default function AdvertiseScreen() {
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
 
-  const [adMonthlyPrice, setAdMonthlyPrice] = useState<number>(5000);
-  const [adOnboardingFee, setAdOnboardingFee] = useState<number>(10000);
   const [adsEnabled, setAdsEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     if (!mosqueUuid) return;
     supabase
       .from('mosques')
-      .select('ad_monthly_price_cents, ad_onboarding_fee_cents, ads_enabled')
+      .select('ads_enabled')
       .eq('id', mosqueUuid)
       .single()
       .then(({ data }) => {
-        if (data) {
-          setAdMonthlyPrice(data.ad_monthly_price_cents ?? 5000);
-          setAdOnboardingFee(data.ad_onboarding_fee_cents ?? 10000);
-          setAdsEnabled(data.ads_enabled ?? false);
-        }
+        if (data) setAdsEnabled(data.ads_enabled ?? false);
       });
   }, [mosqueUuid]);
-
-  const monthlyDisplay = `$${(adMonthlyPrice / 100).toFixed(0)}`;
-  const onboardingDisplay = `$${(adOnboardingFee / 100).toFixed(0)}`;
 
   return (
     <View className="flex-1 bg-background">
@@ -185,23 +176,13 @@ export default function AdvertiseScreen() {
 
           {/* Pricing Info Box */}
           <View className="mx-5 mt-8 rounded-2xl bg-muted/60 px-5 py-5">
+            {/* Figures are withheld while advertising is switched off — quoting
+                a price for something nobody can buy invites the wrong reading. */}
             <Text className="text-[14px] leading-[22px] text-foreground/80">
-              {t('ads.pricingLeadIn')}{' '}
-              <Text className="font-bold text-foreground">
-                {t('ads.pricingMonthlyAmount', { amount: monthlyDisplay })}
-              </Text>{' '}
-              {t('ads.pricingMiddle')}{' '}
-              <Text className="font-bold text-foreground">
-                {t('ads.pricingMembers')}
-              </Text>
-              {t('ads.pricingTrail')}
+              {t('ads.reachLine')}
             </Text>
             <Text className="mt-2 text-[13px] leading-[20px] text-foreground/50">
-              {t('ads.pricingOnboardingLeadIn')}{' '}
-              <Text className="font-semibold text-foreground/60">
-                {t('ads.pricingOnboardingFee', { amount: onboardingDisplay })}
-              </Text>{' '}
-              {t('ads.pricingOnboardingTrail')}
+              {t('ads.pricingComingSoon')}
             </Text>
           </View>
 

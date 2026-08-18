@@ -21,6 +21,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useRequireAccount } from "@/src/components/auth/sign-in-prompt";
 import { Icon } from "@/src/components/ui/icon";
 import SpeakerInfoModal from "@/components/Discover/SpeakerInfoModal";
 import { ContentNotificationSettingsSheet } from "@/components/content/ContentNotificationSettingsSheet";
@@ -176,6 +177,7 @@ export default function ContentDetailScreen() {
   const [speakerModalOpen, setSpeakerModalOpen] = useState(false);
 
   const { data: isSaved = false } = useIsSaved(id);
+  const requireAccount = useRequireAccount();
   const toggleSave = useToggleSave(id, mosqueUuid);
   const saveDisabled = !userId || !mosqueUuid || toggleSave.isPending;
 
@@ -256,6 +258,7 @@ export default function ContentDetailScreen() {
   }));
 
   const handleToggleSave = () => {
+    if (!requireAccount('save')) return;
     const willSave = !isSaved;
     toggleSave.mutate(isSaved);
     if (willSave) setShowSaveToast(true);

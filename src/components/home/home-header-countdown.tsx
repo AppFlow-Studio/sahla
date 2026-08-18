@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import MasjidLogo from '@/assets/masjid-logo.svg';
+import { useRequireAccount } from '@/src/components/auth/sign-in-prompt';
 import { Icon } from '@/src/components/ui/icon';
 import { LTR_ROW, LTR_START } from '@/src/i18n/ltr';
 import { useFontFamily } from '@/src/hooks/use-font-family';
@@ -60,6 +61,7 @@ const LOGO_SIZE = 26;
 const NAME_SIZE = 15;
 
 export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | 'left' }) {
+  const requireAccount = useRequireAccount();
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const fonts = useFontFamily();
@@ -112,7 +114,12 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
         </View>
         <Pressable
           hitSlop={12}
-          onPress={() => router.push('/profile/notification-center')}
+          onPress={() => {
+            // Reminders are delivered to an account, so a guest is offered one
+            // rather than dropped into a settings screen that can't save.
+            if (!requireAccount('notify')) return;
+            router.push('/profile/notification-center');
+          }}
           accessibilityRole="button"
           accessibilityLabel={t('home.notifications', { defaultValue: 'Notifications' })}
         >

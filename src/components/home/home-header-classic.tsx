@@ -8,6 +8,7 @@ import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 import { usePrayerTimes } from '@/src/hooks/use-prayer-times';
 import { LTR_ROW } from '@/src/i18n/ltr';
+import { useGuestStore } from '@/src/stores/guest-store';
 import { HomeHeaderBackdrop } from './home-header-backdrop';
 import { PrayerTimesBar } from './prayer-times-bar';
 
@@ -28,14 +29,19 @@ export function ClassicHomeHeader() {
   const { user } = useUser();
   const storedFirstName = useOnboardingStore((s) => s.firstName);
   const { currentTime, hijriDate, nextPrayer } = usePrayerTimes();
+  const isGuest = useGuestStore((s) => s.isGuest);
 
-  // Read firstName: Clerk metadata (org-keyed) → onboarding store → Clerk user
+  // Read firstName: Clerk metadata (org-keyed) → onboarding store → Clerk user.
+  // A guest has none of those, and greeting them with a bare "Assalamu Alaikum!"
+  // hides the fact that they're signed out — so they're named as a Guest until
+  // they sign in.
   const meta = user?.publicMetadata as Record<string, any> | undefined;
-  const firstName =
-    (clerkOrgId ? meta?.[clerkOrgId]?.firstName : null) ??
-    (storedFirstName.trim() || null) ??
-    user?.firstName ??
-    '';
+  const firstName = isGuest
+    ? t('auth.guestName')
+    : ((clerkOrgId ? meta?.[clerkOrgId]?.firstName : null) ??
+      (storedFirstName.trim() || null) ??
+      user?.firstName ??
+      '');
 
   return (
     <View className="overflow-hidden bg-primary" style={{ paddingTop: insets.top + 16 }}>

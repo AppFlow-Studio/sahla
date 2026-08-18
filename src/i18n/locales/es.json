@@ -295,7 +295,12 @@
     "businessLabel": "Negocio",
     "paymentLabel": "Pago",
     "thankYouAdvertising": "Gracias por anunciarte con nosotros",
-    "notChargedUntilConfirm": "No se te cobrará hasta que confirmes"
+    "notChargedUntilConfirm": "No se te cobrará hasta que confirmes",
+    "soonTitle": "La publicidad llegará pronto",
+    "soonBody": "Los anuncios para negocios aún no están disponibles en esta versión. Te avisaremos cuando lo estén.",
+    "soonCta": "Entendido",
+    "reachLine": "Anuncia tu negocio a más de 3.000 miembros de la comunidad a través de la app.",
+    "pricingComingSoon": "Compartiremos los precios cuando la publicidad esté disponible."
   },
   "auth": {
     "devSignOutReset": "[DEV] Cerrar sesión y restablecer",
@@ -356,7 +361,29 @@
     "verify": "Verificar",
     "verificationFailed": "Verificación fallida",
     "failedToSendEmail": "Error al enviar el correo de verificación",
-    "failedToResendCode": "Error al reenviar el código"
+    "failedToResendCode": "Error al reenviar el código",
+    "browseAsGuest": "Explorar sin cuenta",
+    "gate": {
+      "saveTitle": "Inicia sesión para guardar",
+      "saveBody": "Los programas, eventos y clips guardados viven en tu perfil, así que necesitas una cuenta.",
+      "likeTitle": "Inicia sesión para dar me gusta",
+      "likeBody": "Los me gusta están vinculados a tu cuenta para que tu feed siga siendo tuyo.",
+      "notifyTitle": "Inicia sesión para recordatorios",
+      "notifyBody": "Los recordatorios de oración y programas se envían a tu cuenta.",
+      "profileTitle": "Inicia sesión para ver tu perfil",
+      "profileBody": "Tu perfil reúne lo que guardaste, tus recordatorios y tu historial en un solo lugar.",
+      "genericTitle": "Inicia sesión para continuar",
+      "genericBody": "Esta parte de la app necesita una cuenta.",
+      "signIn": "Iniciar sesión",
+      "notNow": "Ahora no",
+      "guestBanner": "Estás explorando como invitado"
+    },
+    "guestName": "Invitado",
+    "agreeLead": "Al continuar aceptas nuestros ",
+    "agreeMid": " y la ",
+    "agreeTail": ".",
+    "agreeTerms": "Términos de uso",
+    "agreePrivacy": "Política de privacidad"
   },
   "content": {
     "notFound": "No encontrado",
@@ -498,7 +525,10 @@
     "errorTitle": "Error",
     "somethingWentWrong": "Algo salió mal.",
     "paymentNotCompleted": "El pago no se completó.",
-    "paymentFailedTitle": "Pago fallido"
+    "paymentFailedTitle": "Pago fallido",
+    "soonTitle": "Las donaciones llegarán pronto",
+    "soonBody": "Donar aún no está disponible en esta versión. Te avisaremos en cuanto esté activo.",
+    "soonCta": "Entendido"
   },
   "home": {
     "greeting": "Assalamu Alaikum",
@@ -820,7 +850,16 @@
     "nothingInThisWindow": "Nada en este periodo",
     "noSavedClipsBody": "Toca el marcador en cualquier reel de\nVer para guardarlo aquí.",
     "nothingInWindowBody": "No hay clips guardados en el periodo\nseleccionado: prueba \"Todos\".",
-    "noSavedClips": "No hay clips guardados"
+    "noSavedClips": "No hay clips guardados",
+    "guestSubtitle": "Inicia sesión para aprovechar {{masjid}} al máximo.",
+    "perkSave": "Guarda programas, eventos y clips en tu perfil",
+    "perkRemind": "Recibe recordatorios de oración y programas",
+    "perkPersonalize": "Descubre programas elegidos para ti",
+    "guestKeepBrowsing": "Puedes seguir explorando sin cuenta.",
+    "termsRow": "Términos de uso",
+    "privacyRow": "Política de privacidad",
+    "sectionLegal": "Legal",
+    "legalRow": "Términos y privacidad"
   },
   "watch": {
     "notInterested": "No me interesa",
@@ -858,5 +897,12 @@
     "noConnectionBody": "Comprueba tu conexión a internet\ne inténtalo de nuevo",
     "tryAgain": "Inténtalo de nuevo",
     "noReels": "Aún no hay reels"
+  },
+  "legal": {
+    "termsTitle": "Términos de uso",
+    "privacyTitle": "Política de privacidad",
+    "meta": "{{masjid}} · Vigente desde {{date}} · Versión {{version}}",
+    "hubTitle": "Legal",
+    "hubIntro": "La app de {{masjid}} es proporcionada por {{masjid}} y está construida sobre la plataforma Sahla. Estos documentos explican cómo funciona la app y cómo se tratan tus datos."
   }
 }

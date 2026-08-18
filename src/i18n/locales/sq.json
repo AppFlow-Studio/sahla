@@ -295,7 +295,12 @@
     "businessLabel": "Biznesi",
     "paymentLabel": "Pagesa",
     "thankYouAdvertising": "Faleminderit që reklamoni me ne",
-    "notChargedUntilConfirm": "Nuk do të tarifoheni derisa të konfirmoni"
+    "notChargedUntilConfirm": "Nuk do të tarifoheni derisa të konfirmoni",
+    "soonTitle": "Reklamimi po vjen së shpejti",
+    "soonBody": "Reklamat e bizneseve nuk janë ende të disponueshme në këtë version. Do t'ju njoftojmë kur të aktivizohen.",
+    "soonCta": "E kuptova",
+    "reachLine": "Reklamoni biznesin tuaj te mbi 3,000 anëtarë të komunitetit përmes aplikacionit.",
+    "pricingComingSoon": "Çmimet do të ndahen kur reklamimi të aktivizohet."
   },
   "auth": {
     "devSignOutReset": "[DEV] Dil & rivendos",
@@ -356,7 +361,29 @@
     "verify": "Verifiko",
     "verificationFailed": "Verifikimi dështoi",
     "failedToSendEmail": "Dërgimi i emailit të verifikimit dështoi",
-    "failedToResendCode": "Ridërgimi i kodit dështoi"
+    "failedToResendCode": "Ridërgimi i kodit dështoi",
+    "browseAsGuest": "Shfleto pa llogari",
+    "gate": {
+      "saveTitle": "Hyni për ta ruajtur",
+      "saveBody": "Programet, ngjarjet dhe klipet e ruajtura ndodhen në profilin tuaj, prandaj ju duhet një llogari.",
+      "likeTitle": "Hyni për të pëlqyer",
+      "likeBody": "Pëlqimet lidhen me llogarinë tuaj që përmbajtja të mbetet e juaja.",
+      "notifyTitle": "Hyni për kujtesa",
+      "notifyBody": "Kujtesat për namazin dhe programet dërgohen në llogarinë tuaj.",
+      "profileTitle": "Hyni për profilin tuaj",
+      "profileBody": "Profili juaj mban të ruajturat, kujtesat dhe historikun në një vend.",
+      "genericTitle": "Hyni për të vazhduar",
+      "genericBody": "Kjo pjesë e aplikacionit kërkon një llogari.",
+      "signIn": "Hyr",
+      "notNow": "Jo tani",
+      "guestBanner": "Po shfletoni si vizitor"
+    },
+    "guestName": "Vizitor",
+    "agreeLead": "Duke vazhduar ju pranoni ",
+    "agreeMid": " dhe ",
+    "agreeTail": ".",
+    "agreeTerms": "Kushtet e përdorimit",
+    "agreePrivacy": "Politikën e privatësisë"
   },
   "content": {
     "notFound": "Nuk u gjet",
@@ -498,7 +525,10 @@
     "errorTitle": "Gabim",
     "somethingWentWrong": "Diçka shkoi keq.",
     "paymentNotCompleted": "Pagesa nuk u përfundua.",
-    "paymentFailedTitle": "Pagesa dështoi"
+    "paymentFailedTitle": "Pagesa dështoi",
+    "soonTitle": "Donacionet po vijnë së shpejti",
+    "soonBody": "Dhurimi nuk është ende i disponueshëm në këtë version. Do t'ju njoftojmë sapo të aktivizohet.",
+    "soonCta": "E kuptova"
   },
   "home": {
     "greeting": "Es-selamu alejkum",
@@ -820,7 +850,16 @@
     "nothingInThisWindow": "Asgjë në këtë periudhë",
     "noSavedClipsBody": "Prek faqeruajtësin në çdo reel në\nShiko për ta ruajtur këtu.",
     "nothingInWindowBody": "Nuk ka klipe të ruajtura në periudhën\ne zgjedhur — provo \"Të gjitha\".",
-    "noSavedClips": "Nuk ka klipe të ruajtura"
+    "noSavedClips": "Nuk ka klipe të ruajtura",
+    "guestSubtitle": "Hyni për të përfituar sa më shumë nga {{masjid}}.",
+    "perkSave": "Ruani programe, ngjarje dhe klipe në profilin tuaj",
+    "perkRemind": "Merrni kujtesa për namazin dhe programet",
+    "perkPersonalize": "Shihni programe të zgjedhura për ju",
+    "guestKeepBrowsing": "Mund të vazhdoni shfletimin edhe pa llogari.",
+    "termsRow": "Kushtet e përdorimit",
+    "privacyRow": "Politika e privatësisë",
+    "sectionLegal": "Ligjore",
+    "legalRow": "Kushtet dhe privatësia"
   },
   "watch": {
     "notInterested": "Jo i interesuar",
@@ -858,5 +897,12 @@
     "noConnectionBody": "Kontrollo lidhjen tënde të internetit\ndhe provo përsëri",
     "tryAgain": "Provo përsëri",
     "noReels": "Ende nuk ka reel-e"
+  },
+  "legal": {
+    "termsTitle": "Kushtet e përdorimit",
+    "privacyTitle": "Politika e privatësisë",
+    "meta": "{{masjid}} · Në fuqi nga {{date}} · Versioni {{version}}",
+    "hubTitle": "Ligjore",
+    "hubIntro": "Aplikacioni {{masjid}} ofrohet nga {{masjid}} dhe është ndërtuar mbi platformën Sahla. Këto dokumente shpjegojnë si funksionon aplikacioni dhe si trajtohen të dhënat tuaja."
   }
 }

@@ -38,6 +38,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useRequireAccount } from '@/src/components/auth/sign-in-prompt';
 import { AppBlurView } from '@/src/components/ui/blur-view';
 import { LIQUID_GLASS } from '@/src/components/ui/glass-surface';
 import { TAB_BAR_CLEARANCE } from '@/src/components/navigation/tab-bar';
@@ -638,6 +639,7 @@ export function ReelItem({
   const [paused, setPaused] = useState(false);
   const masjidName = useConfigStore((s) => s.config.displayName);
   const isSavedQ = useIsReelSaved(reel.reel_id);
+  const requireAccount = useRequireAccount();
   const toggleSave = useToggleReelSave(reel.reel_id, reel.mosque_id);
   const saved = !!isSavedQ.data;
   const isLikedQ = useIsReelLiked(reel.reel_id);
@@ -742,6 +744,7 @@ export function ReelItem({
   };
 
   const handleDoubleTapLike = () => {
+    if (!requireAccount('like')) return;
     // Double-tap always likes, never unlikes (matches TikTok/IG).
     if (!liked) toggleLike.mutate(liked);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -910,14 +913,20 @@ export function ReelItem({
           <LikeButton
             liked={liked}
             count={formatCount(reel.like_count ?? 0)}
-            onPress={() => toggleLike.mutate(liked)}
+            onPress={() => {
+              if (!requireAccount('like')) return;
+              toggleLike.mutate(liked);
+            }}
           />
           <ActionButton icon="paper-plane-outline" onPress={handleShare} />
           <ActionButton
             icon={saved ? 'bookmark' : 'bookmark-outline'}
             color={saved ? '#B8922A' : '#ffffff'}
             fill={saved ? '#B8922A' : 'none'}
-            onPress={() => toggleSave.mutate(saved)}
+            onPress={() => {
+              if (!requireAccount('save')) return;
+              toggleSave.mutate(saved);
+            }}
           />
           <ActionButton icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>

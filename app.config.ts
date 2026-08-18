@@ -23,7 +23,7 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 type BuildTimeMasjid = { displayName: string };
 
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
-  sahla: { displayName: "Sahla Demo Masjid" },
+  sahla: { displayName: "Sahla App" },
   "mas-cnj": { displayName: "MAS Central New Jersey" },
   "mas-brooklyn-mqb18esx": { displayName: "MAS BK" },
 };
