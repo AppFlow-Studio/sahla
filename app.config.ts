@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /**
@@ -31,6 +34,50 @@ const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
 const MASJID_ID = process.env.MASJID_ID ?? "sahla";
 const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: "Sahla" };
 
+/** "10 38 30" -> "#0A261E" */
+const tripletToHex = (triplet: string) =>
+  "#" +
+  triplet
+    .trim()
+    .split(/\s+/)
+    .map((c) => Number(c).toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+
+/**
+ * Reads one color token out of the active tenant's runtime config so nothing
+ * brand-related is written twice. The native chrome configured below (splash
+ * background, notification tint, Android icon plate) has to be baked into the
+ * binary, but it stays the *same* color the JS theme paints at runtime — a
+ * masjid with a navy theme gets a navy splash, not Sahla's green.
+ *
+ * The evaluator can't follow TS imports (see the note above), so this reads
+ * the file rather than importing it, and falls through to `default.ts` for any
+ * token the tenant didn't override.
+ */
+function themeColor(token: string): string {
+  const files = [
+    join(process.cwd(), `src/config/masjids/${MASJID_ID}.ts`),
+    join(process.cwd(), "src/config/default.ts"),
+  ];
+  for (const file of files) {
+    try {
+      const match = readFileSync(file, "utf8").match(
+        new RegExp(`${token}:\\s*["']([\\d\\s]+)["']`),
+      );
+      if (match) return tripletToHex(match[1]);
+    } catch {
+      // Tenant has no bundled config file yet — fall through to the default.
+    }
+  }
+  throw new Error(`app.config: no "${token}" color found for "${MASJID_ID}"`);
+}
+
+/** Matches the animated BootSplash background (`colors.onboardingBackground`). */
+const SPLASH_BG = themeColor("onboardingBackground");
+/** The masjid's brand color, used for native chrome outside the JS theme. */
+const BRAND_COLOR = themeColor("primary");
+
 const IOS_BUNDLE_ID = `com.sahla.${MASJID_ID}`;
 const ANDROID_PACKAGE = `com.sahlaco.${MASJID_ID.replace(/-/g, "_")}`;
 
@@ -60,7 +107,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
+      backgroundColor: BRAND_COLOR,
       foregroundImage: "./assets/images/sahla-logo-arabic.png",
     },
     edgeToEdgeEnabled: true,
@@ -107,18 +154,28 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-notifications",
       {
         icon: "./assets/images/sahla-logo-arabic.png",
-        color: "#0A261E",
+        color: BRAND_COLOR,
       },
     ],
     [
+      // The OS splash paints the masjid's brand color and nothing else — the
+      // logo animation is owned by `src/components/boot-splash.tsx`, which
+      // hides this one only after it has drawn its first frame.
+      //
+      // `image` is a deliberately blank transparent PNG rather than omitted:
+      // prebuild always writes `windowSplashScreenAnimatedIcon =
+      // @drawable/splashscreen_logo` into the Android theme, but only emits
+      // that drawable when an image is configured. With no image the reference
+      // dangles and `aapt2` fails the Android build with "resource
+      // drawable/splashscreen_logo not found".
       "expo-splash-screen",
       {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
+        image: "./assets/images/splash-blank.png",
+        imageWidth: 32,
         resizeMode: "contain",
-        backgroundColor: "#ffffff",
+        backgroundColor: SPLASH_BG,
         dark: {
-          backgroundColor: "#000000",
+          backgroundColor: SPLASH_BG,
         },
       },
     ],
