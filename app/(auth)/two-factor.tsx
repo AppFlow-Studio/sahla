@@ -148,7 +148,7 @@ export default function TwoFactorScreen() {
           </Pressable>
 
           {error ? (
-            <Text className="mb-4" style={{ fontSize: 13, color: '#EF4444' }}>
+            <Text className="mb-4 text-danger" style={{ fontSize: 13 }}>
               {error}
             </Text>
           ) : null}

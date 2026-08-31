@@ -32,6 +32,7 @@ module.exports = {
         card: 'rgb(var(--color-card) / <alpha-value>)',
         'card-foreground': 'rgb(var(--color-card-foreground) / <alpha-value>)',
         depth: 'rgb(var(--color-depth) / <alpha-value>)',
+        danger: 'rgb(var(--color-danger) / <alpha-value>)',
         'onboarding-bg': 'rgb(var(--color-onboarding-bg) / <alpha-value>)',
         'onboarding-surface': 'rgb(var(--color-onboarding-surface) / <alpha-value>)',
         'onboarding-accent': 'rgb(var(--color-onboarding-accent) / <alpha-value>)',

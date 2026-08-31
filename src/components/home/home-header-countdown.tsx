@@ -97,7 +97,7 @@ export function CountdownHomeHeader({ align = 'center' }: { align?: 'center' | '
               contentFit="cover"
             />
           ) : (
-            <MasjidLogo width={LOGO_SIZE} height={LOGO_SIZE} />
+            <MasjidLogo width={LOGO_SIZE} height={LOGO_SIZE} color={accentRgb} />
           )}
           <Text
             numberOfLines={1}
