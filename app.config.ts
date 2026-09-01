@@ -85,7 +85,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: masjid.displayName,
   slug: "sahla",
-  version: "1.0.5",
+  version: "1.0.6",
   orientation: "portrait",
   icon: "./assets/images/sahla-logo-arabic.png",
   scheme: `sahla-${MASJID_ID}`,
