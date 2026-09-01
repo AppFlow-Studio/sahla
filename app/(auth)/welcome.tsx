@@ -114,11 +114,13 @@ export default function WelcomeScreen() {
         className="absolute inset-x-0 bottom-0"
         style={[{ height: '66%' }, mosqueStyle]}
       >
+        {/* mosque.svg draws in `currentColor`; the silhouette is the tenant's
+            layering color so it reads as depth against its own background. */}
         <Mosque
           width="100%"
           height="100%"
           preserveAspectRatio="xMidYMax meet"
-          color="#071F18"
+          color={triplet(config.colors.onboardingLayer)}
         />
       </Animated.View>
 
@@ -148,7 +150,7 @@ export default function WelcomeScreen() {
               }}
               style={{
                 fontSize: 12,
-                color: '#EF4444',
+                color: triplet(config.colors.danger),
                 fontWeight: '600',
                 marginBottom: 8,
                 padding: 8,

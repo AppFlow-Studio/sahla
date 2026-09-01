@@ -110,7 +110,7 @@ function AppIcon({ config }: { config: MasjidConfig }) {
           contentFit="cover"
         />
       ) : (
-        <MasjidLogo width={26} height={26} />
+        <MasjidLogo width={26} height={26} color={rgb(config.colors.onboardingAccent)} />
       )}
     </View>
   );

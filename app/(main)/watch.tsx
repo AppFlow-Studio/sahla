@@ -60,6 +60,11 @@ import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 
 
+/** "10 38 30" -> "rgb(10, 38, 30)" */
+function rgb(triplet: string) {
+  return `rgb(${triplet.trim().split(/\s+/).join(', ')})`;
+}
+
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
   return String(n);
@@ -270,6 +275,7 @@ function BottomSheet({
 function MasjidCard({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const masjidName = useConfigStore((s) => s.config.displayName);
+  const brand = useConfigStore((s) => s.config.colors);
 
   return (
     <View
@@ -304,13 +310,13 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
               width: 45,
               height: 45,
               borderRadius: 10,
-              backgroundColor: '#0A261E',
+              backgroundColor: rgb(brand.primary),
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
             }}
           >
-            <MasjidLogo width={32} height={32} />
+            <MasjidLogo width={32} height={32} color={rgb(brand.accent)} />
           </View>
           <View style={{ marginStart: 12, flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: '600', color: '#0A261E' }}>
@@ -630,6 +636,8 @@ export function ReelItem({
   // tuned for the iOS 26 native bar; the fallback bar floats higher (it sits
   // above the inset and is taller), so it needs the real measurement.
   const captionBottom = LIQUID_GLASS ? 90 : insets.bottom + TAB_BAR_CLEARANCE;
+  // Action rail sits just above the caption block rather than floating mid-screen.
+  const railBottom = captionBottom + 100;
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -638,6 +646,7 @@ export function ReelItem({
   // Local pause state — single-tapping the reel toggles play/pause (TikTok-style).
   const [paused, setPaused] = useState(false);
   const masjidName = useConfigStore((s) => s.config.displayName);
+  const brand = useConfigStore((s) => s.config.colors);
   const isSavedQ = useIsReelSaved(reel.reel_id);
   const requireAccount = useRequireAccount();
   const toggleSave = useToggleReelSave(reel.reel_id, reel.mosque_id);
@@ -908,7 +917,7 @@ export function ReelItem({
         </View>
 
         <View
-          style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 14, bottom: 280, gap: 28, alignItems: 'center' }}
+          style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 14, bottom: railBottom, gap: 28, alignItems: 'center' }}
         >
           <LikeButton
             liked={liked}
@@ -940,13 +949,13 @@ export function ReelItem({
                 borderRadius: 20,
                 borderWidth: 1,
                 borderColor: '#ffffff',
-                backgroundColor: '#0A261E',
+                backgroundColor: rgb(brand.primary),
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
               }}
             >
-              <MasjidLogo width={28} height={28} />
+              <MasjidLogo width={28} height={28} color={rgb(brand.accent)} />
             </View>
             <View className="ms-3 flex-1">
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#ffffff' }}>
@@ -989,7 +998,7 @@ export function ReelItem({
           onPress={() => setMenuOpen(false)}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         >
-          <View style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 54, bottom: 260 }}>
+          <View style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 54, bottom: railBottom - 20 }}>
             <ReelMenu
               onNotInterested={() => {
                 setMenuOpen(false);

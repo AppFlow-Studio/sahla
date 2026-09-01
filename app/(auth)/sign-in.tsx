@@ -7,7 +7,7 @@ import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 
-import Pattern from '@/assets/onboarding/pattern.svg';
+import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
@@ -194,7 +194,7 @@ export default function SignInScreen() {
   return (
     <View className="flex-1 bg-onboarding-bg">
       <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
-        <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin slice" />
+        <OnboardingPattern />
       </View>
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
@@ -255,7 +255,7 @@ export default function SignInScreen() {
           </Link>
 
           {error ? (
-            <Text className="mb-4" style={{ fontSize: 13, color: '#EF4444' }}>
+            <Text className="mb-4 text-danger" style={{ fontSize: 13 }}>
               {error}
             </Text>
           ) : null}

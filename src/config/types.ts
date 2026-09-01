@@ -30,6 +30,12 @@ export type MasjidColors = {
   depth: string;
   /** True shadow color (used for drop shadows / cast shadows only). */
   shadow: string;
+  /**
+   * Error / destructive text and states. Defaults to a conventional red for
+   * every tenant — a masjid can rebrand it, but it should stay legible as an
+   * error, so it is deliberately not derived from the brand palette.
+   */
+  danger: string;
   onboardingBackground: string;
   onboardingSurface: string;
   onboardingAccent: string;

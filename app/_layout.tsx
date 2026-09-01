@@ -25,6 +25,7 @@ if (Platform.OS !== 'web') {
 
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
+import { Amiri_400Regular } from '@expo-google-fonts/amiri';
 import {
   CormorantGaramond_400Regular,
   CormorantGaramond_500Medium,
@@ -57,6 +58,7 @@ const StripeProvider =
     : ({ children }: { children: React.ReactNode }) => children;
 
 import { bootDirectionChanged } from '@/src/i18n';
+import { BootSplash } from '@/src/components/boot-splash';
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
@@ -210,7 +212,7 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     // All weights referenced by any FONT_THEME in src/theme/fonts.ts must be
     // registered here so a masjid's chosen theme renders without a fallback.
     PlayfairDisplay_400Regular,
@@ -220,16 +222,17 @@ export default function RootLayout() {
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
+    // Arabic display face for the du'a / ayah lines that are set apart from the
+    // UI (the welcome salaam, reel ayah overlays). Referenced by name in those
+    // screens, so it has to be registered here or it silently falls back to the
+    // system font.
+    Amiri_400Regular,
     // Latin+Arabic family used for the whole UI when the language is RTL.
     IBMPlexSansArabic_400Regular,
     IBMPlexSansArabic_500Medium,
     IBMPlexSansArabic_600SemiBold,
     UthmanicHafs: require('../assets/fonts/UthmanicHafs_V22.ttf'),
   });
-
-  useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
 
   // If the boot language flipped the layout direction (e.g. first launch on an
   // Arabic device), RN needs a reload for the forced direction to apply.
@@ -242,12 +245,14 @@ export default function RootLayout() {
 
   console.log('[boot] RootLayout', { fontsLoaded, clerkKey: env.CLERK_PUBLISHABLE_KEY?.slice(0, 11) });
 
-  if (!fontsLoaded) return null;
+  // A font that fails to load must not strand the app on the native splash —
+  // the theme falls back to the system family instead.
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ClerkLoaded>
           <QueryProvider>
             <SupabaseProvider>
               <ConfigProvider>
@@ -268,8 +273,12 @@ export default function RootLayout() {
               </ConfigProvider>
             </SupabaseProvider>
           </QueryProvider>
-        </GestureHandlerRootView>
-      </ClerkLoaded>
+        </ClerkLoaded>
+        {/* Outside <ClerkLoaded> on purpose: the branded splash has to be on
+            screen while Clerk is still rehydrating the session, which is the
+            slowest part of a cold boot. */}
+        <BootSplash />
+      </GestureHandlerRootView>
     </ClerkProvider>
   );
 }
