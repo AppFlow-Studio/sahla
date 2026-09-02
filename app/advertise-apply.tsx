@@ -1,12 +1,14 @@
 import { useUser } from '@clerk/clerk-expo';
+import { useConfirmPayment } from '@stripe/stripe-react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { BackButton } from '@/src/components/ui/back-button';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,12 +21,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Image } from 'expo-image';
 
+import { CardVisual } from '@/src/components/stripe-card-visual';
 import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useSupabase } from '@/src/hooks/use-supabase';
+import { useProfile } from '@/src/hooks/use-profile';
 import { useConfigStore } from '@/src/stores/config-store';
+import { useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { env } from '@/src/lib/env';
 
 type FormData = {
@@ -35,13 +40,7 @@ type FormData = {
   businessAddress: string;
 };
 
-/**
- * Ad purchasing is switched off for the first App Store submission, so the
- * flow is form → notice. The payment, processing and success steps were
- * removed with their Stripe calls; restore them when advertising is turned
- * back on.
- */
-type Step = 'form' | 'soon';
+type Step = 'form' | 'payment' | 'processing' | 'success';
 
 export default function AdvertiseApplyScreen() {
   const router = useRouter();
@@ -50,10 +49,16 @@ export default function AdvertiseApplyScreen() {
   const { user } = useUser();
   const fonts = useFontFamily();
   const supabase = useSupabase();
-  const { colors } = useMasjidConfig();
+  const { profile } = useProfile();
+  const { id: mosqueSlug, colors, displayName } = useMasjidConfig();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const { confirmPayment } = useConfirmPayment();
+  const { setStripeAccountId } = useStripeAccount();
 
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
+  const bgRgb = `rgb(${colors.background.replace(/ /g, ',')})`;
+  const fg = colors.foreground.replace(/ /g, ',');
+  const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
 
   const [form, setForm] = useState<FormData>({
@@ -64,12 +69,44 @@ export default function AdvertiseApplyScreen() {
     businessAddress: '',
   });
   const [step, setStep] = useState<Step>('form');
-  // Kept so the CTA can show a disabled state; nothing async runs while
-  // payments are off.
-  const [submitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const [cardComplete, setCardComplete] = useState(false);
+  const [cardBrand, setCardBrand] = useState('');
+  const [cardLast4, setCardLast4] = useState<string | undefined>(undefined);
+  const [cardExpMonth, setCardExpMonth] = useState<number | undefined>(undefined);
+  const [cardExpYear, setCardExpYear] = useState<number | undefined>(undefined);
+  const [cardFlipped, setCardFlipped] = useState(false);
+  const [cvcFilled, setCvcFilled] = useState(false);
   const [flyerUrl, setFlyerUrl] = useState<string | null>(null);
   const [flyerUploading, setFlyerUploading] = useState(false);
 
+  // Fetch mosque ad pricing
+  const [adMonthlyPrice, setAdMonthlyPrice] = useState<number | null>(null);
+  const [adOnboardingFee, setAdOnboardingFee] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!mosqueUuid) return;
+    supabase
+      .from('mosques')
+      .select('ad_monthly_price_cents, ad_onboarding_fee_cents')
+      .eq('id', mosqueUuid)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setAdMonthlyPrice(data.ad_monthly_price_cents ?? 5000);
+          setAdOnboardingFee(data.ad_onboarding_fee_cents ?? 10000);
+        }
+      });
+  }, [mosqueUuid]);
+
+  const monthlyDisplay = adMonthlyPrice != null ? `$${(adMonthlyPrice / 100).toFixed(0)}` : '$50';
+  const onboardingDisplay = adOnboardingFee != null ? `$${(adOnboardingFee / 100).toFixed(0)}` : '$100';
+  const firstPaymentDisplay =
+    adMonthlyPrice != null && adOnboardingFee != null
+      ? `$${((adMonthlyPrice + adOnboardingFee) / 100).toFixed(0)}`
+      : '$150';
 
   const update = (field: keyof FormData) => (value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -152,15 +189,86 @@ export default function AdvertiseApplyScreen() {
     form.businessName.trim() &&
     form.businessAddress.trim();
 
-  /**
-   * Validates the form and shows the notice. Previously this created a Stripe
-   * subscription intent server-side; with payments off there is nothing to
-   * charge, so nothing is written.
-   */
-  const handleContinueToPayment = useCallback(() => {
-    if (!isFormValid || submitting) return;
-    setStep('soon');
-  }, [isFormValid, submitting]);
+  // Step 1 → Step 2: Create subscription intent
+  const handleContinueToPayment = useCallback(async () => {
+    if (!isFormValid || submitting || !user || !mosqueUuid) return;
+
+    setSubmitting(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke(
+        'create-ad-subscription',
+        {
+          headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+          body: {
+            user_id: user.id,
+            mosque_id: mosqueUuid,
+            customer_email: form.email.trim() || undefined,
+            full_name: form.fullName.trim() || undefined,
+            phone: form.phone.trim() || undefined,
+            business_name: form.businessName.trim() || undefined,
+            business_address: form.businessAddress.trim() || undefined,
+            business_flyer_img: flyerUrl || undefined,
+          },
+        },
+      );
+
+      if (fnError || !data?.clientSecret) {
+        let detail = 'Failed to create subscription';
+        try {
+          if (fnError?.context?.text) {
+            const raw = await fnError.context.text();
+            const body = JSON.parse(raw);
+            detail = body?.error ?? body?.detail ?? raw;
+          } else {
+            detail = data?.error ?? fnError?.message ?? detail;
+          }
+        } catch {
+          detail = fnError?.message ?? 'Unknown error';
+        }
+        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+      }
+
+      setStripeAccountId(data.stripeAccountId);
+      setClientSecret(data.clientSecret);
+      setSubscriptionId(data.subscriptionId);
+      requestAnimationFrame(() => {
+        setStep('payment');
+        setSubmitting(false);
+      });
+    } catch (err: any) {
+      setStripeAccountId(undefined);
+      setSubmitting(false);
+      Alert.alert(t('ads.errorTitle'), err.message ?? t('ads.somethingWentWrong'));
+    }
+  }, [form, isFormValid, submitting, user, supabase, mosqueUuid, flyerUrl]);
+
+  // Step 2 → Confirm payment
+  const handleConfirmPayment = useCallback(async () => {
+    if (!clientSecret || !cardComplete) return;
+    setStep('processing');
+
+    try {
+      const { paymentIntent, error } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+      });
+
+      if (error) throw new Error(error.message);
+
+      if (paymentIntent?.status === 'Succeeded') {
+        // The submission + ad_subscriptions rows were already created
+        // server-side by create-ad-subscription; the stripe-webhook promotes
+        // them to paid/submitted once Stripe confirms the invoice. Nothing to
+        // write from the client here.
+        setStripeAccountId(undefined);
+        setStep('success');
+      } else {
+        throw new Error(t('ads.paymentNotCompleted'));
+      }
+    } catch (err: any) {
+      setStep('payment');
+      Alert.alert(t('ads.paymentFailedTitle'), err.message ?? t('ads.somethingWentWrong'));
+    }
+  }, [clientSecret, cardComplete, confirmPayment, setStripeAccountId]);
 
   return (
     <View className="flex-1 bg-background">
@@ -179,48 +287,178 @@ export default function AdvertiseApplyScreen() {
               <BackButton
                 color={fgRgb}
                 onPress={() => {
-                  // The notice is terminal, so back always leaves the screen.
-                  if (step === 'soon') router.dismissAll();
-                  else router.back();
+                  // On the payment step this rewinds the wizard rather than
+                  // leaving the screen.
+                  if (step === 'payment') {
+                    setStep('form');
+                    setStripeAccountId(undefined);
+                    setClientSecret(null);
+                  } else {
+                    router.back();
+                  }
                 }}
                 style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
               />
               <Text className="ms-3 text-[16px] font-semibold text-foreground">
-                {t('ads.businessApplication')}
+                {step === 'payment' || step === 'processing'
+                  ? t('ads.payment')
+                  : step === 'success'
+                    ? t('ads.applicationSubmitted')
+                    : t('ads.businessApplication')}
               </Text>
             </View>
 
-            {/* ─── Coming Soon ─── */}
-            {/* Ad purchasing is switched off for the first App Store
-                submission. The business form above still runs so the flow reads
-                as intended; this replaces the payment step rather than sitting
-                in front of it. */}
-            {step === 'soon' && (
+            {/* Step indicator */}
+            <View className="mt-4 flex-row items-center justify-center gap-2 px-5">
+              {['form', 'payment'].map((s, i) => (
+                <View key={s} className="flex-row items-center gap-2">
+                  <View
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor:
+                        step === s || (step === 'processing' && s === 'payment') || step === 'success'
+                          ? fgRgb
+                          : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.15)`,
+                    }}
+                  />
+                  {i === 0 && (
+                    <View
+                      className="h-[1px] w-8"
+                      style={{
+                        backgroundColor: `rgb(${colors.foreground.replace(/ /g, ',')} / 0.15)`,
+                      }}
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {/* ─── Success Step ─── */}
+            {step === 'success' && (
               <View className="items-center px-5 pt-16">
                 <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-foreground/5">
-                  <Icon name="megaphone-outline" size={40} color={primaryRgb} />
+                  <Icon
+                    name="check-circle"
+                    size={48}
+                    color={primaryRgb}
+                  />
                 </View>
                 <Text
                   className="text-center text-[24px] font-bold text-foreground"
                   style={{ fontFamily: fonts.display }}
                 >
-                  {t('ads.soonTitle')}
+                  {t('ads.allSet')}
                 </Text>
                 <Text className="mt-3 text-center text-[15px] leading-[22px] text-foreground/60">
-                  {t('ads.soonBody')}
+                  {t('ads.allSetSubtitle')}
                 </Text>
+
+                <View className="mt-8 w-full">
+                  <ReceiptCard
+                    t={t}
+                    title={t('ads.paymentReceipt')}
+                    merchant={displayName}
+                    monthly={monthlyDisplay}
+                    onboarding={onboardingDisplay}
+                    total={firstPaymentDisplay}
+                    businessName={form.businessName.trim() || undefined}
+                    paid
+                    cardBrand={cardBrand || undefined}
+                    last4={cardLast4}
+                    reference={subscriptionId ?? undefined}
+                    dateStr={new Date().toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    tint={primaryRgb}
+                    pageColor={bgRgb}
+                  />
+                </View>
 
                 <Pressable
                   onPress={() => router.dismissAll()}
-                  className="mt-8 h-[48px] w-full items-center justify-center rounded-full bg-foreground active:opacity-90"
+                  className="mt-6 h-[48px] w-full items-center justify-center rounded-full bg-foreground active:opacity-90"
                 >
                   <Text className="text-[16px] font-semibold text-background">
-                    {t('ads.soonCta')}
+                    {t('common.done')}
                   </Text>
                 </Pressable>
               </View>
             )}
 
+            {/* ─── Processing Step ─── */}
+            {step === 'processing' && (
+              <View className="items-center px-5 pt-24">
+                <ActivityIndicator size="large" color={fgRgb} />
+                <Text className="mt-4 text-[15px] text-foreground/50">
+                  {t('ads.processingPayment')}
+                </Text>
+              </View>
+            )}
+
+            {/* ─── Payment Step ─── */}
+            {step === 'payment' && (
+              <View className="mt-6 px-5">
+                {/* Order receipt (pre-purchase) */}
+                <ReceiptCard
+                  t={t}
+                  title={t('ads.orderSummary')}
+                  merchant={displayName}
+                  monthly={monthlyDisplay}
+                  onboarding={onboardingDisplay}
+                  total={firstPaymentDisplay}
+                  tint={primaryRgb}
+                  pageColor={bgRgb}
+                />
+
+                {/* Card entry */}
+                <View className="mt-6">
+                  <Text className="mb-3 text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
+                    {t('ads.cardDetails')}
+                  </Text>
+                  <CardVisual
+                    brand={cardBrand}
+                    cardComplete={cardComplete}
+                    flipped={cardFlipped}
+                    last4={cardLast4}
+                    expiryMonth={cardExpMonth}
+                    expiryYear={cardExpYear}
+                    cvcFilled={cvcFilled}
+                    profileName={form.fullName.trim() || undefined}
+                    bgRgb={bgRgb}
+                    fgRgb={fgRgb}
+                    fg={fg}
+                    accentRgb={accentRgb}
+                    onCardChange={(details) => {
+                      setCardComplete(details.complete);
+                      if (details.brand) setCardBrand(details.brand);
+                      setCardLast4(details.last4 || undefined);
+                      setCardExpMonth(details.expiryMonth ?? undefined);
+                      setCardExpYear(details.expiryYear ?? undefined);
+                      setCvcFilled(details.complete);
+                      if (cardFlipped && details.expiryYear == null) {
+                        setCardFlipped(false);
+                      }
+                    }}
+                    onFocus={(field) => setCardFlipped(field === 'Cvc')}
+                  />
+                </View>
+
+                {/* Business info recap */}
+                <View className="mt-6 rounded-2xl bg-muted/30 px-4 py-3">
+                  <Text className="text-[12px] font-medium text-foreground/40">
+                    {t('ads.applyingAs')}
+                  </Text>
+                  <Text className="mt-1 text-[14px] font-semibold text-foreground">
+                    {form.businessName}
+                  </Text>
+                  <Text className="text-[13px] text-foreground/50">
+                    {form.businessAddress}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* ─── Form Step ─── */}
             {step === 'form' && (
@@ -497,7 +735,10 @@ export default function AdvertiseApplyScreen() {
                       color={`rgb(${colors.foreground.replace(/ /g, ',')} / 0.4)`}
                     />
                     <Text className="text-[13px] leading-[20px] text-foreground/60">
-                      {t('ads.pricingComingSoon')}
+                      {t('ads.pricingInline', {
+                        monthly: monthlyDisplay,
+                        onboarding: onboardingDisplay,
+                      })}
                     </Text>
                   </View>
                 </View>
@@ -505,8 +746,8 @@ export default function AdvertiseApplyScreen() {
             )}
           </ScrollView>
 
-          {/* Fixed Bottom CTA — the notice carries its own button. */}
-          {step === 'form' && (
+          {/* Fixed Bottom CTA */}
+          {step !== 'success' && step !== 'processing' && (
             <View
               className="absolute bottom-0 left-0 right-0 bg-background px-5 pb-10 pt-3"
               style={{
@@ -517,23 +758,49 @@ export default function AdvertiseApplyScreen() {
                 elevation: 5,
               }}
             >
-              <Pressable
-                onPress={handleContinueToPayment}
-                disabled={!isFormValid || submitting}
-                className="h-[52px] flex-row items-center justify-center rounded-full active:opacity-90"
-                style={{
-                  backgroundColor: isFormValid
-                    ? fgRgb
-                    : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`,
-                }}
-              >
-                <Text className="text-[16px] font-semibold text-background">
-                  {t('ads.continueToPayment')}
-                </Text>
-                <Text className="ms-2 text-[16px] text-background">
-                  {isRTL ? '\u2190' : '\u2192'}
-                </Text>
-              </Pressable>
+              {step === 'form' ? (
+                <Pressable
+                  onPress={handleContinueToPayment}
+                  disabled={!isFormValid || submitting}
+                  className="h-[52px] flex-row items-center justify-center rounded-full active:opacity-90"
+                  style={{
+                    backgroundColor: isFormValid
+                      ? fgRgb
+                      : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`,
+                  }}
+                >
+                  {submitting ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={`rgb(${colors.background.replace(/ /g, ',')})`}
+                    />
+                  ) : (
+                    <>
+                      <Text className="text-[16px] font-semibold text-background">
+                        {t('ads.continueToPayment')}
+                      </Text>
+                      <Text className="ms-2 text-[16px] text-background">
+                        {isRTL ? '\u2190' : '\u2192'}
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={handleConfirmPayment}
+                  disabled={!cardComplete}
+                  className="h-[52px] flex-row items-center justify-center rounded-full active:opacity-90"
+                  style={{
+                    backgroundColor: cardComplete
+                      ? fgRgb
+                      : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`,
+                  }}
+                >
+                  <Text className="text-[16px] font-semibold text-background">
+                    {t('ads.paySubscribe', { amount: firstPaymentDisplay })}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
         </KeyboardAvoidingView>
@@ -578,4 +845,254 @@ function FormField({
   );
 }
 
+function ReceiptRow({
+  label,
+  value,
+  bold,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+}) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Text className={`text-[14px] ${bold ? 'font-bold text-foreground' : 'text-foreground/70'}`}>
+        {label}
+      </Text>
+      <Text
+        className={`text-[14px] ${bold ? 'text-[15px] font-bold' : 'font-semibold'} text-foreground`}
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
 
+// A dashed separator with two notch "punches" at the edges — the classic
+// ticket / receipt tear line. `pageColor` fills the notches to match the page.
+function TearLine({ pageColor }: { pageColor?: string }) {
+  return (
+    <View className="my-1" style={{ position: 'relative', justifyContent: 'center', height: 16 }}>
+      <View
+        style={{
+          borderBottomWidth: 1,
+          borderColor: 'rgba(0,0,0,0.18)',
+          borderStyle: 'dashed',
+          marginHorizontal: 4,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute', left: -10, width: 16, height: 16, borderRadius: 8,
+          backgroundColor: pageColor ?? 'transparent',
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute', right: -10, width: 16, height: 16, borderRadius: 8,
+          backgroundColor: pageColor ?? 'transparent',
+        }}
+      />
+    </View>
+  );
+}
+
+// Deterministic faux barcode — sells the "official receipt" look.
+const BARCODE = [2, 1, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 1, 2, 2, 1, 3, 1, 2, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 1, 2];
+function Barcode() {
+  return (
+    <View className="flex-row items-end justify-center" style={{ height: 36 }}>
+      {BARCODE.map((w, i) => (
+        <View
+          key={i}
+          className="bg-foreground"
+          style={{ width: w, height: 36, marginRight: 2, opacity: 0.85 }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Animated rubber "PAID" stamp — slams down into the top-right of the receipt.
+function PaidStamp({ tint }: { tint?: string }) {
+  const a = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(350),
+      Animated.spring(a, { toValue: 1, friction: 5, tension: 90, useNativeDriver: true }),
+    ]).start();
+  }, [a]);
+  const scale = a.interpolate({ inputRange: [0, 1], outputRange: [2.6, 1] });
+  const opacity = a.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.9, 0.9] });
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 14,
+        right: 14,
+        zIndex: 10,
+        opacity,
+        transform: [{ rotate: '-11deg' }, { scale }],
+      }}
+    >
+      <View className="rounded-md border-2 px-2 py-0.5" style={{ borderColor: tint }}>
+        <Text className="text-[13px] font-extrabold tracking-[2px]" style={{ color: tint }}>
+          PAID
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * Itemized receipt styled like a real one. Used before purchase
+ * (paid=false → "Due today") and on the success screen (paid=true → "Total
+ * paid" + card/date + barcode).
+ */
+function ReceiptCard({
+  t,
+  title,
+  monthly,
+  onboarding,
+  total,
+  businessName,
+  merchant,
+  paid = false,
+  cardBrand,
+  last4,
+  dateStr,
+  reference,
+  tint,
+  pageColor,
+}: {
+  t: ReturnType<typeof useTranslation>['t'];
+  title: string;
+  monthly: string;
+  onboarding: string;
+  total: string;
+  businessName?: string;
+  merchant?: string;
+  paid?: boolean;
+  cardBrand?: string;
+  last4?: string;
+  dateStr?: string;
+  reference?: string;
+  tint?: string;
+  pageColor?: string;
+}) {
+  const ref = reference
+    ? reference.replace(/[^a-zA-Z0-9]/g, '').slice(-10).toUpperCase()
+    : null;
+
+  return (
+    <View
+      className="w-full rounded-2xl border border-foreground/10 bg-muted"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+        elevation: 2,
+      }}
+    >
+      {paid ? <PaidStamp tint={tint} /> : null}
+
+      {/* Header */}
+      <View className="items-center px-5 pb-3 pt-5">
+        <View
+          className="mb-2 h-9 w-9 items-center justify-center rounded-full"
+          style={{ backgroundColor: `${tint ?? '#0A261E'}1A` }}
+        >
+          <Icon name="storefront" size={18} color={tint} />
+        </View>
+        {merchant ? (
+          <Text className="text-[13px] font-semibold text-foreground" numberOfLines={1}>
+            {merchant}
+          </Text>
+        ) : null}
+        <Text className="mt-1 text-[11px] font-semibold uppercase tracking-[3px] text-foreground/45">
+          {title}
+        </Text>
+        {(ref || dateStr) && paid ? (
+          <Text className="mt-1 text-[11px] text-foreground/40" style={{ fontVariant: ['tabular-nums'] }}>
+            {ref ? t('ads.receiptNumber', { ref }) : ''}{ref && dateStr ? '  ·  ' : ''}{dateStr ?? ''}
+          </Text>
+        ) : null}
+      </View>
+
+      <TearLine pageColor={pageColor} />
+
+      {/* Line items */}
+      <View className="gap-3 px-5 pt-3">
+        <ReceiptRow label={t('ads.onetimeOnboardingFee')} value={onboarding} />
+        <ReceiptRow label={t('ads.firstMonth')} value={monthly} />
+      </View>
+
+      <View className="px-5">
+        <View
+          className="my-3"
+          style={{ borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.12)', borderStyle: 'dashed' }}
+        />
+        <ReceiptRow label={paid ? t('ads.totalPaid') : t('ads.dueToday')} value={total} bold />
+        <Text className="mt-1 text-[12px] text-foreground/40">
+          {t('ads.thenPerMonth', { amount: monthly })}
+        </Text>
+      </View>
+
+      {/* Meta */}
+      {paid && (businessName || last4) ? (
+        <View className="px-5">
+          <View
+            className="my-3"
+            style={{ borderBottomWidth: 1, borderColor: 'rgba(0,0,0,0.12)', borderStyle: 'dashed' }}
+          />
+          <View className="gap-1.5">
+            {businessName ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[12px] text-foreground/40">{t('ads.businessLabel')}</Text>
+                <Text className="text-[12px] font-medium text-foreground/70">{businessName}</Text>
+              </View>
+            ) : null}
+            {last4 ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[12px] text-foreground/40">{t('ads.paymentLabel')}</Text>
+                <Text
+                  className="text-[12px] font-medium text-foreground/70"
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {cardBrand ? `${cardBrand} ` : ''}•••• {last4}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      {/* Footer */}
+      <View className="items-center px-5 pb-5 pt-4">
+        {paid ? (
+          <>
+            <Text className="mb-3 text-[11px] italic text-foreground/40">
+              {t('ads.thankYouAdvertising')}
+            </Text>
+            <Barcode />
+            {ref ? (
+              <Text
+                className="mt-1.5 text-[10px] tracking-[2px] text-foreground/45"
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {ref}
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <Text className="text-[11px] text-foreground/35">
+            {t('ads.notChargedUntilConfirm')}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
