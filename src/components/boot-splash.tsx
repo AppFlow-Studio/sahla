@@ -40,7 +40,9 @@ const CONFIG_GRACE_MS = 2500;
 const MAX_VISIBLE_MS = 6000;
 const EXIT_MS = 520;
 
-const LOGO_BOX = 96;
+const LOGO_BOX = 132;
+/** Sahla's mark in the credit line, set a little larger than the wordmark. */
+const MARK_SIZE = 26;
 
 /**
  * Cold-boot only. A JS remount (fast refresh, a router reset) shouldn't replay
@@ -67,8 +69,8 @@ const MadeBySahla = memo(function MadeBySahla({ cream }: { cream: string }) {
           by
         </Text>
       </View>
-      <View style={styles.footerLine}>
-        <SahlaMark width={22} height={22} color={rgba(cream, 0.82)} />
+      <View style={styles.creditLine}>
+        <SahlaMark width={MARK_SIZE} height={MARK_SIZE} color={rgba(cream, 0.82)} />
         <Text style={[styles.sahla, { color: rgba(cream, 0.82), fontFamily: fonts.bodySemibold }]}>
           Sahla
         </Text>
@@ -284,16 +286,17 @@ const styles = StyleSheet.create({
   logoBox: {
     width: LOGO_BOX,
     height: LOGO_BOX,
-    borderRadius: 24,
+    // Quarter of the box, so the plate keeps its shape at any LOGO_BOX.
+    borderRadius: LOGO_BOX * 0.25,
     borderWidth: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   name: {
-    marginTop: 22,
-    fontSize: 22,
-    lineHeight: 28,
+    marginTop: 26,
+    fontSize: 29,
+    lineHeight: 36,
     letterSpacing: 0.2,
     textAlign: 'center',
     paddingHorizontal: 40,
@@ -313,6 +316,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+  },
+  creditLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // A touch wider than the line above: the mark outsizes the wordmark, so the
+    // pair needs a little more air to read as one lockup.
+    gap: 6,
   },
   madeWith: {
     fontSize: 11,
