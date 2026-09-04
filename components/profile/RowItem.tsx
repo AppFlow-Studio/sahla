@@ -18,7 +18,7 @@ type Props = {
   showDot?: boolean;
 };
 
-export default function RowItem({ title, icon, renderIcon, onPress }: Props) {
+export default function RowItem({ title, icon, renderIcon, onPress, showDot }: Props) {
   const { colors } = useMasjidConfig();
   const fonts = useFontFamily();
   const isRTL = useIsRTL();
