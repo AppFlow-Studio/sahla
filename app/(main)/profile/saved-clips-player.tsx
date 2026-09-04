@@ -11,6 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { Icon } from '@/src/components/ui/icon';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { ReelItem } from '@/app/(main)/watch';
 import {
   filterSavedReels,
@@ -31,6 +34,8 @@ const VALID_FILTERS: SavedClipsFilter[] = ['all', 'today', 'week', 'month'];
 
 export default function SavedClipsPlayerScreen() {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  useStatusBarStyle('light');
   const { index, filter } = useLocalSearchParams<{ index?: string; filter?: string }>();
   // Floor + clamp the param so a malformed value can't break initialScrollIndex.
   const initialIndex = Math.max(0, Math.floor(Number(index ?? 0)) || 0);

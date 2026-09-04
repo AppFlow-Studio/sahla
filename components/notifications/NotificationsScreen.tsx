@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/src/components/ui/icon';
 import { useEnableNotifications, useNotificationStatus } from '@/src/hooks/use-notification-status';
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useConfigStore } from '@/src/stores/config-store';
 
 import { NotificationTabs } from './NotificationTabs';
@@ -46,6 +47,7 @@ export function NotificationsScreen({ items = [], initialTab, onPressSettings }:
   const enableNotifications = useEnableNotifications();
   const gold = `rgb(${accent.replace(/ /g, ',')})`;
   const [activeTab, setActiveTab] = useState<NotificationTab>(initialTab ?? 'All');
+  useStatusBarStyle('dark');
 
   const filterCategory = TAB_TO_CATEGORY[activeTab];
   const visibleItems = filterCategory

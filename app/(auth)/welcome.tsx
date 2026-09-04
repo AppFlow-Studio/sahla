@@ -21,6 +21,7 @@ import Svg, { Circle } from 'react-native-svg';
 import Mosque from '@/assets/onboarding/mosque.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 const ARABIC = 'Amiri_400Regular';
 
@@ -59,6 +60,7 @@ export default function WelcomeScreen() {
   const config = useMasjidConfig();
   const fonts = useFontFamily();
   const { signOut, isSignedIn } = useAuth();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
   const resetOnboarding = useOnboardingStore((s) => s.reset);
 
   const mosqueY = useSharedValue(200);

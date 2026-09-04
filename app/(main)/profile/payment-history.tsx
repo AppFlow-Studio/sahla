@@ -22,6 +22,7 @@ import { useRouter } from 'expo-router';
 
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useConfigStore } from '@/src/stores/config-store';
@@ -314,6 +315,7 @@ export default function PaymentHistoryScreen() {
   const supabase = useSupabase();
   const { profile } = useProfile();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.background);
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;

@@ -6,7 +6,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
-import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -1093,6 +1093,7 @@ export default function PrayerScreen() {
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const c = usePalette();
+  const { colors: masjidColors } = useMasjidConfig();
   const fonts = useFontFamily();
   const [now, setNow] = useState(new Date());
   const [quranOpen, setQuranOpen] = useState(false);
@@ -1183,7 +1184,9 @@ export default function PrayerScreen() {
 
   const insets = useSafeAreaInsets();
 
-  useStatusBarStyle('light');
+  // Auto-flip icons based on the tenant's primary bg color so the status
+  // bar stays legible whether the admin picks dark green or light cream.
+  useAutoStatusBarStyle(masjidColors.primary);
 
   // Where the scroll view sits at rest, which differs by platform because only
   // iOS honours `contentInset` — see `USE_CONTENT_INSET`.

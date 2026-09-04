@@ -14,6 +14,7 @@ import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
 import { useOnboardingDraft } from '@/src/contexts/onboarding-draft-context';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useOnboardingSubmit } from '@/src/hooks/use-onboarding-submit';
 
 const LANGUAGES: { value: string; labelKey: string }[] = [
@@ -36,6 +37,7 @@ export default function ConfirmScreen() {
   const fonts = useFontFamily();
   const draft = useOnboardingDraft();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.onboardingBackground);
   const submit = useOnboardingSubmit();
 
   const surfaceRgb = `rgb(${colors.onboardingSurface.replace(/ /g, ',')})`;

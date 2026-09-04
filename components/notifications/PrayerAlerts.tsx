@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import {
   type PrayerName,
   usePrayerAlerts,
@@ -89,6 +90,7 @@ export function PrayerAlerts({ onBack }: { onBack?: () => void }) {
   const fonts = useFontFamily();
   const { toggles, getSettings, savePrayerSettings, applyToAll } = usePrayerAlerts();
   const [sheetPrayer, setSheetPrayer] = useState<PrayerName | null>(null);
+  useStatusBarStyle('dark');
 
   const handleBack = onBack ?? (() => router.back());
 

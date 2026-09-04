@@ -10,6 +10,7 @@ import * as Linking from 'expo-linking';
 import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
 import { BackButton } from '@/src/components/ui/back-button';
 
@@ -22,6 +23,7 @@ export default function SignInScreen() {
   const { t } = useTranslation();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

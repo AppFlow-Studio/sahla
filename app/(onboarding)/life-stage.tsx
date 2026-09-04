@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
 import { useOnboardingDraft } from '@/src/contexts/onboarding-draft-context';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 const TILES: { key: string; labelKey: string }[] = [
   { key: 'student', labelKey: 'lifeStageStudent' },
@@ -22,6 +23,7 @@ export default function LifeStageScreen() {
   const { t } = useTranslation();
   const { lifeStages, toggleLifeStage } = useOnboardingDraft();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.onboardingBackground);
 
   const accentRgb = `rgb(${colors.onboardingAccent.replace(/ /g, ',')})`;
   const surfaceRgb = `rgba(${colors.onboardingSurface.replace(/ /g, ',')}, 0.12)`;

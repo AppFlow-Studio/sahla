@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useMyAds, useCancelAdSubscription, type MyAd } from '@/src/hooks/use-my-ads';
 import { BackButton } from '@/src/components/ui/back-button';
 
@@ -41,6 +42,7 @@ export default function AdvertiseStatusScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.background);
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
 

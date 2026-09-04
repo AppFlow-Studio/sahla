@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
 import { BackButton } from '@/src/components/ui/back-button';
 
@@ -17,6 +18,7 @@ export default function TwoFactorScreen() {
   const { t } = useTranslation();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
   const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
   const surfaceAlpha25 = `rgba(${surface}, 0.25)`;

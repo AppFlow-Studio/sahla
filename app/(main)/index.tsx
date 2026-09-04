@@ -19,7 +19,8 @@ import { CommunityPartners } from '@/src/components/home/community-partners';
 import { CommunityPartnerCta } from '@/src/components/home/community-partner-cta';
 import { JummahScheduleCard } from '@/src/components/home/jummah-schedule';
 import { useJummahSchedule, useJummahWindow } from '@/src/hooks/use-jummah-schedule';
-import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import { useScrollAwareStatusBar } from '@/src/hooks/use-status-bar-style';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
 export default function HomeScreen() {
   // The Jummah card is driven entirely by the admin schedule: it shows whenever
@@ -28,7 +29,15 @@ export default function HomeScreen() {
   const { slots } = useJummahSchedule();
   const jummahWindowOpen = useJummahWindow();
   const showJummah = slots.length > 0 && jummahWindowOpen;
-  useStatusBarStyle('light');
+  // Scroll-aware status bar — the ScrollView transitions from a dark
+  // `primary` header to a light `background` body. The hook watches scroll
+  // and flips the icon color when the boundary View climbs above the
+  // status bar. Direction-agnostic (works if the CRM flips either color).
+  const { colors: masjidColors } = useMasjidConfig();
+  const statusBar = useScrollAwareStatusBar({
+    topSurface: masjidColors.primary,
+    bottomSurface: masjidColors.background,
+  });
   const progress = useSharedValue(0);
   // Measured natural height of the card, so the reveal grows/shrinks with the
   // number of jummah slots instead of using a fixed height.
@@ -68,7 +77,12 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        onScroll={statusBar.onScroll}
+        scrollEventThrottle={16}
+      >
         <HomeHeader />
 
         {slots.length > 0 && (
@@ -82,6 +96,7 @@ export default function HomeScreen() {
         <View
           className="bg-background"
           style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
+          onLayout={statusBar.onLayoutBottomSurface}
         >
           <View className="gap-9 px-5 pt-5" style={{ paddingBottom: 160 }}>
             <DonateBanner />

@@ -23,6 +23,7 @@ import { Icon, type IconName } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
 import { env } from '@/src/lib/env';
@@ -51,6 +52,7 @@ export default function AdvertiseApplyScreen() {
   const fonts = useFontFamily();
   const supabase = useSupabase();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.background);
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
 
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;

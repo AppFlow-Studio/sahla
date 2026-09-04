@@ -5,6 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { BackButton } from '@/src/components/ui/back-button';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 type PersonalizationScaffoldProps = {
   step: number;
@@ -39,6 +42,9 @@ export function PersonalizationScaffold({
   const router = useRouter();
   const fonts = useFontFamily();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.onboardingSurface);
   const progress = Math.max(0, Math.min(1, step / totalSteps));
 
   return (
