@@ -12,6 +12,7 @@ import Pattern from '@/assets/onboarding/pattern.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
 export default function SignInScreen() {
@@ -24,6 +25,7 @@ export default function SignInScreen() {
   const isRTL = useIsRTL();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

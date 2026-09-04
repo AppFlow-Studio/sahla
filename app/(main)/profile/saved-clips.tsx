@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import {
   filterSavedReels,
   useSavedReels,
@@ -64,6 +65,7 @@ export default function SavedClipsScreen() {
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const fonts = useFontFamily();
+  useStatusBarStyle('dark');
   const { data, isPending, isError, refetch } = useSavedReels();
   const { width } = useWindowDimensions();
   const [filter, setFilter] = useState<SavedClipsFilter>('all');

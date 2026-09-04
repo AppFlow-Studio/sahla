@@ -23,6 +23,7 @@ import {
 import { storage } from '../lib/mmkv';
 import type { LastViewed } from '../lib/quran-tracker';
 import { useQuranPalette, type QuranPalette } from '../hooks/use-quran-palette';
+import { useStatusBarStyle } from '../hooks/use-status-bar-style';
 import SurahScreen from './SurahScreen';
 import MushafPageScreen from './MushafPageScreen';
 import QuranTrackerScreen from './QuranTrackerScreen';
@@ -44,6 +45,7 @@ type Props = { onClose?: () => void; initial?: LastViewed | null };
 export default function QuranScreen({ onClose, initial }: Props = {}) {
   const { t } = useTranslation();
   const palette = useQuranPalette();
+  useStatusBarStyle('dark');
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [loading, setLoading] = useState(true);

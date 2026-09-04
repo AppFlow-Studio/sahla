@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useToggleSave } from '@/src/hooks/use-saved-content';
 
@@ -49,6 +50,7 @@ type Tab = 'events' | 'programs';
 export default function Saved_Events() {
   const [tab, setTab] = useState<Tab>('events');
   const fonts = useFontFamily();
+  useStatusBarStyle('dark');
   const { userId, isLoaded } = useAuth();
   const supabase = useSupabase();
   const supabaseRef = useRef(supabase);

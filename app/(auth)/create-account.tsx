@@ -12,6 +12,7 @@ import * as WebBrowser from 'expo-web-browser';
 import Pattern from '@/assets/onboarding/pattern.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
 
 // Warm up the browser on Android for faster OAuth redirects.
@@ -67,6 +68,7 @@ export default function CreateAccountScreen() {
   const clerk = useClerk();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
   const bgHex = `rgb(${config.colors.onboardingBackground.replace(/ /g, ',')})`;
   const surfaceHex = `rgb(${config.colors.onboardingSurface.replace(/ /g, ',')})`;
 

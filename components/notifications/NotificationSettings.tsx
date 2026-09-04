@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import {
   useNotificationSettings,
   type SettingsToggleKey,
@@ -187,6 +188,7 @@ export function NotificationSettings({ onBack }: { onBack?: () => void }) {
   const insets = useSafeAreaInsets();
   const fonts = useFontFamily();
   const { toggles, setToggle } = useNotificationSettings();
+  useStatusBarStyle('dark');
 
   const handleBack = onBack ?? (() => router.back());
 

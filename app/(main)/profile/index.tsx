@@ -9,7 +9,8 @@ import { useCallback, useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 
 import { useEnableNotifications } from "@/src/hooks/use-notification-status";
-import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
+import { useScrollAwareStatusBar } from "@/src/hooks/use-status-bar-style";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 export default function ProfileScreen() {
   const { open: openDonate } = useDonation();
@@ -20,7 +21,14 @@ export default function ProfileScreen() {
   // Edit/Complete buttons and the body's Profile setup row drive one instance.
   const [editVisible, setEditVisible] = useState(false);
 
-  useStatusBarStyle("dark");
+  // ProfileHeader paints its top area with the tenant's `primary`, then
+  // ProfileBody starts a light `background` region. The scroll-aware
+  // status bar flips icons as the light body climbs under the status bar.
+  const { colors: masjidColors } = useMasjidConfig();
+  const statusBar = useScrollAwareStatusBar({
+    topSurface: masjidColors.primary,
+    bottomSurface: masjidColors.background,
+  });
 
   const openPersonalization = useCallback(
     () => router.push("/(personalization)/reasons"),
@@ -68,17 +76,24 @@ export default function ProfileScreen() {
         contentInsetAdjustmentBehavior={
           Platform.OS === "ios" ? "never" : undefined
         }
+        onScroll={statusBar.onScroll}
+        scrollEventThrottle={16}
       >
         <View className="w-full ">
           <ProfileHeader
             onPressEdit={openEditProfile}
             onPressCompleteProfile={handlePressCompleteProfile}
           />
-          <ProfileBody
-            onPressPersonalized={openPersonalization}
-            onPressNotifications={enableNotifications}
-            onPressCompleteProfile={openEditProfile}
-          />
+          {/* Wrap ProfileBody so we can measure where the light bg region
+              begins — the scroll-aware status bar flips icons once this
+              boundary climbs above the safe-area top. */}
+          <View onLayout={statusBar.onLayoutBottomSurface}>
+            <ProfileBody
+              onPressPersonalized={openPersonalization}
+              onPressNotifications={enableNotifications}
+              onPressCompleteProfile={openEditProfile}
+            />
+          </View>
         </View>
       </ScrollView>
       <EditProfileSheet visible={editVisible} onClose={() => setEditVisible(false)} />

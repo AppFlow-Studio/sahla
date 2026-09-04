@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import {
   useAdSubmissions,
   useAdDecision,
@@ -44,6 +45,7 @@ export default function AdminBusinessAds() {
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.card);
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
 

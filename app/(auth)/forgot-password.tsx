@@ -10,6 +10,7 @@ import Pattern from '@/assets/onboarding/pattern.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 type Step = 'email' | 'code' | 'new-password';
 
@@ -20,6 +21,7 @@ export default function ForgotPasswordScreen() {
   const isRTL = useIsRTL();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
   const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
   const surfaceAlpha25 = `rgba(${surface}, 0.25)`;

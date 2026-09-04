@@ -27,6 +27,7 @@ import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSpeakers } from '@/src/hooks/use-speakers';
 import {
   CONTENT_TYPES,
@@ -105,6 +106,7 @@ export default function ProgramsScreen() {
   const isRTL = useIsRTL();
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.card);
   const fg = colors.foreground.replace(/ /g, ',');
   const fgRgb = `rgb(${fg})`;
   const mutedRgb = `rgba(${fg}, 0.5)`;

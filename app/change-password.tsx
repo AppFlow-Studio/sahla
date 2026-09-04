@@ -7,12 +7,14 @@ import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 export default function ChangePasswordScreen() {
   const { user } = useUser();
   const router = useRouter();
   const { t } = useTranslation();
   const isRTL = useIsRTL();
+  useStatusBarStyle('light');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

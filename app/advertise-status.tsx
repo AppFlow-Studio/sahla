@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Icon } from '@/src/components/ui/icon';
 import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useMyAds, useCancelAdSubscription, type MyAd } from '@/src/hooks/use-my-ads';
 
 // Primary status line shown to the advertiser, derived from subscription +
@@ -42,6 +43,7 @@ export default function AdvertiseStatusScreen() {
   const isRTL = useIsRTL();
   const insets = useSafeAreaInsets();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.background);
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
 

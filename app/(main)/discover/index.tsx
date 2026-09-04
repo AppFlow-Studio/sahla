@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 
 import { useTranslation } from "react-i18next";
 
-import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
+import { useAutoStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Haptics from "expo-haptics";
 import { ActivityIndicator, Text, View } from "react-native";
@@ -414,7 +414,10 @@ export default function DiscoverScreen() {
     router.push(`/content/${id}`);
   }, []);
 
-  useStatusBarStyle("dark");
+  // Discover renders on the tenant's `background` color (cream by default,
+  // but could be anything the admin sets) — auto-flip icons to stay
+  // readable.
+  useAutoStatusBarStyle(colors.background);
 
   if (!fontsLoaded) {
     return (

@@ -12,6 +12,7 @@ import { useContentItems } from "@/src/hooks/use-content-items";
 import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useAutoStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 
 function toTitleCase(s: string): string {
   return s
@@ -46,6 +47,7 @@ export default function DiscoverCalendarScreen() {
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.background);
   const fonts = useFontFamily();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;

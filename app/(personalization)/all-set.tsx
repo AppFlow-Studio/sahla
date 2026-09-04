@@ -17,6 +17,8 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import Mandala from '@/assets/onboarding/mandala.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useUserPreferences } from '@/src/hooks/use-user-preferences';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
@@ -49,6 +51,8 @@ export default function AllSetScreen() {
   const { user } = useUser();
   const fonts = useFontFamily();
   const { t } = useTranslation();
+  const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.onboardingSurface);
   const { markPersonalizationComplete } = useUserPreferences();
 
   // Reaching this screen means the personalization flow is finished — stamp it

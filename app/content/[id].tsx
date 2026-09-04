@@ -33,6 +33,7 @@ import { useIsSaved, useToggleSave } from "@/src/hooks/use-saved-content";
 import { useSupabase } from "@/src/hooks/use-supabase";
 import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 import { useConfigStore } from "@/src/stores/config-store";
 import { useIsRTL } from "@/src/hooks/use-is-rtl";
 
@@ -138,6 +139,7 @@ export default function ContentDetailScreen() {
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
   const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
+  useStatusBarStyle('light');
   const toastBg = rgb(colors.foreground);
   const toastText = rgb(colors.background);
 

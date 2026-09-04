@@ -7,6 +7,7 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import Mandala from '@/assets/onboarding/mandala.svg';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
 const MANDALA_SIZE = 402;
@@ -39,6 +40,7 @@ export default function WelcomeFullScreen() {
   const { t } = useTranslation();
   const config = useMasjidConfig();
   const fonts = useFontFamily();
+  useAutoStatusBarStyle(config.colors.onboardingLayer);
   const storedName = useOnboardingStore((s) => s.firstName);
   const firstName = storedName.trim().split(/\s+/)[0] || t('onboarding.friendFallback');
 
