@@ -1,5 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  type NotificationKey,
+  resolveMessage,
+  type TemplateOverride,
+} from "../_shared/automated-notifications.ts";
+import { to12Hour } from "../_shared/content-schedule.ts";
 
 /**
  * Sends prayer-time push notifications. Runs every minute via pg_cron.
@@ -86,20 +92,12 @@ function computeIqamahHM(athan: string, rule: IqamahRule | undefined): string | 
   return null;
 }
 
-function messageFor(
-  kind: string,
-  prayer: string,
-  mosqueName: string | null,
-): { title: string; body: string } {
-  const at = mosqueName ? ` at ${mosqueName}` : "";
-  if (kind === "iqamah") {
-    return { title: `${prayer} Iqamah`, body: `Iqamah for ${prayer}${at} is now.` };
-  }
-  if (kind === "reminder_30") {
-    return { title: `${prayer} in 30 minutes`, body: `${prayer}${at} is in 30 minutes.` };
-  }
-  return { title: prayer, body: `It's time for ${prayer}${at}.` };
-}
+/** Notification kind → the catalogue key whose wording a masjid can edit. */
+const KIND_TO_TEMPLATE: Record<string, NotificationKey> = {
+  athan: "prayer.athan",
+  iqamah: "prayer.iqamah",
+  reminder_30: "prayer.reminder_30",
+};
 
 // deno-lint-ignore no-explicit-any
 type Supa = any;
@@ -173,24 +171,39 @@ Deno.serve(async (req: Request) => {
         .from("iqamah_config")
         .select("prayer_name, mode, fixed_time, offset_minutes")
         .eq("mosque_id", mosque.id);
+
+      // Whatever wording this masjid has set in the CRM; anything unset falls
+      // back to the catalogue's default inside resolveMessage.
+      const { data: templateRows } = await supabase
+        .from("automated_notification_templates")
+        .select("notification_key, title, body, enabled")
+        .eq("mosque_id", mosque.id)
+        .like("notification_key", "prayer.%");
+      const templates = new Map<string, TemplateOverride>(
+        (templateRows ?? []).map((t: TemplateOverride) => [t.notification_key, t]),
+      );
       const ruleMap = new Map<string, IqamahRule>(
         (rules ?? []).map((r: IqamahRule) => [r.prayer_name.toLowerCase(), r]),
       );
 
       // Which (prayer, kind) are due this minute?
-      const due: { prayer: string; kind: string }[] = [];
+      const due: { prayer: string; kind: string; time: string }[] = [];
       for (const p of prayers) {
         const athanHM = toHM(p.athan_time);
         if (!athanHM) continue;
-        if (athanHM === nowHM) due.push({ prayer: p.prayer_name, kind: "athan" });
+        if (athanHM === nowHM) {
+          due.push({ prayer: p.prayer_name, kind: "athan", time: athanHM });
+        }
 
         const iqHM =
           computeIqamahHM(p.athan_time, ruleMap.get(p.prayer_name.toLowerCase())) ??
           toHM(p.iqamah_time);
-        if (iqHM && iqHM === nowHM) due.push({ prayer: p.prayer_name, kind: "iqamah" });
+        if (iqHM && iqHM === nowHM) {
+          due.push({ prayer: p.prayer_name, kind: "iqamah", time: iqHM });
+        }
 
         if (addMinutes(nowHM, 30) === athanHM) {
-          due.push({ prayer: p.prayer_name, kind: "reminder_30" });
+          due.push({ prayer: p.prayer_name, kind: "reminder_30", time: athanHM });
         }
       }
 
@@ -228,8 +241,15 @@ Deno.serve(async (req: Request) => {
         const pushTokens = [...new Set((tokenRows ?? []).map((t: { token: string }) => t.token))];
         if (pushTokens.length === 0) continue;
 
-        const { title, body } = messageFor(d.kind, d.prayer, mosque.name);
-        totalSent += await sendExpoPush(supabase, pushTokens, title, body);
+        const templateKey = KIND_TO_TEMPLATE[d.kind];
+        const message = resolveMessage(
+          templateKey,
+          { prayer: d.prayer, masjid: mosque.name, time: to12Hour(d.time) },
+          templates.get(templateKey),
+        );
+        // null means the masjid switched this kind off in the CRM.
+        if (!message) continue;
+        totalSent += await sendExpoPush(supabase, pushTokens, message.title, message.body);
         fired.push(`${mosque.id}:${d.prayer}:${d.kind}=${pushTokens.length}`);
       }
     }
