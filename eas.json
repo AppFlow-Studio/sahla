@@ -41,32 +41,20 @@
       },
       "channel": "sahla-prod"
     },
-    "mas-cnj-dev": {
-      "extends": "base",
-      "env": {
-        "MASJID_ID": "mas-cnj"
-      },
-      "channel": "mas-cnj-dev"
-    },
-    "mas-cnj-preview": {
-      "extends": "base",
-      "distribution": "internal",
-      "env": {
-        "MASJID_ID": "mas-cnj"
-      },
-      "channel": "mas-cnj-preview"
-    },
-    "mas-cnj-prod": {
+    "sahla-demo-masjid-mt93mzuj-prod": {
       "extends": "base",
       "developmentClient": false,
       "distribution": "store",
+      "environment": "production",
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
-        "MASJID_ID": "mas-cnj"
+        "MASJID_ID": "sahla-demo-masjid-mt93mzuj",
+        "IOS_BUNDLE_ID": "com.sahlamasjiddemo.com",
+        "ANDROID_PACKAGE": "com.sahlamasjiddemo.com"
       },
-      "channel": "mas-cnj-prod"
+      "channel": "sahla-demo-masjid-mt93mzuj-prod"
     },
     "mas-brooklyn-mqb18esx-dev": {
       "extends": "base",

@@ -29,6 +29,7 @@ const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
   sahla: { displayName: "Sahla App" },
   "mas-cnj": { displayName: "MAS Central New Jersey" },
   "mas-brooklyn-mqb18esx": { displayName: "MAS BK" },
+  "sahla-demo-masjid-mt93mzuj": { displayName: "Sahla" },
 };
 
 const MASJID_ID = process.env.MASJID_ID ?? "sahla";
@@ -78,8 +79,18 @@ const SPLASH_BG = themeColor("onboardingBackground");
 /** The masjid's brand color, used for native chrome outside the JS theme. */
 const BRAND_COLOR = themeColor("primary");
 
-const IOS_BUNDLE_ID = `com.sahla.${MASJID_ID}`;
-const ANDROID_PACKAGE = `com.sahlaco.${MASJID_ID.replace(/-/g, "_")}`;
+/**
+ * Bundle id / package normally derive from `MASJID_ID`, so every tenant is
+ * unique and two variants coexist on one device / store. A build profile may
+ * override them via env when a store app was registered under a pre-existing
+ * identifier that doesn't follow the `com.sahla.<slug>` scheme (e.g. the
+ * `sahla-demo-masjid-mt93mzuj-prod` profile pins `com.sahlamasjiddemo.com`).
+ * Falls back to the
+ * derived id for every profile that sets neither.
+ */
+const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID ?? `com.sahla.${MASJID_ID}`;
+const ANDROID_PACKAGE =
+  process.env.ANDROID_PACKAGE ?? `com.sahlaco.${MASJID_ID.replace(/-/g, "_")}`;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
