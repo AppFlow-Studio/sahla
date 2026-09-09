@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { resolveMessage, type TemplateOverride } from "../_shared/automated-notifications.ts";
 
 /**
  * Engagement-nudge sender — NT-ENGAGE-01.
@@ -100,13 +101,33 @@ async function sendExpoPush(
   return sent;
 }
 
-function quranGoalMessage(remaining: number, mosqueName: string | null): { title: string; body: string } {
-  const pageWord = remaining === 1 ? "page" : "pages";
-  const at = mosqueName ? ` at ${mosqueName}` : "";
-  return {
-    title: `${remaining} more ${pageWord} to hit your Quran goal`,
-    body: `Almost there — open the Quran${at} to finish today's reading.`,
-  };
+/**
+ * The wording now lives in the shared catalogue so a masjid can edit it in the
+ * CRM. Returns null when they've switched the nudge off entirely.
+ */
+async function quranGoalMessage(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  mosqueId: string,
+  remaining: number,
+  mosqueName: string | null,
+): Promise<{ title: string; body: string } | null> {
+  const { data } = await supabase
+    .from("automated_notification_templates")
+    .select("notification_key, title, body, enabled")
+    .eq("mosque_id", mosqueId)
+    .eq("notification_key", "engagement.quran_goal")
+    .maybeSingle();
+
+  return resolveMessage(
+    "engagement.quran_goal",
+    {
+      pages: String(remaining),
+      pageWord: remaining === 1 ? "page" : "pages",
+      masjid: mosqueName,
+    },
+    (data as TemplateOverride | null) ?? undefined,
+  );
 }
 
 Deno.serve(async (req: Request) => {
@@ -209,7 +230,14 @@ Deno.serve(async (req: Request) => {
         ];
         if (pushTokens.length === 0) continue;
 
-        const { title, body } = quranGoalMessage(remaining, mosque.name);
+        const message = await quranGoalMessage(
+          supabase,
+          mosque.id,
+          remaining,
+          mosque.name,
+        );
+        if (!message) continue;
+        const { title, body } = message;
         totalSent += await sendExpoPush(supabase, pushTokens, title, body);
         fired.push(`${mosque.id}:${userId}:${QURAN_GOAL_NUDGE}=${pushTokens.length}`);
       }
