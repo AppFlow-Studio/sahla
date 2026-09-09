@@ -85,6 +85,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "sahla-demo-masjid-mt93mzuj-prod": {
+      "ios": {
+        "appleId": "info@sahla.co",
+        "appleTeamId": "R8467JY5X8"
+      }
+    }
   }
 }
