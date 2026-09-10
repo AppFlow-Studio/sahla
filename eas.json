@@ -88,6 +88,7 @@
     "production": {},
     "sahla-demo-masjid-mt93mzuj-prod": {
       "ios": {
+        "ascAppId": "6810416414",
         "appleId": "info@sahla.co",
         "appleTeamId": "R8467JY5X8"
       }
