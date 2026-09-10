@@ -50,6 +50,23 @@ verify_jwt = false
 [functions.delete-payment-method]
 verify_jwt = false
 
+# The three charge-path functions. These were absent while payments were
+# switched off, so nothing noticed; with giving turned back on they are on the
+# critical path (donation intent, its cancel-on-back-out, and the ad
+# subscription) and each would 401 the app if left to the verify_jwt default.
+[functions.create-donation-intent]
+verify_jwt = false
+
+[functions.cancel-donation-intent]
+verify_jwt = false
+
+[functions.create-ad-subscription]
+verify_jwt = false
+
+# Saves a card with no charge, so Payment Methods can add one directly.
+[functions.create-setup-intent]
+verify_jwt = false
+
 [functions.reels-actions]
 verify_jwt = false
 

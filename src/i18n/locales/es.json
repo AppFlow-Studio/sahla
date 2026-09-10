@@ -296,11 +296,7 @@
     "paymentLabel": "Pago",
     "thankYouAdvertising": "Gracias por anunciarte con nosotros",
     "notChargedUntilConfirm": "No se te cobrará hasta que confirmes",
-    "soonTitle": "La publicidad llegará pronto",
-    "soonBody": "Los anuncios para negocios aún no están disponibles en esta versión. Te avisaremos cuando lo estén.",
-    "soonCta": "Entendido",
-    "reachLine": "Anuncia tu negocio a más de 3.000 miembros de la comunidad a través de la app.",
-    "pricingComingSoon": "Compartiremos los precios cuando la publicidad esté disponible."
+    "reachLine": "Anuncia tu negocio a más de 3.000 miembros de la comunidad a través de la app."
   },
   "auth": {
     "devSignOutReset": "[DEV] Cerrar sesión y restablecer",
@@ -525,10 +521,7 @@
     "errorTitle": "Error",
     "somethingWentWrong": "Algo salió mal.",
     "paymentNotCompleted": "El pago no se completó.",
-    "paymentFailedTitle": "Pago fallido",
-    "soonTitle": "Las donaciones llegarán pronto",
-    "soonBody": "Donar aún no está disponible en esta versión. Te avisaremos en cuanto esté activo.",
-    "soonCta": "Entendido"
+    "paymentFailedTitle": "Pago fallido"
   },
   "home": {
     "greeting": "Assalamu Alaikum",
@@ -834,8 +827,6 @@
     "failedToRemoveCard": "Error al quitar la tarjeta",
     "securedByStripe": "ASEGURADO POR STRIPE",
     "stripeSecurityBody": "Tus métodos de pago se almacenan de forma segura mediante Stripe. Los datos de la tarjeta nunca se guardan en nuestros servidores.",
-    "comingSoon": "Próximamente",
-    "cardManagementSoon": "La administración de tarjetas estará disponible pronto.",
     "addNewCard": "Agregar nueva tarjeta",
     "noSavedCards": "No hay tarjetas guardadas",
     "noSavedCardsBody": "Toca \"Agregar nueva tarjeta\" para guardar un método de pago para futuras donaciones rápidas.",
@@ -859,7 +850,11 @@
     "termsRow": "Términos de uso",
     "privacyRow": "Política de privacidad",
     "sectionLegal": "Legal",
-    "legalRow": "Términos y privacidad"
+    "legalRow": "Términos y privacidad",
+    "addingCard": "Añadiendo tarjeta…",
+    "addCardErrorTitle": "No se pudo añadir la tarjeta",
+    "addCardErrorBody": "Se produjo un error al añadir tu tarjeta. Inténtalo de nuevo.",
+    "addCardUnavailable": "La gestión de tarjetas no está disponible ahora mismo. Inténtalo en breve."
   },
   "watch": {
     "notInterested": "No me interesa",
