@@ -6,7 +6,6 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
@@ -14,6 +13,7 @@ import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
+import { OAUTH_REDIRECT_URL } from '@/src/lib/oauth-redirect';
 
 // Warm up the browser on Android for faster OAuth redirects.
 if (Platform.OS === 'android') {
@@ -178,7 +178,7 @@ export default function CreateAccountScreen() {
       if (Platform.OS === 'ios') {
         result = await startAppleAuthenticationFlow();
       } else {
-        result = await startSSOFlow({ strategy: 'oauth_apple', redirectUrl: Linking.createURL('/') });
+        result = await startSSOFlow({ strategy: 'oauth_apple', redirectUrl: OAUTH_REDIRECT_URL });
         if (result.authSessionResult?.type === 'dismiss') return;
       }
       await activateOAuthSession(result);
@@ -195,7 +195,7 @@ export default function CreateAccountScreen() {
     if (isSignedIn) await signOut().catch(() => {});
     setLoading('google');
     try {
-      const result = await startSSOFlow({ strategy: 'oauth_google', redirectUrl: Linking.createURL('/') });
+      const result = await startSSOFlow({ strategy: 'oauth_google', redirectUrl: OAUTH_REDIRECT_URL });
       if (result.authSessionResult?.type === 'dismiss') return;
       await activateOAuthSession(result);
     } catch (err) {

@@ -99,7 +99,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: "1.0.6",
   orientation: "portrait",
   icon: "./assets/images/sahla-logo-arabic.png",
-  scheme: `sahla-${MASJID_ID}`,
+  // Per-tenant scheme for deep links, plus a shared `sahlaauth` scheme every
+  // masjid app carries so Clerk's mobile-SSO redirect allowlist is configured
+  // once (see src/lib/oauth-redirect.ts). First entry stays the primary.
+  scheme: [`sahla-${MASJID_ID}`, "sahlaauth"],
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   updates: {
