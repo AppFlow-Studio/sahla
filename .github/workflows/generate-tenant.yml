@@ -47,6 +47,21 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node scripts/generate-tenant.mjs "${{ steps.slug.outputs.value }}"
 
+      # Provisions Clerk (org + shared SSO redirect) and Apple (bundle id +
+      # Sign in with Apple) for the tenant. Never blocks the PR: any missing
+      # credential is skipped inside the script, and the step is non-fatal.
+      - name: Provision auth (Clerk + Apple)
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: node scripts/provision-tenant.mjs "${{ steps.slug.outputs.value }}"
+
       - name: Open PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
