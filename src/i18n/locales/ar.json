@@ -308,11 +308,7 @@
     "paymentLabel": "الدفع",
     "thankYouAdvertising": "شكرًا لإعلانك معنا",
     "notChargedUntilConfirm": "لن يتم خصم أي مبلغ حتى تؤكد",
-    "soonTitle": "الإعلانات قادمة قريباً",
-    "soonBody": "إعلانات الأعمال غير متاحة في هذا الإصدار بعد. سنتواصل معك عند توفرها.",
-    "soonCta": "حسناً",
-    "reachLine": "أعلن عن عملك لأكثر من 3,000 فرد من أفراد المجتمع عبر التطبيق.",
-    "pricingComingSoon": "سيتم مشاركة الأسعار عند إطلاق خدمة الإعلانات."
+    "reachLine": "أعلن عن عملك لأكثر من 3,000 فرد من أفراد المجتمع عبر التطبيق."
   },
   "auth": {
     "devSignOutReset": "[DEV] تسجيل الخروج وإعادة التعيين",
@@ -537,10 +533,7 @@
     "errorTitle": "خطأ",
     "somethingWentWrong": "حدث خطأ ما.",
     "paymentNotCompleted": "لم تكتمل عملية الدفع.",
-    "paymentFailedTitle": "فشل الدفع",
-    "soonTitle": "التبرعات قادمة قريباً",
-    "soonBody": "التبرع غير متاح في هذا الإصدار بعد. سنعلمك فور توفره.",
-    "soonCta": "حسناً"
+    "paymentFailedTitle": "فشل الدفع"
   },
   "home": {
     "greeting": "السلام عليكم",
@@ -858,8 +851,6 @@
     "failedToRemoveCard": "تعذّرت إزالة البطاقة",
     "securedByStripe": "مؤمّن بواسطة Stripe",
     "stripeSecurityBody": "يتم تخزين طرق الدفع الخاصة بك بأمان بواسطة Stripe. لا يتم تخزين تفاصيل البطاقة على خوادمنا أبدًا.",
-    "comingSoon": "قريبًا",
-    "cardManagementSoon": "ستتوفر إدارة البطاقات قريبًا.",
     "addNewCard": "إضافة بطاقة جديدة",
     "noSavedCards": "لا توجد بطاقات محفوظة",
     "noSavedCardsBody": "اضغط على \"إضافة بطاقة جديدة\" لحفظ طريقة دفع للتبرعات المستقبلية السريعة.",
@@ -887,7 +878,11 @@
     "termsRow": "شروط الاستخدام",
     "privacyRow": "سياسة الخصوصية",
     "sectionLegal": "قانوني",
-    "legalRow": "الشروط والخصوصية"
+    "legalRow": "الشروط والخصوصية",
+    "addingCard": "جارٍ إضافة البطاقة…",
+    "addCardErrorTitle": "تعذّرت إضافة البطاقة",
+    "addCardErrorBody": "حدث خطأ أثناء إضافة بطاقتك. يُرجى المحاولة مرة أخرى.",
+    "addCardUnavailable": "إدارة البطاقات غير متاحة حاليًا. يُرجى المحاولة بعد قليل."
   },
   "watch": {
     "notInterested": "غير مهتم",
