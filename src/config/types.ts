@@ -30,6 +30,12 @@ export type MasjidColors = {
   depth: string;
   /** True shadow color (used for drop shadows / cast shadows only). */
   shadow: string;
+  /**
+   * Error / destructive text and states. Defaults to a conventional red for
+   * every tenant — a masjid can rebrand it, but it should stay legible as an
+   * error, so it is deliberately not derived from the brand palette.
+   */
+  danger: string;
   onboardingBackground: string;
   onboardingSurface: string;
   onboardingAccent: string;
@@ -64,6 +70,17 @@ export type MasjidConfig = {
   prayerCalculationMethod?: string;
   /** Clerk Organization ID for this mosque — fetched from Supabase `mosques` row. */
   clerkOrgId?: string;
+  /**
+   * Font theme key — one of the keys in `src/theme/fonts.ts` (FONT_THEMES).
+   * Set by the masjid admin; defaults to "classic" when absent/unknown.
+   */
+  fontTheme?: string;
+  /**
+   * Home-screen header style key — one of the keys in
+   * `src/theme/header-style.ts` (HEADER_STYLES). Set by the masjid admin;
+   * defaults to "classic" when absent/unknown.
+   */
+  headerStyle?: string;
 };
 
 /**

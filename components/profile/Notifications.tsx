@@ -1,19 +1,22 @@
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Icon } from "@/src/components/ui/icon";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { IncompleteBadge } from '@/src/components/profile/IncompleteBadge';
 
 type Props = {
   onEnablePress: () => void;
+  /** Show the red "1" pill — set by useSetupCompleteness when notifications are off. */
+  incomplete?: boolean;
 };
 
-export default function Notifications({ onEnablePress }: Props) {
+export default function Notifications({ onEnablePress, incomplete }: Props) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
 
   return (
@@ -27,40 +30,41 @@ export default function Notifications({ onEnablePress }: Props) {
         borderStyle: 'dashed',
       }}
     >
-      <View className="min-w-0 flex-1 flex-row items-center gap-2 pr-2">
-        <IconSymbol name="bell.fill" size={14} color={accentRgb} />
+      <View className="min-w-0 flex-1 flex-row items-center gap-2 pe-2">
+        <Icon name="bell" size={14} color={accentRgb} fill={accentRgb} />
         <Text
           numberOfLines={1}
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodyMedium,
             fontWeight: "500",
             fontSize: 11,
             lineHeight: 15,
             color: accentRgb,
           }}
         >
-          Push Notifications are off
+          {t('profile.pushNotificationsOff')}
         </Text>
       </View>
       <Pressable
         onPress={onEnablePress}
         accessibilityRole="button"
-        accessibilityLabel="Enable push notifications"
+        accessibilityLabel={t('profile.enablePushNotifications')}
         className="shrink-0 flex-row items-center gap-1.5"
         hitSlop={8}
       >
+        {incomplete ? <IncompleteBadge /> : null}
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontWeight: "400",
             fontSize: 11,
             lineHeight: 15,
             color: accentRgb,
           }}
         >
-          Enable
+          {t('profile.enable')}
         </Text>
-        <IconSymbol name="chevron.right" size={8} color={accentRgb} />
+        <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={accentRgb} />
       </Pressable>
     </View>
   );

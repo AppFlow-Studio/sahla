@@ -1,8 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useTranslation } from 'react-i18next';
 
+import { Icon, type IconName } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import MasjidLogo from '@/assets/masjid-logo.svg';
 import NoWifiSignal from '@/assets/images/no_wifi_signal.png';
@@ -35,7 +36,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useRequireAccount } from '@/src/components/auth/sign-in-prompt';
+import { AppBlurView } from '@/src/components/ui/blur-view';
+import { LIQUID_GLASS } from '@/src/components/ui/glass-surface';
+import { TAB_BAR_CLEARANCE } from '@/src/components/navigation/tab-bar';
 import { useIsFocused } from '@react-navigation/native';
 import { useNetInfo } from '@react-native-community/netinfo';
 
@@ -50,8 +56,14 @@ import {
   type ReelReportReason,
 } from '@/src/hooks/use-report-reel';
 import { useConfigStore } from '@/src/stores/config-store';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 
 
+
+/** "10 38 30" -> "rgb(10, 38, 30)" */
+function rgb(triplet: string) {
+  return `rgb(${triplet.trim().split(/\s+/).join(', ')})`;
+}
 
 function formatCount(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
@@ -70,18 +82,20 @@ function ActionButton({
   icon,
   label,
   color = '#ffffff',
+  fill = 'none',
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label?: string;
   color?: string;
+  fill?: string;
   onPress?: () => void;
 }) {
   return (
     <Pressable onPress={onPress} className="items-center active:opacity-70">
-      <Ionicons name={icon} size={28} color={color} />
+      <Icon name={icon} size={28} color={color} fill={fill} />
       {label ? (
-        <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
+        <Text style={{ fontSize: 11, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
           {label}
         </Text>
       ) : null}
@@ -122,13 +136,14 @@ function LikeButton({
   return (
     <Pressable onPress={handlePress} className="items-center active:opacity-70">
       <Animated.View style={heartStyle}>
-        <Ionicons
+        <Icon
           name={liked ? 'heart' : 'heart-outline'}
           size={28}
           color={liked ? '#FF0005' : '#ffffff'}
+          fill={liked ? '#FF0005' : 'none'}
         />
       </Animated.View>
-      <Text style={{ fontSize: 10, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
+      <Text style={{ fontSize: 11, color: '#ffffff', fontWeight: '600', marginTop: 2 }}>
         {count}
       </Text>
     </Pressable>
@@ -142,6 +157,7 @@ function ReelMenu({
   onNotInterested: () => void;
   onReport: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -161,9 +177,9 @@ function ReelMenu({
         className="flex-row items-center active:opacity-70"
         style={{ paddingHorizontal: 14, paddingVertical: 12 }}
       >
-        <Ionicons name="ban-outline" size={14} color="#0A261E" />
-        <Text style={{ marginLeft: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
-          Not interested
+        <Icon name="ban-outline" size={14} color="#0A261E" />
+        <Text style={{ marginStart: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
+          {t('watch.notInterested')}
         </Text>
       </Pressable>
       <View style={{ height: 0.5, backgroundColor: 'rgba(10, 38, 30, 0.15)', marginHorizontal: 10 }} />
@@ -172,9 +188,9 @@ function ReelMenu({
         className="flex-row items-center active:opacity-70"
         style={{ paddingHorizontal: 14, paddingVertical: 12 }}
       >
-        <Ionicons name="flag-outline" size={14} color="#0A261E" />
-        <Text style={{ marginLeft: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
-          Report
+        <Icon name="flag-outline" size={14} color="#0A261E" />
+        <Text style={{ marginStart: 10, fontSize: 12, color: '#0A261E', fontWeight: '500' }}>
+          {t('watch.report')}
         </Text>
       </Pressable>
     </View>
@@ -257,7 +273,9 @@ function BottomSheet({
 }
 
 function MasjidCard({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const masjidName = useConfigStore((s) => s.config.displayName);
+  const brand = useConfigStore((s) => s.config.colors);
 
   return (
     <View
@@ -292,32 +310,32 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
               width: 45,
               height: 45,
               borderRadius: 10,
-              backgroundColor: '#0A261E',
+              backgroundColor: rgb(brand.primary),
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
             }}
           >
-            <MasjidLogo width={32} height={32} />
+            <MasjidLogo width={32} height={32} color={rgb(brand.accent)} />
           </View>
-          <View style={{ marginLeft: 12, flex: 1 }}>
+          <View style={{ marginStart: 12, flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: '600', color: '#0A261E' }}>
               {masjidName}
             </Text>
             <Text style={{ fontSize: 12, color: 'rgba(10,38,30,0.6)', marginTop: 3 }}>
-              Muslim American Society
+              {t('watch.organization')}
             </Text>
             <View style={{ marginTop: 4 }} className="flex-row items-center">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Ionicons
+                <Icon
                   key={i}
                   name="star"
                   size={10}
                   color="rgba(10,38,30,0.5)"
-                  style={{ marginRight: 2 }}
+                  style={{ marginEnd: 2 }}
                 />
               ))}
-              <Text style={{ fontSize: 10, color: 'rgba(10,38,30,0.6)', marginLeft: 4 }}>4.9</Text>
+              <Text style={{ fontSize: 11, color: 'rgba(10,38,30,0.6)', marginStart: 4 }}>4.9</Text>
             </View>
           </View>
           <Pressable
@@ -330,7 +348,7 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
               borderRadius: 12,
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#ffffff' }}>GET</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#ffffff' }}>{t('watch.get')}</Text>
           </Pressable>
         </View>
       </View>
@@ -346,22 +364,21 @@ function MasjidCard({ onClose }: { onClose: () => void }) {
             fontWeight: '600',
           }}
         >
-          ABOUT THIS APP
+          {t('watch.aboutThisApp')}
         </Text>
         <Text style={{ fontSize: 13, color: '#0A261E', marginTop: 12, lineHeight: 20 }}>
-          Your community hub for prayer times, events, programs, and staying connected with{' '}
-          {masjidName}
+          {t('watch.aboutDescription', { masjid: masjidName })}
         </Text>
       </View>
 
       <View style={{ height: 0.5, backgroundColor: 'rgba(10,38,30,0.1)' }} />
 
       <View className="flex-row" style={{ paddingVertical: 24 }}>
-        <StatColumn label="RATING" value="4.9" />
+        <StatColumn label={t('watch.statRating')} value="4.9" />
         <StatDivider />
-        <StatColumn label="AGE" value="12+" />
+        <StatColumn label={t('watch.statAge')} value="12+" />
         <StatDivider />
-        <StatColumn label="PRICE" value="Free" />
+        <StatColumn label={t('watch.statPrice')} value={t('watch.priceFree')} />
       </View>
     </View>
   );
@@ -393,6 +410,7 @@ function DescriptionPanel({
   visible: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const translateY = useSharedValue(500);
   const backdropOpacity = useSharedValue(0);
@@ -465,9 +483,9 @@ function DescriptionPanel({
 
             {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 }}>
-              <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>Description</Text>
+              <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '700' }}>{t('watch.description')}</Text>
               <Pressable onPress={onClose} hitSlop={12}>
-                <Ionicons name="close" size={22} color="#ffffff" />
+                <Icon name="close" size={22} color="#ffffff" />
               </Pressable>
             </View>
           </View>
@@ -499,7 +517,7 @@ function DescriptionPanel({
               <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
                 {formatCount(reel.like_count ?? 0)}
               </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>Likes</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{t('watch.likes')}</Text>
             </View>
             <View
               style={{
@@ -513,7 +531,7 @@ function DescriptionPanel({
               <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
                 {formatCount(reel.view_count ?? 0)}
               </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>Views</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{t('watch.views')}</Text>
             </View>
           </View>
         </ScrollView>
@@ -536,6 +554,8 @@ function ReportSheet({
   onSelectReason: (reason: ReelReportReason) => void;
   onBlock: () => void;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <View
@@ -562,10 +582,10 @@ function ReportSheet({
         />
         <View style={{ paddingHorizontal: 22, paddingTop: 18, paddingBottom: 6 }}>
           <Text style={{ fontSize: 17, fontWeight: '700', color: '#0A261E' }}>
-            Report this reel
+            {t('watch.reportTitle')}
           </Text>
           <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)', marginTop: 4 }}>
-            Why are you reporting this?
+            {t('watch.reportSubtitle')}
           </Text>
         </View>
 
@@ -576,8 +596,8 @@ function ReportSheet({
             className="flex-row items-center justify-between active:opacity-60"
             style={{ paddingHorizontal: 22, paddingVertical: 14 }}
           >
-            <Text style={{ fontSize: 15, color: '#0A261E' }}>{r.label}</Text>
-            <Ionicons name="chevron-forward" size={16} color="rgba(10,38,30,0.4)" />
+            <Text style={{ fontSize: 15, color: '#0A261E' }}>{t(`watch.reportReason_${r.value}`)}</Text>
+            <Icon name={isRTL ? 'chevron-back' : 'chevron-forward'} size={16} color="rgba(10,38,30,0.4)" />
           </Pressable>
         ))}
 
@@ -588,9 +608,9 @@ function ReportSheet({
           className="flex-row items-center active:opacity-60"
           style={{ paddingHorizontal: 22, paddingVertical: 16 }}
         >
-          <Ionicons name="ban-outline" size={16} color="#B00020" />
-          <Text style={{ marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#B00020' }}>
-            Block {masjidName}
+          <Icon name="ban-outline" size={16} color="#B00020" />
+          <Text style={{ marginStart: 10, fontSize: 15, fontWeight: '600', color: '#B00020' }}>
+            {t('watch.blockSource', { masjid: masjidName })}
           </Text>
         </Pressable>
       </View>
@@ -607,6 +627,17 @@ export function ReelItem({
   height: number;
   isActive: boolean;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
+  const insets = useSafeAreaInsets();
+  // The reel is full-bleed (`edges={['top']}`), so there's no bottom safe-area
+  // padding to inherit — the caption has to clear the tab bar itself. 90 is
+  // tuned for the iOS 26 native bar; the fallback bar floats higher (it sits
+  // above the inset and is taller), so it needs the real measurement.
+  const captionBottom = LIQUID_GLASS ? 90 : insets.bottom + TAB_BAR_CLEARANCE;
+  // Action rail sits just above the caption block rather than floating mid-screen.
+  const railBottom = captionBottom + 100;
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -615,7 +646,9 @@ export function ReelItem({
   // Local pause state — single-tapping the reel toggles play/pause (TikTok-style).
   const [paused, setPaused] = useState(false);
   const masjidName = useConfigStore((s) => s.config.displayName);
+  const brand = useConfigStore((s) => s.config.colors);
   const isSavedQ = useIsReelSaved(reel.reel_id);
+  const requireAccount = useRequireAccount();
   const toggleSave = useToggleReelSave(reel.reel_id, reel.mosque_id);
   const saved = !!isSavedQ.data;
   const isLikedQ = useIsReelLiked(reel.reel_id);
@@ -632,11 +665,11 @@ export function ReelItem({
       {
         onSuccess: () =>
           Alert.alert(
-            'Report received',
-            "Thank you. Our team will review this content. We've also hidden it from your feed.",
+            t('watch.reportReceivedTitle'),
+            t('watch.reportReceivedBody'),
           ),
         onError: () =>
-          Alert.alert('Couldn’t submit report', 'Please check your connection and try again.'),
+          Alert.alert(t('watch.reportFailedTitle'), t('watch.connectionErrorBody')),
       },
     );
   };
@@ -644,17 +677,17 @@ export function ReelItem({
   const handleBlock = () => {
     setReportOpen(false);
     Alert.alert(
-      `Block ${masjidName}?`,
-      `You won't see reels from ${masjidName} anymore. You can’t undo this from the app.`,
+      t('watch.blockConfirmTitle', { masjid: masjidName }),
+      t('watch.blockConfirmBody', { masjid: masjidName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Block',
+          text: t('watch.block'),
           style: 'destructive',
           onPress: () =>
             blockSource.mutate(undefined, {
               onError: () =>
-                Alert.alert('Couldn’t block', 'Please check your connection and try again.'),
+                Alert.alert(t('watch.blockFailedTitle'), t('watch.connectionErrorBody')),
             }),
         },
       ],
@@ -720,6 +753,7 @@ export function ReelItem({
   };
 
   const handleDoubleTapLike = () => {
+    if (!requireAccount('like')) return;
     // Double-tap always likes, never unlikes (matches TikTok/IG).
     if (!liked) toggleLike.mutate(liked);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -810,7 +844,7 @@ export function ReelItem({
               justifyContent: 'center',
             }}
           >
-            <Ionicons name="play" size={40} color="#ffffff" style={{ marginLeft: 4 }} />
+            <Icon name="play" size={40} color="#ffffff" style={{ marginLeft: 4 }} />
           </View>
         </View>
       ) : null}
@@ -823,7 +857,7 @@ export function ReelItem({
           burstStyle,
         ]}
       >
-        <Ionicons name="heart" size={104} color="#FF0005" style={{ transform: [{ rotate: '-12deg' }] }} />
+        <Icon name="heart" size={104} color="#FF0005" fill="#FF0005" style={{ transform: [{ rotate: '-12deg' }] }} />
       </Animated.View>
 
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -870,7 +904,7 @@ export function ReelItem({
           {'source' in reel && reel.source ? (
             <Text
               style={{
-                fontFamily: 'PlayfairDisplay_500Medium',
+                fontFamily: fonts.display,
                 fontSize: 14,
                 color: 'rgba(255,255,255,0.7)',
                 textAlign: 'center',
@@ -883,23 +917,30 @@ export function ReelItem({
         </View>
 
         <View
-          style={{ position: 'absolute', right: 14, bottom: 280, gap: 28, alignItems: 'center' }}
+          style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 14, bottom: railBottom, gap: 28, alignItems: 'center' }}
         >
           <LikeButton
             liked={liked}
             count={formatCount(reel.like_count ?? 0)}
-            onPress={() => toggleLike.mutate(liked)}
+            onPress={() => {
+              if (!requireAccount('like')) return;
+              toggleLike.mutate(liked);
+            }}
           />
           <ActionButton icon="paper-plane-outline" onPress={handleShare} />
           <ActionButton
             icon={saved ? 'bookmark' : 'bookmark-outline'}
             color={saved ? '#B8922A' : '#ffffff'}
-            onPress={() => toggleSave.mutate(saved)}
+            fill={saved ? '#B8922A' : 'none'}
+            onPress={() => {
+              if (!requireAccount('save')) return;
+              toggleSave.mutate(saved);
+            }}
           />
           <ActionButton icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
 
-        <View style={{ paddingHorizontal: 20, paddingBottom: 90 }}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: captionBottom }}>
           <Pressable onPress={() => setSheetOpen(true)} className="flex-row items-center active:opacity-80">
             <View
               style={{
@@ -908,19 +949,19 @@ export function ReelItem({
                 borderRadius: 20,
                 borderWidth: 1,
                 borderColor: '#ffffff',
-                backgroundColor: '#0A261E',
+                backgroundColor: rgb(brand.primary),
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
               }}
             >
-              <MasjidLogo width={28} height={28} />
+              <MasjidLogo width={28} height={28} color={rgb(brand.accent)} />
             </View>
-            <View className="ml-3 flex-1">
+            <View className="ms-3 flex-1">
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#ffffff' }}>
                 {reel.title ?? masjidName}
               </Text>
-              <Text style={{ fontSize: 10, color: '#ffffff' }}>{masjidName}</Text>
+              <Text style={{ fontSize: 11, color: '#ffffff' }}>{masjidName}</Text>
             </View>
           </Pressable>
           {reel.caption ? (
@@ -929,14 +970,14 @@ export function ReelItem({
                 numberOfLines={2}
                 onPress={() => setDescriptionOpen(true)}
                 onTextLayout={(e) => setCaptionTruncated(e.nativeEvent.lines.length > 1)}
-                style={{ fontSize: 10, color: '#ffffff', flex: 1 }}
+                style={{ fontSize: 12, color: '#ffffff', flex: 1 }}
               >
                 {reel.caption}
               </Text>
               {captionTruncated && (
                 <Pressable onPress={() => setDescriptionOpen(true)} hitSlop={8}>
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: '#ffffff', marginLeft: 4 }}>
-                    more
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#ffffff', marginStart: 4 }}>
+                    {t('watch.more')}
                   </Text>
                 </Pressable>
               )}
@@ -957,7 +998,7 @@ export function ReelItem({
           onPress={() => setMenuOpen(false)}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         >
-          <View style={{ position: 'absolute', right: 54, bottom: 260 }}>
+          <View style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 54, bottom: railBottom - 20 }}>
             <ReelMenu
               onNotInterested={() => {
                 setMenuOpen(false);
@@ -989,6 +1030,7 @@ export function ReelItem({
 }
 
 export default function WatchScreen() {
+  const { t } = useTranslation();
 
   const {reels, isLoading, isError, refetch} = useReels();
   const listRef = useRef<FlatList<Reel>>(null);
@@ -1003,14 +1045,26 @@ export default function WatchScreen() {
   const netInfo = useNetInfo();
   const isOffline = netInfo.isConnected === false;
   const showNoConnection = isError || isOffline;
-  const renderItem = useCallback(({ item, index }: { item: Reel; index: number }) => (
-    <ReelItem
-      reel={item}
-      height={height}
-      // Pause the underlying reel while the no-connection overlay is showing.
-      isActive={index === activeIndex && isFocused && !showNoConnection}
-    />
-  ), [height, activeIndex, isFocused, showNoConnection]);
+  const renderItem = useCallback(({ item, index }: { item: Reel; index: number }) => {
+    // iOS provides only a handful of simultaneous H.264 hardware decoders.
+    // Mounting a VideoView/player for every reel at once (the FlatList default
+    // keeps them all alive) exhausts that pool and starves even the on-screen
+    // reel, which then renders as a black frame. Mount only the active reel and
+    // its immediate neighbors (so the next swipe is pre-warmed); render every
+    // other row as a cheap black placeholder of the same height so paging and
+    // getItemLayout stay exact.
+    if (Math.abs(index - activeIndex) > 1) {
+      return <View style={{ height, width: '100%' }} className="bg-black" />;
+    }
+    return (
+      <ReelItem
+        reel={item}
+        height={height}
+        // Pause the underlying reel while the no-connection overlay is showing.
+        isActive={index === activeIndex && isFocused && !showNoConnection}
+      />
+    );
+  }, [height, activeIndex, isFocused, showNoConnection]);
   const keyExtractor = useCallback((item: Reel) => item.reel_id, []);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
   const onViewableItemsChanged = useRef(
@@ -1049,7 +1103,7 @@ export default function WatchScreen() {
             marginBottom: 12,
           }}
         >
-          No connection
+          {t('watch.noConnection')}
         </Text>
         <Text
           style={{
@@ -1060,7 +1114,7 @@ export default function WatchScreen() {
             marginBottom: 24,
           }}
         >
-          Check your internet connection{'\n'}and try again
+          {t('watch.noConnectionBody')}
         </Text>
         <Pressable
           onPress={() => refetch()}
@@ -1074,7 +1128,7 @@ export default function WatchScreen() {
           }}
         >
           <Text style={{ color: '#fffbf2', fontSize: 13, fontWeight: '600' }}>
-            Try again
+            {t('watch.tryAgain')}
           </Text>
         </Pressable>
       </View>
@@ -1083,7 +1137,7 @@ export default function WatchScreen() {
   if (!reels.length) {
     return (
       <View className="flex-1 bg-black items-center justify-center">
-        <Text style={{ color: '#ffffff' }}>No reels yet</Text>
+        <Text style={{ color: '#ffffff' }}>{t('watch.noReels')}</Text>
       </View>
     );
   }
@@ -1107,7 +1161,7 @@ export default function WatchScreen() {
 
       {/* No-connection overlay — blurs the last-known reel + dark tint. */}
       {showNoConnection ? (
-        <BlurView
+        <AppBlurView
           intensity={60}
           tint="dark"
           style={{
@@ -1135,7 +1189,7 @@ export default function WatchScreen() {
               marginBottom: 12,
             }}
           >
-            No connection
+            {t('watch.noConnection')}
           </Text>
           <Text
             style={{
@@ -1146,7 +1200,7 @@ export default function WatchScreen() {
               marginBottom: 24,
             }}
           >
-            Check your internet connection{'\n'}and try again
+            {t('watch.noConnectionBody')}
           </Text>
           <Pressable
             onPress={() => refetch()}
@@ -1160,10 +1214,10 @@ export default function WatchScreen() {
             }}
           >
             <Text style={{ color: '#fffbf2', fontSize: 13, fontWeight: '600' }}>
-              Try again
+              {t('watch.tryAgain')}
             </Text>
           </Pressable>
-        </BlurView>
+        </AppBlurView>
       ) : null}
     </View>
   );

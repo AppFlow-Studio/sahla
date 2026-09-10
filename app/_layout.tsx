@@ -25,7 +25,21 @@ if (Platform.OS !== 'web') {
 
 import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
-import { CormorantGaramond_400Regular } from '@expo-google-fonts/cormorant-garamond';
+import { Amiri_400Regular } from '@expo-google-fonts/amiri';
+import {
+  CormorantGaramond_400Regular,
+  CormorantGaramond_500Medium,
+} from '@expo-google-fonts/cormorant-garamond';
+import {
+  IBMPlexSansArabic_400Regular,
+  IBMPlexSansArabic_500Medium,
+  IBMPlexSansArabic_600SemiBold,
+} from '@expo-google-fonts/ibm-plex-sans-arabic';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
 import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_500Medium,
@@ -43,13 +57,18 @@ const StripeProvider =
     ? require('@stripe/stripe-react-native').StripeProvider
     : ({ children }: { children: React.ReactNode }) => children;
 
+import { bootDirectionChanged } from '@/src/i18n';
+import { BootSplash } from '@/src/components/boot-splash';
 import { ThemeRoot } from '@/src/components/theme-root';
 import { env } from '@/src/lib/env';
 import { ConfigProvider } from '@/src/providers/config-provider';
 import { DonationProvider } from '@/src/providers/donation-provider';
+import { SignInPromptProvider } from '@/src/components/auth/sign-in-prompt';
+import { useGuestStore } from '@/src/stores/guest-store';
 import { StripeAccountProvider, useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { SupabaseProvider } from '@/src/providers/supabase-provider';
+import { UpdatesProvider } from '@/src/providers/updates-provider';
 import { useOnboardingSync } from '@/src/hooks/use-onboarding-sync';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 
@@ -81,20 +100,32 @@ export const unstable_settings = {
 function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
   const onboardingComplete = useOnboardingStore((s) => s.complete);
+  const isGuest = useGuestStore((s) => s.isGuest);
+  const exitGuest = useGuestStore((s) => s.exitGuest);
   const devBypass = __DEV__ && env.DEV_BYPASS_AUTH;
+
+  // A real session supersedes guest mode — clear the flag so the app doesn't
+  // keep gating features for someone who has just signed in.
+  useEffect(() => {
+    if (isSignedIn && isGuest) exitGuest();
+  }, [isSignedIn, isGuest, exitGuest]);
 
   // Sync onboarding state from Clerk metadata (handles new-device scenario)
   useOnboardingSync();
+
+  console.log('[boot] RootNavigator', { isLoaded, isSignedIn, onboardingComplete, devBypass, isGuest });
 
   if (!isLoaded) {
     // Returning null keeps the native splash visible until Clerk is ready.
     return null;
   }
 
-  const authenticated = !!isSignedIn || devBypass;
+  // Guests reach `(main)` without a session and without onboarding — the
+  // personalization questions all write to a profile they don't have.
+  const authenticated = !!isSignedIn || devBypass || isGuest;
   const showAuth = !authenticated;
-  const showOnboarding = authenticated && !onboardingComplete && !devBypass;
-  const showMain = authenticated && (onboardingComplete || devBypass);
+  const showOnboarding = authenticated && !onboardingComplete && !devBypass && !isGuest;
+  const showMain = authenticated && (onboardingComplete || devBypass || isGuest);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -138,6 +169,13 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
+          name="quran"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
           name="reminders-settings"
           options={{
             headerShown: false,
@@ -151,46 +189,96 @@ function RootNavigator() {
       <Stack.Protected guard={showAuth}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      {/* Deliberately outside every guard: the sign-up screen asserts that the
+          user agrees to these documents, so they have to be readable before a
+          session exists — and a reviewer must be able to reach them without
+          creating an account. */}
+      <Stack.Screen
+        name="legal/index"
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="legal/[doc]"
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      />
     </Stack>
   );
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
+    // All weights referenced by any FONT_THEME in src/theme/fonts.ts must be
+    // registered here so a masjid's chosen theme renders without a fallback.
     PlayfairDisplay_400Regular,
     PlayfairDisplay_500Medium,
     CormorantGaramond_400Regular,
+    CormorantGaramond_500Medium,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    // Arabic display face for the du'a / ayah lines that are set apart from the
+    // UI (the welcome salaam, reel ayah overlays). Referenced by name in those
+    // screens, so it has to be registered here or it silently falls back to the
+    // system font.
+    Amiri_400Regular,
+    // Latin+Arabic family used for the whole UI when the language is RTL.
+    IBMPlexSansArabic_400Regular,
+    IBMPlexSansArabic_500Medium,
+    IBMPlexSansArabic_600SemiBold,
     UthmanicHafs: require('../assets/fonts/UthmanicHafs_V22.ttf'),
   });
 
+  // If the boot language flipped the layout direction (e.g. first launch on an
+  // Arabic device), RN needs a reload for the forced direction to apply.
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    if (bootDirectionChanged) {
+      const Updates = require('expo-updates') as typeof import('expo-updates');
+      Updates.reloadAsync().catch(() => {});
+    }
+  }, []);
 
-  if (!fontsLoaded) return null;
+  console.log('[boot] RootLayout', { fontsLoaded, clerkKey: env.CLERK_PUBLISHABLE_KEY?.slice(0, 11) });
+
+  // A font that fails to load must not strand the app on the native splash —
+  // the theme falls back to the system family instead.
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <ClerkProvider publishableKey={env.CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ClerkLoaded>
           <QueryProvider>
             <SupabaseProvider>
               <ConfigProvider>
                 <StripeAccountProvider>
                   <StripeProviderWithConnect>
                     <ThemeRoot>
-                      <DonationProvider>
-                        <RootNavigator />
-                        <StatusBar style="auto" />
-                      </DonationProvider>
+                      <UpdatesProvider>
+                        <DonationProvider>
+                          <SignInPromptProvider>
+                            <RootNavigator />
+                            <StatusBar style="auto" />
+                          </SignInPromptProvider>
+                        </DonationProvider>
+                      </UpdatesProvider>
                     </ThemeRoot>
                   </StripeProviderWithConnect>
                 </StripeAccountProvider>
               </ConfigProvider>
             </SupabaseProvider>
           </QueryProvider>
-        </GestureHandlerRootView>
-      </ClerkLoaded>
+        </ClerkLoaded>
+        {/* Outside <ClerkLoaded> on purpose: the branded splash has to be on
+            screen while Clerk is still rehydrating the session, which is the
+            slowest part of a cold boot. */}
+        <BootSplash />
+      </GestureHandlerRootView>
     </ClerkProvider>
   );
 }

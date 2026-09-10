@@ -1,46 +1,54 @@
-import { Image } from "expo-image";
-import type { ImageSourcePropType } from "react-native";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Icon, type IconName } from "@/src/components/ui/icon";
+import { NudgeDot } from "@/src/components/ui/nudge-dot";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
 
 type Props = {
   title: string;
-  icon: ImageSourcePropType;
+  icon?: IconName;
+  /** Custom SVG / component to render in place of a Lucide icon. Takes
+   *  precedence over `icon` when provided. Useful for one-off Figma glyphs
+   *  like the personalization sunburst emblem. */
+  renderIcon?: () => React.ReactNode;
   onPress: () => void;
+  /** Show an attention dot beside the title (e.g. an unfinished setup step). */
+  showDot?: boolean;
 };
 
-export default function RowItem({ title, icon, onPress }: Props) {
+export default function RowItem({ title, icon, renderIcon, onPress, showDot }: Props) {
   const { colors } = useMasjidConfig();
-  const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
+  const fonts = useFontFamily();
+  const isRTL = useIsRTL();
+  const fg = colors.foreground.replace(/ /g, ",");
+  const fgRgb = `rgb(${fg})`;
   return (
     <Pressable
       onPress={onPress}
       className="flex-row items-center justify-between px-4 py-3"
     >
       <View className="flex-row items-center gap-2">
-        {/* Tint the (monochrome) icon glyph so it follows the masjid theme. */}
-        <Image
-          source={icon}
-          style={{ width: 16, height: 16 }}
-          contentFit="contain"
-          tintColor={fgRgb}
-        />
+        {/* Icon stroke follows the masjid theme foreground. */}
+        {renderIcon ? renderIcon() : icon ? (
+          <Icon name={icon} size={16} color={fgRgb} />
+        ) : null}
         <Text
           className="text-foreground"
           style={{
-            fontFamily: Platform.select({ android: "Roboto", default: undefined }),
+            fontFamily: fonts.bodyMedium,
             fontWeight: "500",
-            fontSize: 11,
+            fontSize: 13,
             lineHeight: 18,
             letterSpacing: 0,
           }}
         >
           {title}
         </Text>
+        {showDot && <NudgeDot size={7} style={{ marginStart: 2 }} />}
       </View>
-      <IconSymbol name="chevron.right" size={8} className="text-foreground/40" />
+      <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={14} color={`rgba(${fg},0.4)`} />
     </Pressable>
   );
 }

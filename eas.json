@@ -8,18 +8,23 @@
       "node": "24.10.0",
       "ios": {
         "resourceClass": "m-medium"
-      }
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "base"
     },
     "sahla-dev": {
       "extends": "base",
       "env": {
         "MASJID_ID": "sahla"
-      }
+      },
+      "channel": "sahla-dev"
     },
     "sahla-preview": {
       "extends": "base",
       "environment": "preview",
-      "channel": "preview",
+      "channel": "sahla-preview",
       "env": {
         "MASJID_ID": "sahla"
       }
@@ -28,33 +33,65 @@
       "extends": "base",
       "developmentClient": false,
       "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "MASJID_ID": "sahla"
-      }
+      },
+      "channel": "sahla-prod"
     },
-    "mas-cnj-dev": {
-      "extends": "base",
-      "env": {
-        "MASJID_ID": "mas-cnj"
-      }
-    },
-    "mas-cnj-preview": {
-      "extends": "base",
-      "distribution": "internal",
-      "env": {
-        "MASJID_ID": "mas-cnj"
-      }
-    },
-    "mas-cnj-prod": {
+    "sahla-demo-masjid-mt93mzuj-prod": {
       "extends": "base",
       "developmentClient": false,
       "distribution": "store",
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
-        "MASJID_ID": "mas-cnj"
-      }
+        "MASJID_ID": "sahla-demo-masjid-mt93mzuj",
+        "IOS_BUNDLE_ID": "com.sahlamasjiddemo.com",
+        "ANDROID_PACKAGE": "com.sahlamasjiddemo.com"
+      },
+      "channel": "sahla-demo-masjid-mt93mzuj-prod"
+    },
+    "mas-brooklyn-mqb18esx-dev": {
+      "extends": "base",
+      "env": {
+        "MASJID_ID": "mas-brooklyn-mqb18esx"
+      },
+      "channel": "mas-brooklyn-mqb18esx-dev"
+    },
+    "mas-brooklyn-mqb18esx-preview": {
+      "extends": "base",
+      "distribution": "internal",
+      "env": {
+        "MASJID_ID": "mas-brooklyn-mqb18esx"
+      },
+      "channel": "mas-brooklyn-mqb18esx-preview"
+    },
+    "mas-brooklyn-mqb18esx-prod": {
+      "extends": "base",
+      "developmentClient": false,
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "MASJID_ID": "mas-brooklyn-mqb18esx"
+      },
+      "channel": "mas-brooklyn-mqb18esx-prod"
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "sahla-demo-masjid-mt93mzuj-prod": {
+      "ios": {
+        "ascAppId": "6810416414",
+        "appleId": "info@sahla.co",
+        "appleTeamId": "R8467JY5X8"
+      }
+    }
   }
 }

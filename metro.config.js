@@ -11,7 +11,16 @@ config.transformer = {
 };
 config.resolver = {
   ...resolver,
-  assetExts: [...resolver.assetExts.filter((ext) => ext !== 'svg'), 'db', 'sqlite'],
+  // `.qsvg` is the mushaf-page bundle (under assets/mushaf-svg/). The custom
+  // extension keeps these files in the asset pipeline (giving us a localUri
+  // we can read at runtime) instead of being transformed into React
+  // components by react-native-svg-transformer like the ornament .svg files.
+  assetExts: [
+    ...resolver.assetExts.filter((ext) => ext !== 'svg'),
+    'db',
+    'sqlite',
+    'qsvg',
+  ],
   sourceExts: [...resolver.sourceExts, 'svg'],
 };
 

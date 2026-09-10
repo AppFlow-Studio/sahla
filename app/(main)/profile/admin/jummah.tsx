@@ -21,10 +21,13 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
 import { useSpeakers, type SpeakerRow } from '@/src/hooks/use-speakers';
@@ -34,6 +37,7 @@ import {
   MAX_REGULAR_JUMMAHS,
 } from '@/src/hooks/use-jummah-schedule';
 import { TimePicker } from '@/src/components/admin/time-picker';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -168,7 +172,9 @@ function useDeleteJummah() {
 export default function JummahAdminScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.card);
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
   const borderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.1)`;
@@ -184,7 +190,7 @@ export default function JummahAdminScreen() {
   // slots arrive sorted by time; number the regular ones, label the school one.
   let regularSeen = 0;
   const labeled = slots.map((slot) => {
-    if (slot.is_school) return { slot, title: 'School Jummah', badge: '' };
+    if (slot.is_school) return { slot, title: t('admin.schoolJummah'), badge: '' };
     regularSeen += 1;
     return { slot, title: jummahTitle(false, regularSeen - 1), badge: String(regularSeen) };
   });
@@ -204,12 +210,12 @@ export default function JummahAdminScreen() {
 
   const handleDelete = (slot: JummahRow, title: string) => {
     Alert.alert(
-      'Delete slot',
-      `Delete "${title}"? This removes it from the home-page schedule.`,
+      t('admin.deleteSlotTitle'),
+      t('admin.deleteSlotMessage', { title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('admin.delete'),
           style: 'destructive',
           onPress: () => deleteJummah.mutate(slot.id),
         },
@@ -222,11 +228,9 @@ export default function JummahAdminScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={fgRgb} />
-          </Pressable>
-          <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
-            Jummah Schedule
+          <BackButton color={fgRgb} />
+          <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
+            {t('admin.jummahSchedule')}
           </Text>
         </View>
         <TouchableOpacity
@@ -236,7 +240,7 @@ export default function JummahAdminScreen() {
           disabled={atCapacity}
           style={{ opacity: atCapacity ? 0.35 : 1 }}
         >
-          <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
+          <Icon name="add-circle-outline" size={26} color={accentRgb} />
         </TouchableOpacity>
       </View>
 
@@ -246,9 +250,9 @@ export default function JummahAdminScreen() {
         </View>
       ) : slots.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="calendar-outline" size={48} color={mutedRgb} />
+          <Icon name="calendar-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
-            No Jummah slots yet. Tap + to add one.
+            {t('admin.noJummahSlots')}
           </Text>
         </View>
       ) : (
@@ -306,8 +310,9 @@ function JummahCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const speakerName =
-    (slot.speaker_data as JummahRow['speaker_data'])?.speaker_name ?? 'Unassigned';
+    (slot.speaker_data as JummahRow['speaker_data'])?.speaker_name ?? t('admin.unassigned');
   const speakerImg = (slot.speaker_data as JummahRow['speaker_data'])?.speaker_img;
 
   return (
@@ -329,11 +334,11 @@ function JummahCard({
           backgroundColor: `rgba(${accentRgb.slice(4, -1)}, 0.15)`,
           alignItems: 'center',
           justifyContent: 'center',
-          marginRight: 12,
+          marginEnd: 12,
         }}
       >
         {slot.is_school ? (
-          <Ionicons name="school-outline" size={18} color={accentRgb} />
+          <Icon name="school-outline" size={18} color={accentRgb} />
         ) : (
           <Text style={{ color: accentRgb, fontSize: 13, fontWeight: '700' }}>
             {badge}
@@ -346,7 +351,7 @@ function JummahCard({
           {title}
         </Text>
         <Text style={{ color: mutedRgb, fontSize: 11, marginTop: 2 }}>
-          {speakerName} · {slot.prayer_time ?? 'No time set'}
+          {speakerName} · {slot.prayer_time ?? t('admin.noTimeSet')}
         </Text>
         {slot.topic ? (
           <Text style={{ color: mutedRgb, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
@@ -356,16 +361,16 @@ function JummahCard({
       </View>
 
       {speakerImg ? (
-        <View style={{ width: 32, height: 32, borderRadius: 16, overflow: 'hidden', marginRight: 8 }}>
+        <View style={{ width: 32, height: 32, borderRadius: 16, overflow: 'hidden', marginEnd: 8 }}>
           <Image source={{ uri: speakerImg }} style={{ width: 32, height: 32 }} />
         </View>
       ) : null}
 
-      <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 16 }}>
-        <Ionicons name="pencil-outline" size={16} color={mutedRgb} />
+      <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginEnd: 16 }}>
+        <Icon name="pencil-outline" size={16} color={mutedRgb} />
       </TouchableOpacity>
       <TouchableOpacity onPress={onDelete} hitSlop={8}>
-        <Ionicons name="trash-outline" size={16} color="rgb(239,68,68)" />
+        <Icon name="trash-outline" size={16} color="rgb(239,68,68)" />
       </TouchableOpacity>
     </Pressable>
   );
@@ -387,6 +392,7 @@ function JummahFormModal({
   schoolUsed: number;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const insets = useSafeAreaInsets();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
@@ -564,7 +570,7 @@ function JummahFormModal({
                 textTransform: 'uppercase',
               }}
             >
-              {isEditing ? 'Edit Jummah Slot' : 'Add Jummah Slot'}
+              {isEditing ? t('admin.editJummahSlot') : t('admin.addJummahSlot')}
             </Text>
           </View>
 
@@ -588,7 +594,7 @@ function JummahFormModal({
                 marginBottom: 8,
               }}
             >
-              Type
+              {t('admin.type')}
             </Text>
             <View
               style={{
@@ -600,8 +606,8 @@ function JummahFormModal({
               }}
             >
               {[
-                { label: 'Regular Jummah', value: false, enabled: canRegular },
-                { label: 'School Jummah', value: true, enabled: canSchool },
+                { label: t('admin.regularJummah'), value: false, enabled: canRegular },
+                { label: t('admin.schoolJummah'), value: true, enabled: canSchool },
               ].map((opt) => {
                 const active = isSchool === opt.value;
                 const disabled = !active && !opt.enabled;
@@ -646,7 +652,7 @@ function JummahFormModal({
                 marginBottom: 8,
               }}
             >
-              Speaker
+              {t('admin.speaker')}
             </Text>
 
             {/* Unassign option */}
@@ -669,14 +675,14 @@ function JummahFormModal({
                   backgroundColor: borderColor,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginRight: 10,
+                  marginEnd: 10,
                 }}
               >
-                <Ionicons name="person-outline" size={14} color={labelColor} />
+                <Icon name="person-outline" size={14} color={labelColor} />
               </View>
-              <Text style={{ color: fgRgb, fontSize: 13, flex: 1 }}>Unassigned</Text>
+              <Text style={{ color: fgRgb, fontSize: 13, flex: 1 }}>{t('admin.unassigned')}</Text>
               {selectedSpeaker === null && (
-                <Ionicons name="checkmark-circle" size={20} color={accentRgb} />
+                <Icon name="checkmark-circle" size={20} color={accentRgb} />
               )}
             </TouchableOpacity>
 
@@ -700,29 +706,29 @@ function JummahFormModal({
                     borderRadius: 16,
                     overflow: 'hidden',
                     backgroundColor: borderColor,
-                    marginRight: 10,
+                    marginEnd: 10,
                   }}
                 >
                   {s.speaker_img ? (
                     <Image source={{ uri: s.speaker_img }} style={{ width: 32, height: 32 }} />
                   ) : (
                     <View className="flex-1 items-center justify-center">
-                      <Ionicons name="person" size={14} color={labelColor} />
+                      <Icon name="person" size={14} color={labelColor} />
                     </View>
                   )}
                 </View>
                 <Text style={{ color: fgRgb, fontSize: 13, flex: 1 }}>
-                  {s.speaker_name ?? 'Unnamed'}
+                  {s.speaker_name ?? t('admin.unnamed')}
                 </Text>
                 {selectedSpeaker === s.speaker_id && (
-                  <Ionicons name="checkmark-circle" size={20} color={accentRgb} />
+                  <Icon name="checkmark-circle" size={20} color={accentRgb} />
                 )}
               </TouchableOpacity>
             ))}
 
             {speakers.length === 0 && (
               <Text style={{ color: placeholderColor, fontSize: 12, paddingVertical: 8 }}>
-                No sheikhs added yet. Add one from the Sheikhs screen.
+                {t('admin.noSheikhsAddOne')}
               </Text>
             )}
 
@@ -738,12 +744,12 @@ function JummahFormModal({
                   marginBottom: 6,
                 }}
               >
-                Khutbah Topic
+                {t('admin.khutbahTopic')}
               </Text>
               <TextInput
                 value={topic}
                 onChangeText={setTopic}
-                placeholder="e.g. The importance of brotherhood"
+                placeholder={t('admin.khutbahTopicPlaceholder')}
                 placeholderTextColor={placeholderColor}
                 autoCapitalize="sentences"
                 multiline
@@ -771,7 +777,7 @@ function JummahFormModal({
                   marginBottom: 6,
                 }}
               >
-                Prayer Time
+                {t('admin.prayerTime')}
               </Text>
               <TimePicker
                 value={prayerTime}
@@ -793,12 +799,12 @@ function JummahFormModal({
               style={{ height: 43, opacity: mutation.isPending ? 0.5 : 1 }}
             >
               <Text className="text-[14px] font-semibold text-primary-foreground">
-                {mutation.isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Slot'}
+                {mutation.isPending ? t('admin.saving') : isEditing ? t('admin.saveChanges') : t('admin.addSlot')}
               </Text>
             </TouchableOpacity>
             {mutation.isError && (
               <Text className="mt-2 text-center text-[11px] text-red-500">
-                {mutation.error?.message ?? 'Failed to save'}
+                {mutation.error?.message ?? t('admin.failedToSave')}
               </Text>
             )}
           </View>

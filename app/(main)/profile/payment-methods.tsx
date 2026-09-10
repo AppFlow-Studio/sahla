@@ -20,13 +20,19 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+
+import { Icon } from '@/src/components/ui/icon';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useConfigStore } from '@/src/stores/config-store';
+import { BackButton } from '@/src/components/ui/back-button';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -40,7 +46,7 @@ interface SavedPaymentMethod {
 
 // ── Helpers ────────────────────────────────────────────
 
-const getCardBrandDisplayName = (brand: string): string => {
+const getCardBrandDisplayName = (brand: string, t: TFunction): string => {
   const names: Record<string, string> = {
     visa: 'Visa',
     mastercard: 'Mastercard',
@@ -49,7 +55,7 @@ const getCardBrandDisplayName = (brand: string): string => {
     jcb: 'JCB',
     diners: 'Diners Club',
   };
-  return names[brand?.toLowerCase()] ?? 'Card';
+  return names[brand?.toLowerCase()] ?? t('profile.card');
 };
 
 const getCardBrandIcon = (
@@ -101,7 +107,7 @@ function PaymentMethodsSkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: stri
     <View style={{ flex: 1, backgroundColor: bgRgb }}>
       {/* Header skeleton */}
       <View style={{ paddingTop: insets.top + 8, paddingBottom: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
-        <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: shimmerColor, marginRight: 16 }} />
+        <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: shimmerColor, marginEnd: 16 }} />
         <SkeletonBox width={140} height={18} style={{ backgroundColor: shimmerColor }} />
       </View>
 
@@ -119,7 +125,7 @@ function PaymentMethodsSkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: stri
         {/* Card skeletons */}
         {[0, 1, 2].map((i) => (
           <View key={i} style={{ backgroundColor: cardRgb, borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: `${fgRgb}0D` }}>
-            <SkeletonBox width={32} height={22} borderRadius={4} style={{ backgroundColor: shimmerColor, marginRight: 14 }} />
+            <SkeletonBox width={32} height={22} borderRadius={4} style={{ backgroundColor: shimmerColor, marginEnd: 14 }} />
             <View style={{ flex: 1 }}>
               <SkeletonBox width={100} height={14} style={{ backgroundColor: shimmerColor, marginBottom: 6 }} />
               <SkeletonBox width={140} height={11} style={{ backgroundColor: shimmerColor }} />
@@ -135,11 +141,13 @@ function PaymentMethodsSkeleton({ bgRgb, cardRgb, fgRgb, insets }: { bgRgb: stri
 // ── Screen ─────────────────────────────────────────────
 
 export default function PaymentMethodsScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const supabase = useSupabase();
   const { profile } = useProfile();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.background);
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
@@ -193,12 +201,12 @@ export default function PaymentMethodsScreen() {
   const handleDelete = (card: SavedPaymentMethod) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
-      'Remove Card',
-      `Remove ${getCardBrandDisplayName(card.brand)} ending in ${card.last4}?`,
+      t('profile.removeCard'),
+      t('profile.removeCardConfirm', { brand: getCardBrandDisplayName(card.brand, t), last4: card.last4 }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('profile.remove'),
           style: 'destructive',
           onPress: async () => {
             setDeletingId(card.id);
@@ -217,7 +225,7 @@ export default function PaymentMethodsScreen() {
               setCards((prev) => prev.filter((c) => c.id !== card.id));
             } catch (err: any) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert('Error', err?.message || 'Failed to remove card');
+              Alert.alert(t('profile.error'), err?.message || t('profile.failedToRemoveCard'));
             }
             setDeletingId(null);
           },
@@ -244,10 +252,8 @@ export default function PaymentMethodsScreen() {
             alignItems: 'center',
           }}
         >
-          <Pressable onPress={() => router.back()} hitSlop={12} style={{ marginRight: 16 }}>
-            <Ionicons name="chevron-back" size={24} color={fgRgb} />
-          </Pressable>
-          <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>Payment Methods</Text>
+          <BackButton color={fgRgb} style={{ marginEnd: 16 }} />
+          <Text style={{ fontSize: 17, fontWeight: '600', color: fgRgb }}>{t('profile.paymentMethods')}</Text>
         </View>
 
         <ScrollView
@@ -272,13 +278,13 @@ export default function PaymentMethodsScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="shield-checkmark" size={16} color={accentRgb} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: accentRgb, letterSpacing: 0.3, marginLeft: 6 }}>
-                  SECURED BY STRIPE
+                <Icon name="shield-checkmark" size={16} color={accentRgb} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: accentRgb, letterSpacing: 0.3, marginStart: 6 }}>
+                  {t('profile.securedByStripe')}
                 </Text>
               </View>
               <Text style={{ fontSize: 13, color: mutedFgRgb, lineHeight: 19 }}>
-                Your payment methods are securely stored by Stripe. Card details are never stored on our servers.
+                {t('profile.stripeSecurityBody')}
               </Text>
             </View>
           </Animated.View>
@@ -288,7 +294,7 @@ export default function PaymentMethodsScreen() {
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                Alert.alert('Coming Soon', 'Card management will be available soon.');
+                Alert.alert(t('profile.comingSoon'), t('profile.cardManagementSoon'));
               }}
               style={{
                 backgroundColor: primaryRgb,
@@ -300,9 +306,9 @@ export default function PaymentMethodsScreen() {
                 marginBottom: 24,
               }}
             >
-              <Ionicons name="add" size={20} color={pfgRgb} />
-              <Text style={{ fontSize: 15, fontWeight: '600', color: pfgRgb, marginLeft: 8 }}>
-                Add New Card
+              <Icon name="add" size={20} color={pfgRgb} />
+              <Text style={{ fontSize: 15, fontWeight: '600', color: pfgRgb, marginStart: 8 }}>
+                {t('profile.addNewCard')}
               </Text>
             </Pressable>
           </Animated.View>
@@ -321,13 +327,13 @@ export default function PaymentMethodsScreen() {
                   marginBottom: 16,
                 }}
               >
-                <Ionicons name="card-outline" size={36} color={accentRgb} />
+                <Icon name="card-outline" size={36} color={accentRgb} />
               </View>
               <Text style={{ fontSize: 18, fontWeight: '700', color: fgRgb, marginBottom: 6 }}>
-                No Saved Cards
+                {t('profile.noSavedCards')}
               </Text>
               <Text style={{ fontSize: 13, color: mutedFgRgb, textAlign: 'center', paddingHorizontal: 40, lineHeight: 19 }}>
-                Tap "Add New Card" to save a payment method for quick future donations.
+                {t('profile.noSavedCardsBody')}
               </Text>
             </Animated.View>
           ) : (
@@ -340,10 +346,10 @@ export default function PaymentMethodsScreen() {
                   letterSpacing: 1.8,
                   textTransform: 'uppercase',
                   marginBottom: 12,
-                  marginLeft: 4,
+                  marginStart: 4,
                 }}
               >
-                {cards.length} SAVED {cards.length === 1 ? 'CARD' : 'CARDS'}
+                {t('profile.savedCardsCount', { count: cards.length })}
               </Text>
 
               {cards.map((card, index) => {
@@ -362,13 +368,13 @@ export default function PaymentMethodsScreen() {
                         borderColor: `${fgRgb}0D`,
                       }}
                     >
-                      <View style={{ marginRight: 14 }}>
+                      <View style={{ marginEnd: 14 }}>
                         <FontAwesome name={brandIcon.name} size={32} color={brandIcon.color} />
                       </View>
 
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 15, fontWeight: '600', color: fgRgb }}>
-                          {getCardBrandDisplayName(card.brand)}
+                          {getCardBrandDisplayName(card.brand, t)}
                         </Text>
                         <Text style={{ fontSize: 13, color: mutedFgRgb, marginTop: 2 }}>
                           •••• {card.last4} · {String(card.expMonth).padStart(2, '0')}/{String(card.expYear).slice(-2)}
@@ -390,7 +396,7 @@ export default function PaymentMethodsScreen() {
                         {deletingId === card.id ? (
                           <ActivityIndicator size="small" color={mutedFgRgb} />
                         ) : (
-                          <Ionicons name="trash-outline" size={18} color={pfgRgb} />
+                          <Icon name="trash-outline" size={18} color={pfgRgb} />
                         )}
                       </Pressable>
                     </View>

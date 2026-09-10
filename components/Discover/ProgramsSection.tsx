@@ -1,7 +1,9 @@
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import type { ImageSourcePropType } from "react-native";
-import { Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 import SectionTitle from "./SectionTitle";
 
@@ -9,6 +11,10 @@ export type ProgramItem = {
   id: string;
   title: string;
   image?: ImageSourcePropType;
+  /** Which Discover "Programs" filter tapping this card opens into. */
+  audience?: "All" | "Kids" | "Youth" | "Adults";
+  /** Solid background shown behind/instead of the cover image. */
+  bgColor?: string | null;
 };
 
 type Props = {
@@ -17,12 +23,6 @@ type Props = {
   onPressSeeAll?: () => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 function ProgramCard({
   item,
   onPress,
@@ -30,6 +30,7 @@ function ProgramCard({
   item: ProgramItem;
   onPress?: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -41,7 +42,7 @@ function ProgramCard({
       <View
         className="h-[217px] w-full overflow-hidden rounded-[16px] border"
         style={{
-          backgroundColor: cardRgb,
+          backgroundColor: item.bgColor ?? cardRgb,
           borderColor,
         }}
       >
@@ -56,7 +57,7 @@ function ProgramCard({
       <Text
         style={{
           marginTop: 10,
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodyMedium,
           fontSize: 13,
           fontWeight: "500",
           color: fgRgb,
@@ -73,11 +74,12 @@ export default function ProgramsSection({
   onPressItem,
   onPressSeeAll,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <View>
       <SectionTitle
-        title="Programs"
-        actionLabel="See all"
+        title={t("discover.programsTitle")}
+        actionLabel={t("discover.seeAll")}
         onPressAction={onPressSeeAll}
       />
       <ScrollView

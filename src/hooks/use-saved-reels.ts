@@ -10,6 +10,22 @@ import { useSupabase } from '@/src/hooks/use-supabase';
  * the patterns are nearly identical (saved_content → saved_reels).
  */
 
+/** A reel + the timestamp the current user saved it. The Saved Clips screen
+ *  filters this list into rolling Today / Week / Month buckets. */
+export type SavedReel = Reel & { saved_at: string };
+
+export type SavedClipsFilter = 'all' | 'today' | 'week' | 'month';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Rolling-window bucketing: 'today' = last 24h, 'week' = last 7d, 'month' = last 30d. */
+export function filterSavedReels(reels: SavedReel[], filter: SavedClipsFilter): SavedReel[] {
+  if (filter === 'all') return reels;
+  const cutoffMs = filter === 'today' ? DAY_MS : filter === 'week' ? 7 * DAY_MS : 30 * DAY_MS;
+  const cutoff = Date.now() - cutoffMs;
+  return reels.filter((r) => new Date(r.saved_at).getTime() >= cutoff);
+}
+
 /**
  * Reads whether the current user has saved a given reel.
  * Mirror of `useIsSaved`.
@@ -84,8 +100,8 @@ export function useSavedReels() {
 
   return useQuery({
     queryKey: ['saved-reels-list', userId],
-    queryFn: async (): Promise<Reel[]> => {
-      const {data, error} = await supabase.functions.invoke<{reels: Reel[], error?: string}>('reels-actions', {
+    queryFn: async (): Promise<SavedReel[]> => {
+      const {data, error} = await supabase.functions.invoke<{reels: SavedReel[], error?: string}>('reels-actions', {
         body: { action: 'list_saved_reels', user_id: userId },
       });
       if (error) throw new Error(error.message);

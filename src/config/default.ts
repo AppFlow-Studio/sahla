@@ -24,6 +24,7 @@ export const defaultConfig: MasjidConfig = {
     cardForeground: "10 38 30", //     #0A261E  brand primary
     depth: "7 31 24", //               #071F18  layering / depth on dark surfaces
     shadow: "0 0 0", //                #000000  shadow effect color (cast/drop shadows)
+    danger: "239 68 68", //            #EF4444  error / destructive
     onboardingBackground: "10 38 30", //   #0a261e  deep green
     onboardingSurface: "255 251 242", //   #fffbf2  cream
     onboardingAccent: "184 146 42", //     #b8922a  gold
@@ -43,4 +44,6 @@ export const defaultConfig: MasjidConfig = {
   timezone: "UTC",
   prayerCalculationMethod: "ISNA",
   clerkOrgId: "org_3CfxuY1bSbDRGv2y8LIcZRA6w7Q",
+  fontTheme: "classic",
+  headerStyle: "classic",
 };

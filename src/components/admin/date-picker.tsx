@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -28,6 +29,8 @@ export function DatePicker({
   labelColor,
   borderColor,
   allowClear = false,
+  maximumDate,
+  minimumDate,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -37,7 +40,12 @@ export function DatePicker({
   borderColor: string;
   /** Show a "Clear" action (for optional dates like an end date). */
   allowClear?: boolean;
+  /** Latest selectable date (e.g. today, for a date of birth). */
+  maximumDate?: Date;
+  /** Earliest selectable date. */
+  minimumDate?: Date;
 }) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   const date = parseYMD(value);
 
@@ -52,7 +60,7 @@ export function DatePicker({
         onPress={() => onChange('')}
         hitSlop={8}
         style={{
-          marginLeft: 12,
+          marginStart: 12,
           paddingVertical: 6,
           paddingHorizontal: 12,
           borderRadius: 999,
@@ -60,7 +68,7 @@ export function DatePicker({
           borderColor,
         }}
       >
-        <Text style={{ color: labelColor, fontSize: 12, fontWeight: '600' }}>Clear</Text>
+        <Text style={{ color: labelColor, fontSize: 12, fontWeight: '600' }}>{t('admin.clear')}</Text>
       </Pressable>
     ) : null;
 
@@ -72,6 +80,8 @@ export function DatePicker({
           mode="date"
           display="compact"
           accentColor={accentRgb}
+          maximumDate={maximumDate}
+          minimumDate={minimumDate}
           onChange={handleChange}
         />
         {clearButton}
@@ -92,12 +102,19 @@ export function DatePicker({
         }}
       >
         <Text style={{ color: fgRgb, fontSize: 15, fontWeight: '600' }}>
-          {value || 'Select date'}
+          {value || t('admin.selectDate')}
         </Text>
       </Pressable>
       {clearButton}
       {show ? (
-        <DateTimePicker value={date} mode="date" display="default" onChange={handleChange} />
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="default"
+          maximumDate={maximumDate}
+          minimumDate={minimumDate}
+          onChange={handleChange}
+        />
       ) : null}
     </View>
   );

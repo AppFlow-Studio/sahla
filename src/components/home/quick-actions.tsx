@@ -1,20 +1,27 @@
 import { View, Text, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useDonation } from '@/src/providers/donation-provider';
 
+/**
+ * Rendered with MaterialCommunityIcons rather than the shared `Icon` wrapper:
+ * these are MCI's solid glyphs (MCI's convention is that the bare name is
+ * filled and `-outline` is the stroked variant), which is what v2 shows. The
+ * shared wrapper maps the same names onto Lucide, whose glyphs are outline-only.
+ */
 const QUICK_ACTIONS = [
-  { id: 'donate', icon: 'heart', label: 'DONATE' },
-  { id: 'volunteer', icon: 'account-group', label: 'VOLUNTEER' },
-  { id: 'advertise', icon: 'bullhorn', label: 'ADVERTISE' },
-  { id: 'prayers', icon: 'clock', label: 'PRAYERS' },
+  { id: 'donate', icon: 'heart' },
+  { id: 'volunteer', icon: 'account-group' },
+  { id: 'advertise', icon: 'bullhorn' },
+  { id: 'prayers', icon: 'clock' },
+  { id: 'quran', icon: 'book-open-variant' },
 ] as const;
 
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-
 export function QuickActions() {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const { open: openDonation } = useDonation();
   const router = useRouter();
@@ -25,22 +32,27 @@ export function QuickActions() {
     if (id === 'donate') openDonation();
     else if (id === 'prayers') router.push('/prayer');
     else if (id === 'advertise') router.push('/advertise');
+    else if (id === 'quran') router.push('/quran');
   };
 
   return (
-    <View className="flex-row justify-center gap-4">
+    <View className="flex-row justify-between">
       {QUICK_ACTIONS.map((action) => (
         <TouchableOpacity
           key={action.id}
-          className="items-center"
+          className="flex-1 items-center"
           activeOpacity={0.7}
           onPress={() => handlePress(action.id)}
         >
+          {/* v2 (Figma node 365:4226): the label lives inside the 62×62 tile
+              under the icon, in sentence case — it used to sit below the tile
+              in uppercase. */}
           <View
-            className="mb-2 items-center justify-center rounded-[20px] border border-foreground/10 bg-muted"
+            className="items-center justify-center rounded-2xl border border-foreground/10 bg-muted"
             style={{
-              height: 63,
-              width: 66,
+              height: 62,
+              width: 62,
+              paddingHorizontal: 3,
               shadowColor: fgRgb,
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.02,
@@ -49,14 +61,21 @@ export function QuickActions() {
             }}
           >
             <MaterialCommunityIcons
-              name={action.icon as IconName}
-              size={24}
+              name={action.icon}
+              size={20}
               color={primaryRgb}
             />
+            <Text
+              // Longer translations ("رضاکارانہ خدمت" for volunteer) would
+              // overflow a 62px tile, so shrink to fit rather than ellipsize.
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+              className="mt-[5px] text-[10px] font-semibold text-foreground/70"
+            >
+              {t(`quickActions.${action.id}`)}
+            </Text>
           </View>
-          <Text className="text-[8px] font-bold uppercase tracking-[1px] text-foreground/60">
-            {action.label}
-          </Text>
         </TouchableOpacity>
       ))}
     </View>

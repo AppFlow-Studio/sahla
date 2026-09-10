@@ -1,38 +1,52 @@
 import { SendFeedback } from "@/src/components/send_feedback";
+import { useAppUpdates } from "@/src/hooks/use-app-updates";
+import { useAppVersion } from "@/src/hooks/use-app-version";
 import { useIsAdmin } from "@/src/hooks/use-is-admin";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useTutorialSeen } from "@/src/hooks/use-tutorial-seen";
 import { useOnboardingStore } from "@/src/stores/onboarding-store";
+import { useUpdatesActions } from "@/src/providers/updates-provider";
 import { useAuth } from "@clerk/clerk-expo";
 import { router, type Href } from "expo-router";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, Platform, Pressable, Share, Text, View } from "react-native";
 import DonateCard from "./DonateCard";
+import LanguageRow from "./LanguageRow";
 import Notifications from "./Notifications";
+import { PersonalizeIcon } from "@/src/components/ui/personalize-icon";
 import PersonalizedCard from "./PersonalizedCard";
+import ProfileSetupRow from "./ProfileSetupRow";
 import RowItem from "./RowItem";
 import SectionHeader from "./SectionHeader";
+import { useSetupCompleteness } from "@/src/hooks/use-setup-completeness";
 
 const APP_STORE_URL = "https://apps.apple.com/app/sahla/id0000000000"; // TODO: replace with real App Store URL
 
-const COMMUNITY_ICON = require("@/assets/images/Vector_addfriends.png");
-const SAVED_PROGRAMS_AND_EVENTS_ICON = require("@/assets/images/Saved_Programgs_and_events.png");
-const SAVED_CLIPS_ICON = require("@/assets/images/saved_clips.png");
-const PAYMENT_HISTORY_ICON = require("@/assets/images/Payment_history.png");
-const PAYMENT_METHODS_ICON = require("@/assets/images/Payment_Methods.png");
-const PRAYER_ALERTS_ICON = require("@/assets/images/Bell_Ring.png");
-const PROGRAMS_ICON = require("@/assets/images/Programs.png");
-const EVENTS_ICON = require("@/assets/images/Events.png");
-const MAS_BAG_ICON = require("@/assets/images/Mas_bag.png");
-const APPLICATION_ICON = require("@/assets/images/Start_Application.png");
-const CHECK_STATUS_ICON = require("@/assets/images/check_status2.png");
-const MANAGE_SUBS_ICON = require("@/assets/images/Manage_subs.png");
-const FEEDBACK_ICON = require("@/assets/images/feedback.png");
-const ADMIN_ICON = require("@/assets/images/Admin_Portal.png");
+// Profile menu row icons, mapped to the shared Lucide registry (src/components/ui/icon.tsx).
+const COMMUNITY_ICON = "user-plus";
+const SAVED_PROGRAMS_AND_EVENTS_ICON = "calendar-heart";
+const SAVED_CLIPS_ICON = "clapperboard";
+const TERMS_ICON = "file-text";
+// Also used by the "Check for Updates" row further down.
+const CHECK_STATUS_ICON = "clipboard-check";
+const PRAYER_ALERTS_ICON = "bell";
+const PROGRAMS_ICON = "graduation-cap";
+const EVENTS_ICON = "calendar-outline";
+const MAS_BAG_ICON = "shopping-bag";
+const APPLICATION_ICON = "file-text";
+const REPLAY_TUTORIAL_ICON = "compass";
+const FEEDBACK_ICON = "message-outline";
+const ADMIN_ICON = "shield";
 
 type Props = {
   onPressPersonalized: () => void;
   onPressNotifications: () => void;
+  /** Open the EditProfile sheet — lifted to the parent so the header CTA and
+   *  the new Profile setup row trigger the same instance. */
+  onPressCompleteProfile: () => void;
 };
 
 function SectionRule() {
@@ -40,25 +54,31 @@ function SectionRule() {
 }
 
 function SignOutButton() {
+  const { t } = useTranslation();
   const { signOut } = useAuth();
   const resetOnboarding = useOnboardingStore((s) => s.reset);
 
   return (
     <Pressable
       onPress={async () => {
-        resetOnboarding();
+        // Sign out first: once isSignedIn flips false the auth guard wins
+        // regardless of onboarding state. Resetting onboarding before signOut
+        // resolves briefly satisfies showOnboarding (still signed in +
+        // complete=false) and flashes the onboarding screen.
         await signOut();
+        resetOnboarding();
       }}
       className="rounded-full border border-red-500/30 px-8 py-3 active:opacity-70"
     >
       <Text className="text-red-500" style={{ fontSize: 14, fontWeight: '600' }}>
-        Sign Out
+        {t('profile.signOut')}
       </Text>
     </Pressable>
   );
 }
 
 function DeleteAccountButton() {
+  const { t } = useTranslation();
   const { signOut } = useAuth();
   const supabase = useSupabase();
   const resetOnboarding = useOnboardingStore((s) => s.reset);
@@ -66,12 +86,12 @@ function DeleteAccountButton() {
 
   const confirmDelete = useCallback(() => {
     Alert.alert(
-      "Delete Account",
-      "This permanently deletes your Sahla account and all your data — saved items, preferences, notifications, and history. This can't be undone.",
+      t('profile.deleteAccount'),
+      t('profile.deleteAccountConfirm'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('profile.delete'),
           style: "destructive",
           onPress: async () => {
             setDeleting(true);
@@ -80,20 +100,22 @@ function DeleteAccountButton() {
                 body: {},
               });
               if (error) throw error;
-              resetOnboarding();
+              // Sign out before resetting onboarding — see SignOutButton note:
+              // the reverse order flashes the onboarding screen mid-sign-out.
               await signOut();
+              resetOnboarding();
             } catch (err: any) {
               setDeleting(false);
               Alert.alert(
-                "Couldn't delete account",
-                err?.message || "Something went wrong. Please try again or contact support.",
+                t('profile.deleteAccountError'),
+                err?.message || t('profile.deleteAccountErrorBody'),
               );
             }
           },
         },
       ],
     );
-  }, [supabase, resetOnboarding, signOut]);
+  }, [supabase, resetOnboarding, signOut, t]);
 
   return (
     <Pressable
@@ -102,9 +124,9 @@ function DeleteAccountButton() {
       className="mt-4 flex-row items-center active:opacity-70"
       style={{ opacity: deleting ? 0.5 : 1 }}
     >
-      {deleting && <ActivityIndicator size="small" color="#9ca3af" style={{ marginRight: 8 }} />}
+      {deleting && <ActivityIndicator size="small" color="#9ca3af" style={{ marginEnd: 8 }} />}
       <Text className="text-foreground/40" style={{ fontSize: 13, fontWeight: '500' }}>
-        {deleting ? "Deleting…" : "Delete Account"}
+        {deleting ? t('profile.deleting') : t('profile.deleteAccount')}
       </Text>
     </Pressable>
   );
@@ -113,21 +135,36 @@ function DeleteAccountButton() {
 export default function ProfileBody({
   onPressPersonalized,
   onPressNotifications,
+  onPressCompleteProfile,
 }: Props) {
+  const { t } = useTranslation();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const { isAdmin } = useIsAdmin();
+  const appVersion = useAppVersion();
+  const updates = useAppUpdates();
+  const { checkAndNotify } = useUpdatesActions();
+  const setup = useSetupCompleteness();
+  const { seen: tutorialSeen, completed: tutorialCompleted, replay: replayTutorial } =
+    useTutorialSeen();
+  // Tutorial is a separate "finish setting up" nudge (not part of setup
+  // completeness): shown once they've seen the tour but didn't reach the end.
+  const tutorialIncomplete = tutorialSeen && !tutorialCompleted;
 
   const handleInviteFriends = useCallback(async () => {
     try {
       await Share.share({
-        message: `Join me at ${config.displayName} on Sahla — ${APP_STORE_URL}`,
+        message: t('profile.inviteShareMessage', {
+          masjid: config.displayName,
+          url: APP_STORE_URL,
+        }),
         url: APP_STORE_URL,
       });
     } catch {
       // User dismissed or platform error — nothing actionable to show.
     }
-  }, [config.displayName]);
+  }, [config.displayName, t]);
 
   return (
     <View
@@ -138,11 +175,20 @@ export default function ProfileBody({
         ...(Platform.OS === "android" ? { elevation: 3 } : {}),
       }}
     >
-      <PersonalizedCard onPress={onPressPersonalized} />
+      {/* Setup affordances — each row disappears once the user has completed
+          it, and the IncompleteBadge clears in-session via useSetupCompleteness. */}
+      {!setup.profile ? (
+        <View style={{ marginBottom: 12 }}>
+          <ProfileSetupRow onPress={onPressCompleteProfile} />
+        </View>
+      ) : null}
+      {!setup.personalization ? (
+        <PersonalizedCard onPress={onPressPersonalized} incomplete />
+      ) : null}
 
       {/* COMMUNITY */}
       <View className="flex-col">
-        <SectionHeader title="COMMUNITY" />
+        <SectionHeader title={t('profile.sectionCommunity')} />
         <View
           style={{
             borderWidth: 0.5,
@@ -153,7 +199,7 @@ export default function ProfileBody({
         >
           <RowItem
             icon={COMMUNITY_ICON}
-            title="Invite friends"
+            title={t('profile.inviteFriends')}
             onPress={handleInviteFriends}
           />
         </View>
@@ -161,28 +207,36 @@ export default function ProfileBody({
 
       {/* MY ACTIVITY */}
       <View className="flex-col">
-        <SectionHeader title="MY ACTIVITY" />
+        <SectionHeader title={t('profile.sectionMyActivity')} />
         <View>
+          {/* Personalize preferences — the featured PersonalizedCard at the
+              top of the body hides itself once personalization is done, so
+              the entry point still lives here as a regular row for people
+              who want to revisit / update their picks. Uses the same
+              PersonalizeIcon sunburst as the featured card so the two
+              read as the same destination. */}
+          <RowItem
+            renderIcon={() => (
+              <PersonalizeIcon size={16} color={`rgb(${config.colors.foreground.replace(/ /g, ',')})`} />
+            )}
+            title={t('profile.personalizePreferences')}
+            onPress={onPressPersonalized}
+          />
           <RowItem
             icon={SAVED_PROGRAMS_AND_EVENTS_ICON}
-            title="Saved Programs & Events"
+            title={t('profile.savedProgramsEvents')}
             onPress={() => router.push("/profile/saved-events" as Href)}
           />
           <RowItem
             icon={SAVED_CLIPS_ICON}
-            title="Saved Clips"
+            title={t('profile.savedClips')}
             onPress={() => router.push("/profile/saved-clips" as Href)}
           />
-          <RowItem
-            icon={PAYMENT_HISTORY_ICON}
-            title="Payment History"
-            onPress={() => router.push('/profile/payment-history')}
-          />
-          <RowItem
-            icon={PAYMENT_METHODS_ICON}
-            title="Payment Methods"
-            onPress={() => router.push('/profile/payment-methods')}
-          />
+          {/* Payment History and Payment Methods are hidden while payments are
+              off — with no way to add a card or make a charge, both rows lead
+              to a permanently empty screen. The routes and their edge
+              functions are untouched; restore these two rows when giving is
+              turned back on. */}
         </View>
       </View>
 
@@ -193,24 +247,28 @@ export default function ProfileBody({
 
       {/* NOTIFICATIONS */}
       <View className="flex-col gap-2">
-        <SectionHeader title="NOTIFICATIONS" />
-        <Notifications onEnablePress={onPressNotifications} />
+        <SectionHeader title={t('profile.sectionNotifications')} />
+        {/* The "enable" card doubles as the in-profile notifications nudge —
+            shown only while notifications aren't actually live. */}
+        {!setup.notifications ? (
+          <Notifications onEnablePress={onPressNotifications} incomplete />
+        ) : null}
         <View className="flex-col">
           <RowItem
             icon={PRAYER_ALERTS_ICON}
-            title="Prayer Alerts"
+            title={t('profile.prayerAlerts')}
             onPress={() => router.push("/profile/notification-center" as Href)}
           />
           <RowItem
             icon={PROGRAMS_ICON}
-            title="Programs"
+            title={t('profile.programs')}
             onPress={() =>
               router.push("/profile/notification-center?tab=Programs" as Href)
             }
           />
           <RowItem
             icon={EVENTS_ICON}
-            title="Events"
+            title={t('profile.events')}
             onPress={() =>
               router.push("/profile/notification-center?tab=Events" as Href)
             }
@@ -219,13 +277,59 @@ export default function ProfileBody({
         <SectionRule />
       </View>
 
+      {/* APP */}
+      <View className="flex-col">
+        <SectionHeader title={t('profile.sectionApp')} />
+        <View>
+          <LanguageRow />
+          <RowItem
+            icon={REPLAY_TUTORIAL_ICON}
+            title={tutorialIncomplete ? t('profile.finishTutorial') : t('profile.replayTutorial')}
+            onPress={replayTutorial}
+            showDot={tutorialIncomplete}
+          />
+          {updates.isReady ? (
+            <RowItem
+              icon={APPLICATION_ICON}
+              title={t('profile.restartToApplyUpdate')}
+              onPress={() => {
+                updates.reloadNow().catch(() => {});
+              }}
+            />
+          ) : (
+            <RowItem
+              icon={CHECK_STATUS_ICON}
+              title={updates.isDownloading ? t('profile.downloadingUpdate') : t('profile.checkForUpdates')}
+              onPress={() => {
+                if (updates.isChecking || updates.isDownloading) return;
+                checkAndNotify();
+              }}
+            />
+          )}
+        </View>
+        <View className="px-4 pb-2 pt-1">
+          <Text
+            className="text-foreground/40"
+            style={{
+              fontFamily: fonts.body,
+              fontSize: 11,
+              lineHeight: 16,
+            }}
+          >
+            {t('profile.appVersion', { version: appVersion })}
+            {__DEV__ && updates.channel ? ` · ${updates.channel}` : ''}
+          </Text>
+        </View>
+        <SectionRule />
+      </View>
+
       {/* MAS SHOP */}
       <View className="flex-col">
-        <SectionHeader title="SHOP" />
+        <SectionHeader title={t('profile.sectionShop')} />
         <View>
           <RowItem
             icon={MAS_BAG_ICON}
-            title="Programs / Events Shop"
+            title={t('profile.programsEventsShop')}
             onPress={() => {}}
           />
         </View>
@@ -234,22 +338,29 @@ export default function ProfileBody({
 
       {/* BUSINESS ADS */}
       <View className="flex-col">
-        <SectionHeader title="BUSINESS ADS" />
+        <SectionHeader title={t('profile.sectionBusinessAds')} />
         <View>
           <RowItem
             icon={APPLICATION_ICON}
-            title="Start an Application"
+            title={t('profile.startAnApplication')}
             onPress={() => router.push("/advertise" as Href)}
           />
+          {/* Check the Status and Manage Subscriptions are hidden while ad
+              purchasing is off — no ad can exist, so both rows land on a
+              permanently empty screen whose only action is a live Stripe
+              cancel. Restore them with the payment step. */}
+        </View>
+        <SectionRule />
+      </View>
+
+      {/* LEGAL — reachable without signing up, which is where a reviewer looks. */}
+      <View className="flex-col">
+        <SectionHeader title={t('profile.sectionLegal')} />
+        <View>
           <RowItem
-            icon={CHECK_STATUS_ICON}
-            title="Check the Status"
-            onPress={() => router.push("/advertise-status" as Href)}
-          />
-          <RowItem
-            icon={MANAGE_SUBS_ICON}
-            title="Manage Subscriptions"
-            onPress={() => router.push("/advertise-status" as Href)}
+            icon={TERMS_ICON}
+            title={t('profile.legalRow')}
+            onPress={() => router.push('/legal' as Href)}
           />
         </View>
         <SectionRule />
@@ -257,11 +368,11 @@ export default function ProfileBody({
 
       {/* LEAVE A COMMENT */}
       <View className="flex-col">
-        <SectionHeader title="LEAVE A COMMENT" />
+        <SectionHeader title={t('profile.sectionLeaveAComment')} />
         <View>
           <RowItem
             icon={FEEDBACK_ICON}
-            title="Send Feedback"
+            title={t('profile.sendFeedback')}
             onPress={() => setFeedbackOpen(true)}
           />
         </View>
@@ -271,11 +382,11 @@ export default function ProfileBody({
       {/* ADMIN */}
       {isAdmin && (
         <View className="flex-col">
-          <SectionHeader title="ADMIN" />
+          <SectionHeader title={t('profile.sectionAdmin')} />
           <View>
             <RowItem
               icon={ADMIN_ICON}
-              title="Admin Portal"
+              title={t('profile.adminPortal')}
               onPress={() => router.push("/profile/admin" as Href)}
             />
           </View>

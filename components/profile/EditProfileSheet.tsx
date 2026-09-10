@@ -13,6 +13,9 @@ import {
   View,
 } from 'react-native';
 
+import { useTranslation } from 'react-i18next';
+
+import { DatePicker } from '@/src/components/admin/date-picker';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useProfile, useUpdateProfile } from '@/src/hooks/use-profile';
 
@@ -82,12 +85,14 @@ function Field({
 }
 
 export default function EditProfileSheet({ visible, onClose }: Props) {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const { profile } = useProfile();
   const updateProfile = useUpdateProfile();
 
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const bgRgb = `rgb(${colors.card.replace(/ /g, ',')})`;
+  const accentRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
   const labelColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.6)`;
   const borderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.1)`;
   const placeholderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.25)`;
@@ -96,6 +101,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
 
   const [mounted, setMounted] = useState(false);
   const translateY = useRef(new Animated.Value(SCREEN_H)).current;
@@ -107,6 +113,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
       setLastName(profile.last_name ?? '');
       setEmail(profile.profile_email ?? '');
       setPhone(profile.phone_number ?? '');
+      setDob(profile.date_of_birth ?? '');
     }
   }, [visible, profile]);
 
@@ -152,6 +159,7 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
         last_name: lastName.trim() || null,
         profile_email: email.trim() || null,
         phone_number: phone.trim() || null,
+        date_of_birth: dob || null,
       },
       { onSuccess: onClose },
     );
@@ -161,7 +169,8 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
     firstName !== (profile?.first_name ?? '') ||
     lastName !== (profile?.last_name ?? '') ||
     email !== (profile?.profile_email ?? '') ||
-    phone !== (profile?.phone_number ?? '');
+    phone !== (profile?.phone_number ?? '') ||
+    dob !== (profile?.date_of_birth ?? '');
 
   return (
     <Modal
@@ -203,9 +212,9 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
             elevation: 12,
           }}
         >
-          {/* Handle */}
+          {/* Handle — Figma v2 (node 365:3793) draws it 25px wide, not 40. */}
           <View className="items-center pb-2 pt-3">
-            <View className="h-1 w-10 rounded-full bg-foreground/20" />
+            <View className="h-1 rounded-full bg-foreground/20" style={{ width: 25 }} />
           </View>
 
           {/* Header */}
@@ -219,17 +228,19 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
                 textTransform: 'uppercase',
               }}
             >
-              Edit Profile
+              {t('profile.editProfile')}
             </Text>
           </View>
 
-          {/* Fields */}
-          <View className="px-6">
+          {/* Fields — v2 insets the labels/underlines 36px from the sheet edge
+              (Figma x=45..352 in a 385-wide sheet), wider than the 24px the
+              save button uses below. */}
+          <View style={{ paddingHorizontal: 36 }}>
             <Field
-              label="First Name"
+              label={t('profile.firstName')}
               value={firstName}
               onChangeText={setFirstName}
-              placeholder="Enter first name"
+              placeholder={t('profile.enterFirstName')}
               autoCapitalize="words"
               labelColor={labelColor}
               textColor={fgRgb}
@@ -237,10 +248,10 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               placeholderColor={placeholderColor}
             />
             <Field
-              label="Last Name"
+              label={t('profile.lastName')}
               value={lastName}
               onChangeText={setLastName}
-              placeholder="Enter last name"
+              placeholder={t('profile.enterLastName')}
               autoCapitalize="words"
               labelColor={labelColor}
               textColor={fgRgb}
@@ -248,10 +259,10 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               placeholderColor={placeholderColor}
             />
             <Field
-              label="Email"
+              label={t('profile.email')}
               value={email}
               onChangeText={setEmail}
-              placeholder="Enter email"
+              placeholder={t('profile.enterEmail')}
               keyboardType="email-address"
               autoCapitalize="none"
               labelColor={labelColor}
@@ -260,38 +271,64 @@ export default function EditProfileSheet({ visible, onClose }: Props) {
               placeholderColor={placeholderColor}
             />
             <Field
-              label="Phone"
+              label={t('profile.phone')}
               value={phone}
               onChangeText={setPhone}
-              placeholder="Enter phone number"
+              placeholder={t('profile.enterPhoneNumber')}
               keyboardType="phone-pad"
               labelColor={labelColor}
               textColor={fgRgb}
               borderColor={borderColor}
               placeholderColor={placeholderColor}
             />
+
+            {/* Date of birth — native picker (input when empty, edit when set) */}
+            <View style={{ marginBottom: 16 }}>
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  letterSpacing: 1.4,
+                  textTransform: 'uppercase',
+                  color: labelColor,
+                  marginBottom: 6,
+                }}
+              >
+                {t('profile.dateOfBirth')}
+              </Text>
+              <DatePicker
+                value={dob}
+                onChange={setDob}
+                accentRgb={accentRgb}
+                fgRgb={fgRgb}
+                labelColor={labelColor}
+                borderColor={borderColor}
+                allowClear
+                maximumDate={new Date()}
+              />
+            </View>
           </View>
 
-          {/* Save Button */}
-          <View className="px-6 pb-8 pt-4">
+          {/* Save Button — v2: 39px tall, inset 22px, 23px off the sheet bottom. */}
+          <View className="pt-4" style={{ paddingHorizontal: 22, paddingBottom: 23 }}>
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={handleSave}
               disabled={!hasChanges || updateProfile.isPending}
               className="items-center justify-center rounded-full bg-primary"
               style={{
-                height: 43,
+                height: 39,
                 opacity: hasChanges && !updateProfile.isPending ? 1 : 0.5,
               }}
             >
               <Text className="text-[14px] font-semibold text-primary-foreground">
-                {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
+                {updateProfile.isPending ? t('profile.saving') : t('profile.saveChanges')}
               </Text>
             </TouchableOpacity>
 
             {updateProfile.isError && (
               <Text className="mt-2 text-center text-[11px] text-red-500">
-                {updateProfile.error?.message ?? 'Failed to save'}
+                {updateProfile.error?.message ?? t('profile.failedToSave')}
               </Text>
             )}
           </View>

@@ -1,21 +1,25 @@
 import { useClerk, useSignUp } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Pattern from '@/assets/onboarding/pattern.svg';
+import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
-
-const SERIF = 'PlayfairDisplay_500Medium';
+import { BackButton } from '@/src/components/ui/back-button';
 
 export default function SignUpScreen() {
   const { signUp, setActive, isLoaded } = useSignUp();
   const clerk = useClerk();
   const router = useRouter();
+  const { t } = useTranslation();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
   const surfaceAlpha60 = `rgba(${surface}, 0.6)`;
   const surfaceAlpha25 = `rgba(${surface}, 0.25)`;
@@ -31,9 +35,9 @@ export default function SignUpScreen() {
   const clerkError = (err: unknown) => {
     if (err && typeof err === 'object' && 'errors' in err) {
       // @ts-expect-error Clerk error shape
-      return err.errors?.[0]?.message ?? 'Something went wrong';
+      return err.errors?.[0]?.message ?? t('auth.somethingWentWrong');
     }
-    return 'Something went wrong';
+    return t('auth.somethingWentWrong');
   };
 
   const onCreate = useCallback(async () => {
@@ -52,7 +56,7 @@ export default function SignUpScreen() {
         const userId = clerk.user?.id;
         if (userId) await joinAndActivateOrg(userId);
       } else {
-        setError(`Unexpected status: ${created.status}`);
+        setError(t('auth.unexpectedStatus', { status: created.status }));
       }
     } catch (err: any) {
       console.error('[SignUp] full error:', JSON.stringify(err?.errors ?? err, null, 2));
@@ -60,7 +64,7 @@ export default function SignUpScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signUp, email, password, submitting]);
+  }, [isLoaded, signUp, email, password, submitting, t]);
 
   const joinAndActivateOrg = useCallback(
     async (userId: string) => {
@@ -68,12 +72,12 @@ export default function SignUpScreen() {
       if (!orgId) return;
       const result = await joinOrgDirect(userId, orgId);
       if (result === 'error') {
-        setError('Failed to join organization. Please try again.');
+        setError(t('auth.joinOrgFailed'));
         return;
       }
       await clerk.setActive({ organization: orgId });
     },
-    [clerk, config.clerkOrgId],
+    [clerk, config.clerkOrgId, t],
   );
 
   const onVerify = useCallback(async () => {
@@ -87,43 +91,37 @@ export default function SignUpScreen() {
         const userId = clerk.user?.id;
         if (userId) await joinAndActivateOrg(userId);
       } else {
-        setError(`Unexpected verification status: ${attempt.status}`);
+        setError(t('auth.unexpectedVerificationStatus', { status: attempt.status }));
       }
     } catch (err) {
       setError(clerkError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signUp, code, setActive, submitting, joinAndActivateOrg, clerk]);
+  }, [isLoaded, signUp, code, setActive, submitting, joinAndActivateOrg, clerk, t]);
 
   return (
     <View className="flex-1 bg-onboarding-bg">
       <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
-        <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin slice" />
+        <OnboardingPattern />
       </View>
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-5 pt-2">
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            className="h-6 w-6 items-center justify-center"
-          >
-            <Ionicons name="arrow-back" size={20} color={surfaceAlpha60} />
-          </Pressable>
+          <BackButton color={surfaceAlpha60} style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }} />
         </View>
 
         <View className="flex-1 justify-center px-6">
           <Text
             className="text-onboarding-surface"
             style={{
-              fontFamily: SERIF,
+              fontFamily: fonts.display,
               fontSize: 30,
               fontWeight: '500',
               marginBottom: 32,
             }}
           >
-            {pendingVerification ? 'Verify your\nemail' : 'Create your\naccount'}
+            {pendingVerification ? t('auth.verifyEmailTitle') : t('auth.createTitle')}
           </Text>
 
           {!pendingVerification ? (
@@ -132,12 +130,12 @@ export default function SignUpScreen() {
                 className="text-onboarding-surface/40 mb-2"
                 style={{ fontSize: 10, letterSpacing: 1.5 }}
               >
-                EMAIL
+                {t('auth.email')}
               </Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 placeholderTextColor={surfaceAlpha25}
                 autoCapitalize="none"
                 autoComplete="email"
@@ -149,12 +147,12 @@ export default function SignUpScreen() {
                 className="text-onboarding-surface/40 mb-2"
                 style={{ fontSize: 10, letterSpacing: 1.5 }}
               >
-                PASSWORD
+                {t('auth.password')}
               </Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                placeholder="At least 8 characters"
+                placeholder={t('auth.passwordPlaceholderMin')}
                 placeholderTextColor={surfaceAlpha25}
                 secureTextEntry
                 autoComplete="new-password"
@@ -165,18 +163,18 @@ export default function SignUpScreen() {
           ) : (
             <>
               <Text className="text-onboarding-surface/80 mb-6" style={{ fontSize: 11 }}>
-                Enter the 6-digit code we sent to {email}
+                {t('auth.enterCodeSentTo', { email })}
               </Text>
               <Text
                 className="text-onboarding-surface/40 mb-2"
                 style={{ fontSize: 10, letterSpacing: 1.5 }}
               >
-                VERIFICATION CODE
+                {t('auth.verificationCode')}
               </Text>
               <TextInput
                 value={code}
                 onChangeText={setCode}
-                placeholder="123456"
+                placeholder={t('auth.codePlaceholder')}
                 placeholderTextColor={surfaceAlpha25}
                 keyboardType="number-pad"
                 className="border-onboarding-surface/20 text-onboarding-surface mb-6 border-b pb-2"
@@ -186,7 +184,7 @@ export default function SignUpScreen() {
           )}
 
           {error ? (
-            <Text className="mb-4" style={{ fontSize: 13, color: '#EF4444' }}>
+            <Text className="mb-4 text-danger" style={{ fontSize: 13 }}>
               {error}
             </Text>
           ) : null}
@@ -204,7 +202,7 @@ export default function SignUpScreen() {
                   className="text-onboarding-bg"
                   style={{ fontSize: 14, fontWeight: '600' }}
                 >
-                  {pendingVerification ? 'Verify email' : 'Create account'}
+                  {pendingVerification ? t('auth.verifyEmailButton') : t('auth.createAccountButton')}
                 </Text>
               )}
             </Pressable>

@@ -13,17 +13,27 @@ const DonationContext = createContext<DonationContextValue | null>(null);
 
 export function DonationProvider({ children }: { children: React.ReactNode }) {
   const [visible, setVisible] = useState(false);
+  // Stays true after the first open so the modal can run its OWN close
+  // animation when `visible` flips false. The earlier `{visible && ...}`
+  // unmounted the modal synchronously on close, which killed the spring
+  // mid-flight and made the sheet snap off-screen. The DonationModal
+  // self-unmounts (returns null) once its internal `mounted` state flips
+  // — see the resetState() call after the close animation completes.
+  const [everOpened, setEverOpened] = useState(false);
 
   return (
     <DonationContext.Provider
       value={{
-        open: () => setVisible(true),
+        open: () => {
+          setEverOpened(true);
+          setVisible(true);
+        },
         close: () => setVisible(false),
       }}
     >
       {children}
       <Suspense fallback={null}>
-        {visible && <DonationModal visible={visible} onClose={() => setVisible(false)} />}
+        {everOpened && <DonationModal visible={visible} onClose={() => setVisible(false)} />}
       </Suspense>
     </DonationContext.Provider>
   );

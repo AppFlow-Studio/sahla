@@ -39,6 +39,28 @@ export type IqamahRule = {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
+/** 'HH:MM' or 'HH:MM:SS' → minutes-of-day, or null when unparseable. */
+function timeToMinutes(time: string | null | undefined): number | null {
+  if (typeof time !== 'string') return null;
+  const [h, m] = time.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * True when a FIXED iqamah time falls before the athan — an impossible config.
+ * Returns false when either value is missing (nothing to validate against).
+ */
+export function isFixedIqamahBeforeAthan(
+  fixedTime: string | null | undefined,
+  athanRaw: string | null | undefined,
+): boolean {
+  const fixed = timeToMinutes(fixedTime);
+  const athan = timeToMinutes(athanRaw);
+  if (fixed == null || athan == null) return false;
+  return fixed < athan;
+}
+
 /**
  * Resolve an iqamah rule against a day's athan time.
  * @param athanRaw athan time-of-day, 'HH:MM' or 'HH:MM:SS'

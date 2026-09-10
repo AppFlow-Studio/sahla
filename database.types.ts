@@ -1910,6 +1910,8 @@ export type Database = {
           apple_merchant_id: string | null
           apple_team_id: string | null
           brand_color: string | null
+          font_theme: string
+          header_style: string
           bundle_id: string | null
           calculation_method: number | null
           city: string | null
@@ -1961,6 +1963,8 @@ export type Database = {
           apple_merchant_id?: string | null
           apple_team_id?: string | null
           brand_color?: string | null
+          font_theme?: string
+          header_style?: string
           bundle_id?: string | null
           calculation_method?: number | null
           city?: string | null
@@ -2012,6 +2016,8 @@ export type Database = {
           apple_merchant_id?: string | null
           apple_team_id?: string | null
           brand_color?: string | null
+          font_theme?: string
+          header_style?: string
           bundle_id?: string | null
           calculation_method?: number | null
           city?: string | null
@@ -2563,6 +2569,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          date_of_birth: string | null
           first_name: string | null
           id: string
           last_name: string | null
@@ -2573,6 +2580,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          date_of_birth?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
@@ -2583,6 +2591,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          date_of_birth?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -3347,6 +3356,96 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_categories: {
+        Row: {
+          audience_filter: string
+          bg_color: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          mosque_id: string
+          sort_order: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          audience_filter?: string
+          bg_color?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          mosque_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          audience_filter?: string
+          bg_color?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          mosque_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_categories_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_category_content: {
+        Row: {
+          category_id: string
+          content_id: string
+          created_at: string
+          mosque_id: string
+          sort_order: number
+        }
+        Insert: {
+          category_id: string
+          content_id: string
+          created_at?: string
+          mosque_id: string
+          sort_order?: number
+        }
+        Update: {
+          category_id?: string
+          content_id?: string
+          created_at?: string
+          mosque_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_category_content_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "program_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_category_content_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["content_id"]
+          },
+          {
+            foreignKeyName: "program_category_content_mosque_id_fkey"
+            columns: ["mosque_id"]
+            isOneToOne: false
+            referencedRelation: "mosques"
             referencedColumns: ["id"]
           },
         ]

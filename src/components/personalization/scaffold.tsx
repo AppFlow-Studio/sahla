@@ -1,9 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const SERIF = 'PlayfairDisplay_500Medium';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { BackButton } from '@/src/components/ui/back-button';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 type PersonalizationScaffoldProps = {
   step: number;
@@ -36,22 +40,26 @@ export function PersonalizationScaffold({
   onSkip,
 }: PersonalizationScaffoldProps) {
   const router = useRouter();
+  const fonts = useFontFamily();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.onboardingSurface);
   const progress = Math.max(0, Math.min(1, step / totalSteps));
 
   return (
     <View className="flex-1 bg-onboarding-surface">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center justify-between px-5 pt-2">
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            className="h-6 w-6 items-center justify-center"
-          >
-            <Ionicons name="arrow-back" size={20} color="rgba(10,38,30,0.6)" />
-          </Pressable>
+          <BackButton
+            color="rgba(10,38,30,0.6)"
+            style={{ width: 24, height: 24, alignItems: 'center', justifyContent: 'center' }}
+          />
           {onSkip ? (
             <Pressable onPress={onSkip} hitSlop={12} className="active:opacity-60">
-              <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)' }}>Skip</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(10,38,30,0.6)' }}>
+                {t('personalization.skip')}
+              </Text>
             </Pressable>
           ) : (
             <View />
@@ -69,7 +77,7 @@ export function PersonalizationScaffold({
             className="mt-3 text-onboarding-bg/60"
             style={{ fontSize: 11, letterSpacing: 0.6 }}
           >
-            STEP {step} OF {totalSteps}
+            {t('personalization.stepOf', { step, total: totalSteps })}
           </Text>
         </View>
 
@@ -80,7 +88,7 @@ export function PersonalizationScaffold({
         >
           <Text
             className="text-onboarding-bg"
-            style={{ fontFamily: SERIF, fontSize: 30, lineHeight: 35 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 35 }}
           >
             {title}
           </Text>

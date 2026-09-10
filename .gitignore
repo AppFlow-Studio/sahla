@@ -52,3 +52,7 @@ supabase/.branches/
 
 # editor
 .cursor/
+
+# Editor swap files
+*.swp
+*.swo

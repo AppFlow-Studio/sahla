@@ -1,17 +1,67 @@
+import EditProfileSheet from "@/components/profile/EditProfileSheet";
+import GuestProfile from "@/components/profile/GuestProfile";
 import ProfileBody from "@/components/profile/ProfileBody";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { useDonation } from "@/src/providers/donation-provider";
+import { useSetupCompleteness } from "@/src/hooks/use-setup-completeness";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Linking, Platform, ScrollView, View } from "react-native";
+import { useCallback, useState } from "react";
+import { Platform, ScrollView, View } from "react-native";
 
-import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
+import { useEnableNotifications } from "@/src/hooks/use-notification-status";
+import { useScrollAwareStatusBar } from "@/src/hooks/use-status-bar-style";
+import { useGuestStore } from "@/src/stores/guest-store";
+import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 export default function ProfileScreen() {
+  const isGuest = useGuestStore((s) => s.isGuest);
   const { open: openDonate } = useDonation();
   const router = useRouter();
+  const setup = useSetupCompleteness();
+  const enableNotifications = useEnableNotifications();
+  // EditProfileSheet lifted from ProfileHeader so both the header's
+  // Edit/Complete buttons and the body's Profile setup row drive one instance.
+  const [editVisible, setEditVisible] = useState(false);
 
-  useStatusBarStyle("dark");
+  // ProfileHeader paints its top area with the tenant's `primary`, then
+  // ProfileBody starts a light `background` region. The scroll-aware
+  // status bar flips icons as the light body climbs under the status bar.
+  const { colors: masjidColors } = useMasjidConfig();
+  const statusBar = useScrollAwareStatusBar({
+    topSurface: masjidColors.primary,
+    bottomSurface: masjidColors.background,
+  });
+
+
+  const openPersonalization = useCallback(
+    () => router.push("/(personalization)/reasons"),
+    [router],
+  );
+  const openEditProfile = useCallback(() => setEditVisible(true), []);
+
+  // "Complete Profile" header CTA routes to the first outstanding step in
+  // priority order: profile fields → personalization → notifications. (The CTA
+  // itself gates on profile fields, so in practice this hits the profile case.)
+  const handlePressCompleteProfile = useCallback(() => {
+    switch (setup.firstIncomplete) {
+      case 'personalization':
+        openPersonalization();
+        return;
+      case 'notifications':
+        void enableNotifications();
+        return;
+      case 'profile':
+      default:
+        openEditProfile();
+    }
+  }, [setup.firstIncomplete, openEditProfile, openPersonalization, enableNotifications]);
+
+  // Guests get an explanation of what an account adds rather than an empty
+  // profile. Placed below every hook so the hook order stays identical across
+  // both branches — an early return above the useCallbacks would change the
+  // hook count the moment a guest signs in.
+  if (isGuest) return <GuestProfile />;
 
   return (
     <View className="flex-1 bg-depth">
@@ -36,15 +86,27 @@ export default function ProfileScreen() {
         contentInsetAdjustmentBehavior={
           Platform.OS === "ios" ? "never" : undefined
         }
+        onScroll={statusBar.onScroll}
+        scrollEventThrottle={16}
       >
         <View className="w-full ">
-          <ProfileHeader />
-          <ProfileBody
-            onPressPersonalized={() => router.push("/(personalization)/reasons")}
-            onPressNotifications={() => Linking.openSettings()}
+          <ProfileHeader
+            onPressEdit={openEditProfile}
+            onPressCompleteProfile={handlePressCompleteProfile}
           />
+          {/* Wrap ProfileBody so we can measure where the light bg region
+              begins — the scroll-aware status bar flips icons once this
+              boundary climbs above the safe-area top. */}
+          <View onLayout={statusBar.onLayoutBottomSurface}>
+            <ProfileBody
+              onPressPersonalized={openPersonalization}
+              onPressNotifications={enableNotifications}
+              onPressCompleteProfile={openEditProfile}
+            />
+          </View>
         </View>
       </ScrollView>
+      <EditProfileSheet visible={editVisible} onClose={() => setEditVisible(false)} />
     </View>
   );
 }

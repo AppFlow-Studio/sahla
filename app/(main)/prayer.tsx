@@ -1,14 +1,18 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { GlassView } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect } from 'expo-router';
 
-import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -19,6 +23,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
+import { Icon, type IconName } from '@/src/components/ui/icon';
 import QuranScreen from '@/src/screens/QuranScreen';
 import { PrayerNotificationSheet } from '@/src/components/prayer/prayer-notification-sheet';
 import { CommunityPartnersCarousel } from '@/src/components/community-partners-carousel';
@@ -41,6 +46,14 @@ function rgb(triplet: string, alpha = 1) {
   return alpha === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/**
+ * `contentInset` / `contentOffset` are **iOS-only** ScrollView props — Android
+ * ignores them outright, which left the top of the page rendering under the
+ * status bar with its top clipped. Android gets real `paddingTop` instead. It
+ * has to be one or the other: applying both would double the gap on iOS.
+ */
+const USE_CONTENT_INSET = Platform.OS === 'ios';
+
 type Status = 'passed' | 'next' | 'upcoming';
 
 type PrayerRow = {
@@ -53,13 +66,14 @@ type PrayerRow = {
 
 function buildPrayerRows(
   items: { name: string; athan: string; iqamah: string; status: Status }[],
-  nextPrayer: { name: string; timeRemaining: string } | null
+  nextPrayer: { name: string; timeRemaining: string } | null,
+  t: (key: string, opts?: Record<string, unknown>) => string
 ): PrayerRow[] {
   return items.map((p) => {
     let statusLabel = '';
-    if (p.status === 'passed') statusLabel = 'Passed';
+    if (p.status === 'passed') statusLabel = t('prayer.passed');
     if (p.status === 'next' && nextPrayer)
-      statusLabel = `Next in ${nextPrayer.timeRemaining}`;
+      statusLabel = t('prayer.nextIn', { time: nextPrayer.timeRemaining });
     return {
       name: p.name,
       athan: p.athan,
@@ -296,16 +310,15 @@ function PrayerDots({
               borderColor: isNext ? c.gold : c.border20,
             }}
           >
-            <GlassView
-              glassEffectStyle="regular"
+            <View
               style={{
                 width: dotSize,
                 height: dotSize,
                 backgroundColor: isPassed
-                  ? c.text
+                  ? c.muted
                   : isNext
                     ? c.goldGlass
-                    : 'transparent',
+                    : 'rgba(0, 0, 0, 0.18)',
               }}
             />
           </View>
@@ -385,6 +398,8 @@ function StarField({ color }: { color: string }) {
   );
 }
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 function ProgressRing({
   progress,
   size = 72,
@@ -402,10 +417,27 @@ function ProgressRing({
   const cx = size / 2;
   const cy = size / 2;
   const circ = 2 * Math.PI * r;
+
+  // Animate strokeDashoffset from `circ` (empty ring) toward
+  // `circ * (1 - progress)` (target). Starts at circ on mount so we
+  // sweep in from 0% on first paint, then transitions between values
+  // when `progress` changes (e.g. Daily → Monthly toggle).
+  const offset = useSharedValue(circ);
+  useEffect(() => {
+    offset.value = withTiming(circ * (1 - progress), {
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [progress, circ, offset]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: offset.value,
+  }));
+
   return (
     <Svg width={size} height={size}>
       <Circle cx={cx} cy={cy} r={r} stroke={track} strokeWidth={stroke} fill="none" />
-      <Circle
+      <AnimatedCircle
         cx={cx}
         cy={cy}
         r={r}
@@ -414,20 +446,22 @@ function ProgressRing({
         fill="none"
         strokeLinecap="round"
         strokeDasharray={`${circ} ${circ}`}
-        strokeDashoffset={circ * (1 - progress)}
+        animatedProps={animatedProps}
         transform={`rotate(-90 ${cx} ${cy})`}
       />
     </Svg>
   );
 }
 
-const PERIOD_OPTIONS: { key: Period; short: string; long: string }[] = [
-  { key: 'day', short: 'Daily', long: 'today' },
-  { key: 'month', short: 'Monthly', long: 'this month' },
-  { key: 'year', short: 'Yearly', long: 'this year' },
+const PERIOD_OPTIONS: { key: Period; shortKey: string; longKey: string }[] = [
+  { key: 'day', shortKey: 'periodDaily', longKey: 'periodToday' },
+  { key: 'month', shortKey: 'periodMonthly', longKey: 'periodThisMonth' },
+  { key: 'year', shortKey: 'periodYearly', longKey: 'periodThisYear' },
 ];
 
 function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueReading?: () => void }) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
   const [period, setPeriod] = useState<Period>('day');
   const version = useTrackerVersion();
 
@@ -439,115 +473,166 @@ function DailyQuranGoalCard({ c, onContinueReading }: { c: Palette; onContinueRe
       pages: p,
       goal: g,
       percent: Math.min(1, p / g),
-      periodLabel: PERIOD_OPTIONS.find((o) => o.key === period)!.long,
+      periodLabel: t(`prayer.${PERIOD_OPTIONS.find((o) => o.key === period)!.longKey}`),
     };
-  }, [period, version]);
+  }, [period, version, t]);
 
   const remaining = Math.max(0, goal - pages);
   const ringSize = 64;
-
-  // No saved last-viewed position → the user hasn't read yet, so prompt them to
-  // "Start Reading" rather than "Continue Reading".
   const hasRead = useMemo(() => getLastViewed() != null, [version]);
 
   return (
     <View
       style={{
-        borderRadius: 22,
-        paddingHorizontal: 20,
-        paddingVertical: 20,
+        borderRadius: 20,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 22,
         backgroundColor: c.depth30,
         marginTop: 20,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-        <GlassView
-          glassEffectStyle="regular"
+      {/* Header — book badge + "Quran Goal" title on the left, ring on
+          the right with the period-remaining subtitle stacked directly
+          beneath the ring. Book icon in our dark blur badge preserved. */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        <View
           style={{
-            width: 34,
-            height: 34,
-            borderRadius: 17,
+            width: 30,
+            height: 30,
+            borderRadius: 15,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: 12,
-            overflow: 'hidden',
+            marginEnd: 10,
+            marginTop: 4,
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
-          <MaterialCommunityIcons name="book-open-page-variant" size={16} color={c.gold} />
-        </GlassView>
-        <Text style={{ color: c.text, fontSize: 24, fontFamily: 'PlayfairDisplay_400Regular', fontWeight: '400' }}>
-          Quran Goal
+          <Icon name="book-open-page-variant" size={16} color={c.gold} />
+        </View>
+        <Text
+          style={{
+            color: c.text,
+            fontSize: 25,
+            fontFamily: fonts.displayRegular,
+            fontWeight: '400',
+            flex: 1,
+          }}
+        >
+          {t('prayer.quranGoal')}
         </Text>
-      </View>
-
-      <PeriodToggle
-        c={c}
-        value={period}
-        onChange={setPeriod}
-      />
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: c.text, fontSize: 20, fontWeight: '700' }}>
-            {pages} / {goal} pages
-          </Text>
-          <Text style={{ color: c.muted, fontSize: 12, marginTop: 6 }}>
+        {/* Fixed-width wrapper so the ring position doesn't shift when the
+            subtitle text below it changes length. `alignItems: 'flex-end'`
+            pins the ring + subtitle to the RIGHT edge of the wrapper —
+            keeps the ring flush with the card's right side and the
+            subtitle right-aligned beneath it. */}
+        <View style={{ width: 130, alignItems: 'flex-end' }}>
+          <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
+            <ProgressRing
+              progress={percent}
+              size={ringSize}
+              stroke={3}
+              color={c.gold}
+              track={c.ringTrack}
+            />
+            {/* absoluteFill overlay + centered text keeps the percentage
+                pinned to the ring's visual center regardless of how many
+                digits it is (0%, 50%, 100% all sit on the same anchor).
+                The earlier `position: absolute` alone anchored to the
+                top-left corner, so as digit count grew the text shifted
+                right when switching Daily → Monthly → Yearly. */}
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { alignItems: 'center', justifyContent: 'center' },
+              ]}
+              pointerEvents="none"
+            >
+              <Text
+                style={{
+                  color: c.text,
+                  fontSize: 22,
+                  fontFamily: 'CormorantGaramond_400Regular',
+                  textAlign: 'center',
+                }}
+              >
+                {Math.round(percent * 100)}%
+              </Text>
+            </View>
+          </View>
+          <Text
+            numberOfLines={1}
+            style={{
+              color: 'rgba(255, 255, 255, 0.4)',
+              fontSize: 10,
+              letterSpacing: 0.18,
+              marginTop: 6,
+              textAlign: 'right',
+            }}
+          >
             {remaining === 0 ? (
-              <Text style={{ color: c.gold }}>Goal reached {periodLabel}</Text>
+              <Text style={{ color: '#B8922A' }}>{t('prayer.goalReached', { period: periodLabel })}</Text>
             ) : (
               <>
-                {periodLabel} <Text style={{ color: c.gold }}>• {remaining} left</Text>
+                {periodLabel}{' '}
+                <Text style={{ color: '#B8922A' }}>{t('prayer.pagesLeft', { count: remaining })}</Text>
               </>
             )}
           </Text>
-          <Pressable
-            style={{ alignSelf: 'flex-start', marginTop: 14 }}
-            onPress={onContinueReading}
-          >
-            <GlassView
-              glassEffectStyle="regular"
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 7,
-                borderRadius: 999,
-                overflow: 'hidden',
-              }}
-            >
-              <Text style={{ color: c.text, fontSize: 12, fontWeight: '500' }}>
-                {hasRead ? 'Continue Reading' : 'Start Reading'}
-              </Text>
-            </GlassView>
-          </Pressable>
         </View>
+      </View>
 
-        <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
-          <ProgressRing
-            progress={percent}
-            size={ringSize}
-            stroke={4}
-            color={c.gold}
-            track={c.ringTrack}
-          />
-          <View
-            style={{
-              position: 'absolute',
-              top: 2,
-              right: 10,
-            }}
-          >
-            <Sparkle size={6} color={c.gold} />
-          </View>
+      <View style={{ marginTop: -32, marginStart: -8 }}>
+        <PeriodToggle c={c} value={period} onChange={setPeriod} />
+      </View>
+
+      <Text
+        style={{
+          color: c.text,
+          fontSize: 13,
+          fontWeight: '600',
+          letterSpacing: 0.234,
+          marginTop: 14,
+        }}
+      >
+        {t('prayer.pagesProgress', { pages, goal })}
+      </Text>
+
+      {/* Continue Reading pill — Figma spec: 292×32, 0.5pt gold border, no
+          fill (transparent), SF Pro Semibold 8pt text with arrow.
+          marginTop lives on an outer static wrapper because Pressable's
+          style-function form has been dropping layout props on this
+          codebase's RN + New Arch (same gotcha as earlier). */}
+      <View style={{ marginTop: 24 }}>
+      <Pressable
+        onPress={onContinueReading}
+        style={({ pressed }) => ({
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        })}
+      >
+        <View
+          style={{
+            height: 32,
+            borderRadius: 20,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: c.gold,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <Text
             style={{
-              position: 'absolute',
               color: c.text,
-              fontSize: 22,
-              fontFamily: 'CormorantGaramond_400Regular',
+              fontSize: 10,
+              fontWeight: '600',
+              letterSpacing: 0.144,
             }}
           >
-            {Math.round(percent * 100)}%
+            {hasRead ? t('prayer.continueReading') : t('prayer.startReading')} →
           </Text>
         </View>
+      </Pressable>
       </View>
 
       <View
@@ -573,6 +658,7 @@ function PeriodToggle({
   value: Period;
   onChange: (p: Period) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -605,7 +691,7 @@ function PeriodToggle({
                 letterSpacing: 0.5,
               }}
             >
-              {opt.short}
+              {t(`prayer.${opt.shortKey}`)}
             </Text>
           </Pressable>
         );
@@ -615,26 +701,29 @@ function PeriodToggle({
 }
 
 function RemembrancesSection({ c }: { c: Palette }) {
+  const { t } = useTranslation();
+  const fonts = useFontFamily();
+  const meta = t('prayer.athkarMeta', { count: 42, minutes: 12 });
   return (
     <View style={{ marginTop: 18, marginBottom: 16 }}>
       <Text
         style={{
           color: c.text,
           fontSize: 24,
-          fontFamily: 'PlayfairDisplay_400Regular',
+          fontFamily: fonts.displayRegular,
           fontWeight: '400',
           marginBottom: 22,
         }}
       >
-        Remembrances
+        {t('prayer.remembrances')}
       </Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <RemembranceItem
           c={c}
           icon="weather-sunny"
-          title="Morning Athkar"
-          meta="42 Prayers • 12m"
+          title={t('prayer.morningAthkar')}
+          meta={meta}
         />
         <View
           style={{
@@ -647,8 +736,8 @@ function RemembrancesSection({ c }: { c: Palette }) {
         <RemembranceItem
           c={c}
           icon="moon-waning-crescent"
-          title="Evening Athkar"
-          meta="42 Prayers • 12m"
+          title={t('prayer.eveningAthkar')}
+          meta={meta}
         />
       </View>
     </View>
@@ -662,13 +751,30 @@ function RemembranceItem({
   meta,
 }: {
   c: Palette;
-  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  icon: IconName;
   title: string;
   meta: string;
 }) {
   return (
     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-      <MaterialCommunityIcons name={icon} size={18} color={c.gold} style={{ marginRight: 10 }} />
+      {/* Dark blur badge kept per feedback but sized down so its center
+          lines up with the title+meta stack center (was 34×34 which sat
+          ~4pt below the text center). 28×28 + 15pt icon + 8pt marginEnd
+          restores the "icon-next-to-title" alignment of the pre-badge
+          version. */}
+      <View
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginEnd: 8,
+          backgroundColor: 'rgba(0, 0, 0, 0.18)',
+        }}
+      >
+        <Icon name={icon} size={15} color={c.gold} />
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: c.text, fontSize: 13, fontWeight: '600' }}>{title}</Text>
         <Text style={{ color: c.muted, fontSize: 11, marginTop: 2 }}>{meta}</Text>
@@ -678,6 +784,7 @@ function RemembranceItem({
 }
 
 function CommunityPartnersSection({ c }: { c: Palette }) {
+  const { t } = useTranslation();
   const { data } = useCommunityPartners();
   const partners = data ?? [];
 
@@ -697,7 +804,7 @@ function CommunityPartnersSection({ c }: { c: Palette }) {
         }}
       >
         <Text style={{ color: c.text, fontSize: 12, fontWeight: '700', letterSpacing: 2 }}>
-          COMMUNITY PARTNERS
+          {t('prayer.communityPartners')}
         </Text>
       </View>
 
@@ -715,6 +822,8 @@ function CommunityPartnersSection({ c }: { c: Palette }) {
 }
 
 function SupportMasjidCard({ c }: { c: Palette }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { open } = useDonation();
   return (
     <View
@@ -730,50 +839,65 @@ function SupportMasjidCard({ c }: { c: Palette }) {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <GlassView
-          glassEffectStyle="regular"
+        <View
           style={{
             width: 40,
             height: 40,
             borderRadius: 20,
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: 'hidden',
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
-          <Text style={{ color: c.gold, fontSize: 20, lineHeight: 22 }}>♥</Text>
-        </GlassView>
+          <MaterialCommunityIcons name="heart" size={20} color={c.gold} />
+        </View>
         <View>
           <Text style={{ color: c.text, fontSize: 14, fontWeight: '700' }}>
-            Support Your Masjid
+            {t('prayer.supportYourMasjid')}
           </Text>
-          <Text style={{ color: c.muted, fontSize: 11, marginTop: 1 }}>Donate</Text>
+          <Text style={{ color: c.muted, fontSize: 11, marginTop: 1 }}>{t('prayer.donate')}</Text>
         </View>
       </View>
 
       <Pressable onPress={open}>
-        <GlassView
-          glassEffectStyle="regular"
+        <View
           style={{
             borderRadius: 999,
             paddingHorizontal: 16,
             paddingVertical: 8,
-            overflow: 'hidden',
+            backgroundColor: 'rgba(0, 0, 0, 0.18)',
           }}
         >
           <Text style={{ color: c.gold, fontSize: 11, fontWeight: '800' }}>
-            DONATE →
+            {t('prayer.donateCta')} {isRTL ? '←' : '→'}
           </Text>
-        </GlassView>
+        </View>
       </Pressable>
     </View>
   );
 }
 
+// Map a raw prayer name (DB-derived, title-cased) to its i18n key suffix so it
+// can be translated. Falls back to the original name when unrecognized.
+function prayerNameKey(name: string): string | null {
+  const n = name.toLowerCase();
+  if (n.includes('fajr')) return 'fajr';
+  if (n.includes('sunrise') || n.includes('shuru') || n.includes('shorooq'))
+    return 'sunrise';
+  if (n.includes('dhuhr') || n.includes('zuhr') || n.includes('duhr'))
+    return 'dhuhr';
+  if (n.includes('asr')) return 'asr';
+  if (n.includes('maghrib')) return 'maghrib';
+  if (n.includes('isha')) return 'isha';
+  if (n.includes('jummah') || n.includes('jumah') || n.includes('juma'))
+    return 'jummah';
+  return null;
+}
+
 // Icon per prayer, matching the time of day it falls in.
 function prayerIcon(
   name: string,
-): React.ComponentProps<typeof MaterialCommunityIcons>['name'] {
+): IconName {
   const n = name.toLowerCase();
   if (n.includes('fajr')) return 'weather-sunset-up'; // dawn
   if (n.includes('sunrise') || n.includes('shuru') || n.includes('shorooq'))
@@ -799,9 +923,12 @@ function PrayerRowItem({
   hasNotifications: boolean;
   onBellPress: () => void;
 }) {
+  const { t } = useTranslation();
   const isNext = row.status === 'next';
   const isPassed = row.status === 'passed';
   const bellActive = hasNotifications || isNext;
+  const nameKey = prayerNameKey(row.name);
+  const displayName = nameKey ? t(`prayer.${nameKey}`) : row.name;
 
   return (
     <View
@@ -817,8 +944,8 @@ function PrayerRowItem({
         borderBottomColor: c.divider10,
       }}
     >
-      <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
-        <MaterialCommunityIcons
+      <View style={{ width: 40, alignItems: 'center', marginEnd: 12 }}>
+        <Icon
           name={prayerIcon(row.name)}
           size={22}
           color={isNext ? c.gold : isPassed ? c.muted : c.text}
@@ -833,7 +960,7 @@ function PrayerRowItem({
             fontWeight: '600',
           }}
         >
-          {row.name}
+          {displayName}
         </Text>
         {row.statusLabel ? (
           <Text style={{ color: isNext ? c.gold : c.muted, fontSize: 11, marginTop: 2 }}>
@@ -870,10 +997,11 @@ function PrayerRowItem({
         hitSlop={12}
         style={{ width: 24, alignItems: 'center' }}
       >
-        <MaterialCommunityIcons
+        <Icon
           name={bellActive ? 'bell' : 'bell-outline'}
           size={16}
           color={bellActive ? c.gold : c.muted}
+          fill={bellActive ? c.gold : 'none'}
         />
       </Pressable>
     </View>
@@ -911,7 +1039,7 @@ function SkeletonRow({ c, index }: { c: Palette; index: number }) {
         alignItems: 'center',
       }}
     >
-      <View style={{ width: 40, alignItems: 'center', marginRight: 12 }}>
+      <View style={{ width: 40, alignItems: 'center', marginEnd: 12 }}>
         <Animated.View style={[{ width: 22, height: 22, borderRadius: 11, backgroundColor: c.text }, shimmer]} />
       </View>
       <View style={{ flex: 1.1 }}>
@@ -962,7 +1090,11 @@ function DateBarSkeleton({ c }: { c: Palette }) {
 const SKELETON_PRAYERS = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
 export default function PrayerScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const c = usePalette();
+  const { colors: masjidColors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const [now, setNow] = useState(new Date());
   const [quranOpen, setQuranOpen] = useState(false);
   const [resumeTarget, setResumeTarget] = useState<ReturnType<typeof getLastViewed>>(null);
@@ -1019,8 +1151,8 @@ export default function PrayerScreen() {
     applyToAll,
   } = usePrayerAlerts();
   const prayerRows = useMemo(
-    () => buildPrayerRows(prayerItems, isToday ? nextPrayer : null),
-    [prayerItems, nextPrayer, isToday]
+    () => buildPrayerRows(prayerItems, isToday ? nextPrayer : null, t),
+    [prayerItems, nextPrayer, isToday, t]
   );
 
   const goBack = useCallback(() => setDayOffset((d) => Math.max(d - 1, 0)), []);
@@ -1052,15 +1184,21 @@ export default function PrayerScreen() {
 
   const insets = useSafeAreaInsets();
 
-  useStatusBarStyle('light');
+  // Auto-flip icons based on the tenant's primary bg color so the status
+  // bar stays legible whether the admin picks dark green or light cream.
+  useAutoStatusBarStyle(masjidColors.primary);
+
+  // Where the scroll view sits at rest, which differs by platform because only
+  // iOS honours `contentInset` — see `USE_CONTENT_INSET`.
+  const topOffset = USE_CONTENT_INSET ? -insets.top : 0;
 
   // Always start the Prayer page at the top each time it's focused, rather than
   // restoring the previous scroll position.
   const scrollRef = useRef<ScrollView>(null);
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: -insets.top, animated: false });
-    }, [insets.top]),
+      scrollRef.current?.scrollTo({ y: topOffset, animated: false });
+    }, [topOffset]),
   );
 
   return (
@@ -1068,11 +1206,17 @@ export default function PrayerScreen() {
       <Stack.Screen options={{ headerShown: false }} />
         <ScrollView
           ref={scrollRef}
-          contentContainerStyle={{ paddingBottom: 160 }}
+          contentContainerStyle={{
+            paddingTop: USE_CONTENT_INSET ? 0 : insets.top,
+            paddingBottom: 160,
+          }}
           indicatorStyle="white"
           scrollEventThrottle={16}
-          contentInset={{ top: insets.top }}
-          contentOffset={{ x: 0, y: -insets.top }}
+          // On iOS, inset the content (instead of paddingTop) so it sits in the
+          // visible safe area while still overscrolling into it. Android falls
+          // back to the padding above.
+          contentInset={USE_CONTENT_INSET ? { top: insets.top } : undefined}
+          contentOffset={USE_CONTENT_INSET ? { x: 0, y: -insets.top } : undefined}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -1151,7 +1295,14 @@ export default function PrayerScreen() {
                       marginBottom: 4,
                     }}
                   >
-                    {nextPrayer ? `${nextPrayer.name.toUpperCase()} IN` : ''}
+                    {nextPrayer
+                      ? t('prayer.countdownLabel', {
+                          name: (() => {
+                            const k = prayerNameKey(nextPrayer.name);
+                            return (k ? t(`prayer.${k}`) : nextPrayer.name).toUpperCase();
+                          })(),
+                        })
+                      : ''}
                   </Text>
                   <Text
                     style={{
@@ -1163,20 +1314,19 @@ export default function PrayerScreen() {
                   >
                     {countdownClock ?? '--'}
                   </Text>
-                  <GlassView
-                    glassEffectStyle="regular"
+                  <View
                     style={{
                       marginTop: 8,
                       paddingHorizontal: 14,
                       paddingVertical: 5,
                       borderRadius: 999,
-                      overflow: 'hidden',
+                      backgroundColor: 'rgba(0, 0, 0, 0.18)',
                     }}
                   >
                     <Text style={{ color: c.gold, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
-                      {currentTime} CURRENT
+                      {t('prayer.currentTime', { time: currentTime })}
                     </Text>
-                  </GlassView>
+                  </View>
                 </View>
               </View>
             </View>
@@ -1188,10 +1338,10 @@ export default function PrayerScreen() {
                 textAlign: 'center',
                 marginTop: 24,
                 fontWeight: '400',
-                fontFamily: 'PlayfairDisplay_400Regular',
+                fontFamily: fonts.displayRegular,
               }}
             >
-              Prayer Times
+              {t('prayer.title')}
             </Text>
           </View>
 
@@ -1211,7 +1361,7 @@ export default function PrayerScreen() {
                 }}
               >
                 <Pressable hitSlop={12} onPress={goBack} style={{ opacity: dayOffset > 0 ? 1 : 0.3 }}>
-                  <MaterialCommunityIcons name="chevron-left" size={22} color={c.muted} />
+                  <Icon name={isRTL ? 'chevron-right' : 'chevron-left'} size={22} color={c.muted} />
                 </Pressable>
                 <Pressable onPress={() => setDayOffset(0)} hitSlop={8}>
                   <View style={{ alignItems: 'center' }}>
@@ -1219,14 +1369,14 @@ export default function PrayerScreen() {
                       {selectedDateFormatted}
                     </Text>
                     {!isToday && (
-                      <Text style={{ color: c.gold, fontSize: 9, marginTop: 2, letterSpacing: 1 }}>
-                        TAP TO RETURN TO TODAY
+                      <Text style={{ color: c.gold, fontSize: 11, marginTop: 2, letterSpacing: 1 }}>
+                        {t('prayer.tapToReturnToday')}
                       </Text>
                     )}
                   </View>
                 </Pressable>
                 <Pressable hitSlop={12} onPress={goForward} style={{ opacity: dayOffset < 7 ? 1 : 0.3 }}>
-                  <MaterialCommunityIcons name="chevron-right" size={22} color={c.muted} />
+                  <Icon name={isRTL ? 'chevron-left' : 'chevron-right'} size={22} color={c.muted} />
                 </Pressable>
               </View>
             )}
@@ -1240,17 +1390,17 @@ export default function PrayerScreen() {
                 paddingHorizontal: 14,
               }}
             >
-              <View style={{ width: 40, marginRight: 12 }} />
-              <Text style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 1.1 }}>PRAYER</Text>
+              <View style={{ width: 40, marginEnd: 12 }} />
+              <Text style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 1.1 }}>{t('prayer.colPrayer')}</Text>
               <Text
                 style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 0.9, textAlign: 'center' }}
               >
-                ATHAN
+                {t('prayer.colAthan')}
               </Text>
               <Text
                 style={{ color: c.muted, fontSize: 11, letterSpacing: 2, flex: 0.9, textAlign: 'center' }}
               >
-                IQAMAH
+                {t('prayer.colIqamah')}
               </Text>
               <View style={{ width: 20 }} />
             </View>

@@ -1,9 +1,9 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
+
 const INK = '#0A261E';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
-
-const SF_MEDIUM = 'System';
 
 type Props<T extends string> = {
   tabs: readonly T[];
@@ -16,6 +16,7 @@ export function NotificationTabs<T extends string>({
   active,
   onChange,
 }: Props<T>) {
+  const fonts = useFontFamily();
   return (
     <View
       style={{
@@ -37,20 +38,22 @@ export function NotificationTabs<T extends string>({
           >
             <Text
               style={{
-                fontFamily: SF_MEDIUM,
+                fontFamily: fonts.bodyMedium,
                 fontWeight: '500',
-                fontSize: 12,
+                fontSize: 13,
                 color: isActive ? INK : INK_MUTED,
               }}
             >
               {tab}
             </Text>
             {isActive ? (
+              // Stretch to the Pressable's content width — which equals the
+              // label width because the Pressable sizes to its child Text.
               <View
                 style={{
                   marginTop: 4,
                   height: 1,
-                  width: 15,
+                  alignSelf: 'stretch',
                   backgroundColor: INK,
                 }}
               />

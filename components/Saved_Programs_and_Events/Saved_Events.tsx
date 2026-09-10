@@ -1,9 +1,8 @@
 import { useAuth } from '@clerk/clerk-expo';
-import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -19,9 +18,12 @@ import Animated, {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useToggleSave } from '@/src/hooks/use-saved-content';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type SavedEvent = {
   content_id: string;
@@ -44,26 +46,12 @@ const INK_MUTED = 'rgba(10,38,30,0.6)';
 const GOLD = '#B8922A';
 const DIVIDER = 'rgba(10,38,30,0.1)';
 
-const SF_MEDIUM = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
-const SF_SEMIBOLD = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
-const SF_REGULAR = Platform.select({
-  ios: 'SF Pro Text',
-  android: 'Roboto',
-  default: 'system-ui',
-});
-
 type Tab = 'events' | 'programs';
 
 export default function Saved_Events() {
   const [tab, setTab] = useState<Tab>('events');
+  const fonts = useFontFamily();
+  useStatusBarStyle('dark');
   const { userId, isLoaded } = useAuth();
   const supabase = useSupabase();
   const supabaseRef = useRef(supabase);
@@ -155,9 +143,8 @@ export default function Saved_Events() {
           contentContainerStyle={{ paddingBottom: 120 }}
         >
           <View className="px-6 pt-2">
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={12}
+            <BackButton
+              color={INK}
               style={{
                 width: 36,
                 height: 36,
@@ -165,12 +152,10 @@ export default function Saved_Events() {
                 justifyContent: 'center',
                 marginLeft: -8,
               }}
-            >
-              <Ionicons name="chevron-back" size={26} color={INK} />
-            </Pressable>
+            />
             <Text
               style={{
-                fontFamily: 'PlayfairDisplay_500Medium',
+                fontFamily: fonts.display,
                 fontSize: 30,
                 lineHeight: 52,
                 color: INK,
@@ -271,17 +256,7 @@ function StatsCard({
             marginLeft: 15,
           }}
         >
-          <Text
-            style={{
-              color: GOLD,
-              textAlign: 'center',
-              fontFamily: 'Inter',
-              fontSize: 20,
-              fontWeight: '400',
-            }}
-          >
-            ♥
-          </Text>
+          <MaterialCommunityIcons name="heart" size={20} color={GOLD} />
         </View>
         <View style={{ marginLeft: 8 }}>
           <Stat label="TOTAL" value={total} />
@@ -298,11 +273,12 @@ function StatsCard({
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
+  const fonts = useFontFamily();
   return (
     <View className="items-center">
       <Text
         style={{
-          fontFamily: SF_SEMIBOLD,
+          fontFamily: fonts.bodySemibold,
           fontWeight: '600',
           fontSize: 10,
           lineHeight: 14,
@@ -314,7 +290,7 @@ function Stat({ label, value }: { label: string; value: number }) {
       </Text>
       <Text
         style={{
-          fontFamily: 'PlayfairDisplay_500Medium',
+          fontFamily: fonts.display,
           fontSize: 20,
           lineHeight: 24,
           color: INK,
@@ -364,6 +340,7 @@ function SegmentButton({
   active: boolean;
   onPress: () => void;
 }) {
+  const fonts = useFontFamily();
   return (
     <Pressable
       onPress={onPress}
@@ -376,7 +353,7 @@ function SegmentButton({
     >
       <Text
         style={{
-          fontFamily: SF_MEDIUM,
+          fontFamily: fonts.bodyMedium,
           fontWeight: '500',
           fontSize: 11,
           color: active ? '#FFFBF2' : INK_MUTED,
@@ -389,6 +366,7 @@ function SegmentButton({
 }
 
 function EmptyState({ label }: { label: string }) {
+  const fonts = useFontFamily();
   return (
     <View
       className="px-5"
@@ -396,7 +374,7 @@ function EmptyState({ label }: { label: string }) {
     >
       <Text
         style={{
-          fontFamily: SF_REGULAR,
+          fontFamily: fonts.body,
           fontSize: 13,
           lineHeight: 18,
           color: INK_MUTED,
@@ -488,6 +466,7 @@ function SavedRow({
   mosqueId: string | null;
   onRemove: (contentId: string) => void;
 }) {
+  const fonts = useFontFamily();
   const subtitle = item.subtitle_override ?? formatSavedDate(item.start_date);
   const toggleSave = useToggleSave(item.content_id, mosqueId);
   // Demo placeholder rows have no real saved_content row to remove.
@@ -507,7 +486,7 @@ function SavedRow({
         style={{ paddingVertical: 14 }}
       >
         <View
-          className="mr-4 overflow-hidden rounded-[10px]"
+          className="me-4 overflow-hidden rounded-[10px]"
           style={{ width: 50, height: 50, backgroundColor: '#CFE0EA' }}
         >
           <Image
@@ -525,7 +504,7 @@ function SavedRow({
         <View className="flex-1">
           <Text
             style={{
-              fontFamily: SF_SEMIBOLD,
+              fontFamily: fonts.bodySemibold,
               fontWeight: '600',
               fontSize: 11,
               lineHeight: 18,
@@ -537,7 +516,7 @@ function SavedRow({
           </Text>
           <Text
             style={{
-              fontFamily: SF_REGULAR,
+              fontFamily: fonts.body,
               fontSize: 10,
               lineHeight: 18,
               color: INK_MUTED,
@@ -553,20 +532,10 @@ function SavedRow({
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={`Remove ${item.name ?? 'item'} from saved`}
-          className="ml-2 items-center justify-center active:opacity-60"
+          className="ms-2 items-center justify-center active:opacity-60"
           style={{ width: 36, height: 40 }}
         >
-          <Text
-            style={{
-              color: GOLD,
-              textAlign: 'center',
-              fontFamily: 'Inter',
-              fontSize: 20,
-              fontWeight: '400',
-            }}
-          >
-            ♥
-          </Text>
+          <MaterialCommunityIcons name="heart" size={20} color={GOLD} />
         </Pressable>
       </Pressable>
       {!isLast && <View style={{ height: 1, backgroundColor: DIVIDER }} />}

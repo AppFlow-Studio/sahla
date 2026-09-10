@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -16,11 +15,15 @@ import {
   type Ayah,
   type Surah,
 } from '../db/quranDb';
+import { Icon } from '../components/ui/icon';
+import { Tappable } from '../components/ui/tappable';
+import { CENTERED_GLYPH } from '../lib/text-styles';
 import SurahOrnamentTop from '../../assets/surah-ornament-top.svg';
 import SurahOrnamentBottom from '../../assets/surah-ornament-bottom.svg';
 import { MorphingFooter } from './MushafPageScreen';
 import { useTrackPage } from '../hooks/use-track-page';
 import { useQuranPalette, type QuranPalette } from '../hooks/use-quran-palette';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type ViewMode = 'list' | 'mushaf';
 
@@ -108,19 +111,24 @@ export default function SurahScreen({
 
       {/* Back + Recite row */}
       <View style={styles.toolbar}>
-        <Pressable onPress={onBack} hitSlop={10} style={styles.backCircle}>
-          <Text style={styles.backArrow}>←</Text>
-        </Pressable>
+        <BackButton
+          onPress={onBack}
+          color={palette.brandDark}
+          size={18}
+          variant="circle"
+          circleColor={palette.cream}
+          circleBorderColor={palette.divider08}
+        />
         <View style={{ flex: 1 }} />
         {viewMode && onChangeViewMode ? (
-          <Pressable
+          <Tappable
             onPress={() => onChangeViewMode('mushaf')}
             style={styles.recitePill}
             hitSlop={6}
           >
-            <Text style={styles.recitePlay}>▸</Text>
+            <Icon name="play" size={10} color={palette.brandDark} fill={palette.brandDark} />
             <Text style={styles.reciteText}>Mushaf</Text>
-          </Pressable>
+          </Tappable>
         ) : null}
       </View>
 
@@ -239,17 +247,6 @@ function makeStyles(p: QuranPalette) {
       paddingTop: 12,
       paddingBottom: 8,
     },
-    backCircle: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: p.cream,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: p.divider08,
-    },
-    backArrow: { color: p.brandDark, fontSize: 14 },
     recitePill: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -260,8 +257,7 @@ function makeStyles(p: QuranPalette) {
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: p.brandDark,
     },
-    recitePlay: { color: p.brandDark, fontSize: 10 },
-    reciteText: { color: p.brandDark, fontSize: 12, fontWeight: '600' },
+    reciteText: { ...CENTERED_GLYPH, color: p.brandDark, fontSize: 12, fontWeight: '600' },
 
     headerOrnament: {
       alignItems: 'center',

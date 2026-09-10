@@ -1,8 +1,8 @@
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -17,13 +17,9 @@ import Animated, {
   SlideOutRight,
 } from "react-native-reanimated";
 
+import { useFontFamily } from "@/src/hooks/use-font-family";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
-
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
 
 export type AudienceItem = {
   id: string;
@@ -38,69 +34,100 @@ export type AudienceItem = {
 };
 
 export type AudienceFilter = "All" | "Kids" | "Youth" | "Adults";
-const FILTERS: AudienceFilter[] = ["All", "Kids", "Youth", "Adults"];
+
+/** A single selectable pill. `key` is the filter identity (audience name or a
+ *  program-category id); `label` is what the user sees. */
+export type BrowseFilter = { key: string; label: string };
 
 type Props = {
   items: AudienceItem[];
   onPressItem: (id: string) => void;
-  onPressSeeAll?: (audience: Exclude<AudienceFilter, "All">) => void;
+  onPressSeeAll?: (key: string) => void;
   allTabFooter?: React.ReactNode;
   kind?: "events" | "programs";
-  initialFilter?: AudienceFilter;
+  initialFilter?: string;
+  /** Override the pills. Defaults to the All/Kids/Youth/Adults audience set.
+   *  The first entry is treated as the "show everything" tab. */
+  filters?: BrowseFilter[];
+  /** Whether an item belongs under a given non-"all" filter key. Defaults to
+   *  audience matching (Kids/Youth/Adults via item flags). */
+  matchFilter?: (item: AudienceItem, key: string) => boolean;
 };
 
 function FilterPills({
+  filters,
   active,
   onSelect,
 }: {
-  active: AudienceFilter;
-  onSelect: (f: AudienceFilter) => void;
+  filters: BrowseFilter[];
+  active: string;
+  onSelect: (key: string) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ",")})`;
   const bgRgb = `rgb(${colors.background.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
   const pillTrackBg = `rgba(${fg}, 0.06)`;
-  const pillTrackBorder = `rgba(${fg}, 0.4)`;
+
+  // Up to 4 pills fit the full-width segmented look; beyond that, scroll.
+  const scrollable = filters.length > 4;
+
+  const pill = (f: BrowseFilter) => {
+    const isActive = f.key === active;
+    return (
+      <Pressable
+        key={f.key}
+        onPress={() => onSelect(f.key)}
+        className={scrollable ? "items-center justify-center" : "flex-1 items-center justify-center"}
+        style={{
+          paddingVertical: 7,
+          paddingHorizontal: scrollable ? 16 : 0,
+          borderRadius: 999,
+          backgroundColor: isActive ? primaryRgb : "transparent",
+        }}
+      >
+        <Text
+          numberOfLines={1}
+          style={{
+            fontFamily: fonts.body,
+            fontSize: 11,
+            color: isActive ? bgRgb : mutedFgRgb,
+          }}
+        >
+          {f.label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  // No outline, and no inner padding — so the active pill fills the whole track
+  // (a clean stadium-in-stadium), clipped to the rounded ends.
+  const trackStyle = {
+    backgroundColor: pillTrackBg,
+    borderRadius: 999,
+    overflow: 'hidden',
+  } as const;
+
+  if (scrollable) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 24 }}
+      >
+        <View className="flex-row items-center" style={trackStyle}>
+          {filters.map(pill)}
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <View className="px-6">
-      <View
-        className="flex-row items-center"
-        style={{
-          backgroundColor: pillTrackBg,
-          borderRadius: 999,
-          padding: 3,
-          borderWidth: 0.5,
-          borderColor: pillTrackBorder,
-        }}
-      >
-        {FILTERS.map((f) => {
-          const isActive = f === active;
-          return (
-            <Pressable
-              key={f}
-              onPress={() => onSelect(f)}
-              className="flex-1 items-center justify-center"
-              style={{
-                paddingVertical: 7,
-                borderRadius: 999,
-                backgroundColor: isActive ? primaryRgb : "transparent",
-              }}
-            >
-              <Text
-                style={{
-                  fontFamily: platformUiFont,
-                  fontSize: 11,
-                  color: isActive ? bgRgb : mutedFgRgb,
-                }}
-              >
-                {f}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View className="flex-row items-center" style={trackStyle}>
+        {filters.map(pill)}
       </View>
     </View>
   );
@@ -113,6 +140,7 @@ function Card({
   item: AudienceItem;
   onPress: () => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -121,7 +149,7 @@ function Card({
   return (
     <Pressable
       onPress={onPress}
-      style={{ width: 145, marginRight: 16 }}
+      style={{ width: 145, marginEnd: 16 }}
       accessibilityRole="button"
       accessibilityLabel={item.title}
     >
@@ -146,11 +174,11 @@ function Card({
         numberOfLines={1}
         style={{
           marginTop: 10,
-          fontFamily: platformUiFont,
-          fontSize: 11,
+          fontFamily: fonts.bodySemibold,
+          fontSize: 13,
           fontWeight: "600",
           color: fgRgb,
-          lineHeight: 16,
+          lineHeight: 18,
         }}
       >
         {item.title}
@@ -159,10 +187,10 @@ function Card({
         numberOfLines={1}
         style={{
           marginTop: 2,
-          fontFamily: platformUiFont,
-          fontSize: 10,
+          fontFamily: fonts.body,
+          fontSize: 12,
           color: mutedFgRgb,
-          lineHeight: 14,
+          lineHeight: 16,
         }}
       >
         {item.dateLabel}
@@ -180,6 +208,8 @@ function ListRow({
   onPress: () => void;
   showDivider: boolean;
 }) {
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -215,15 +245,15 @@ function ListRow({
           ) : null}
         </View>
 
-        <View className="ml-3 flex-1">
+        <View className="ms-3 flex-1">
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: platformUiFont,
+              fontFamily: fonts.bodySemibold,
               fontSize: 13,
               fontWeight: "600",
               color: fgRgb,
-              lineHeight: 16,
+              lineHeight: 18,
             }}
           >
             {item.title}
@@ -232,10 +262,10 @@ function ListRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
-                fontSize: 11,
+                fontFamily: fonts.body,
+                fontSize: 12,
                 color: mutedFgRgb,
-                lineHeight: 14,
+                lineHeight: 16,
                 marginTop: 2,
               }}
             >
@@ -246,8 +276,8 @@ function ListRow({
             <Text
               numberOfLines={1}
               style={{
-                fontFamily: platformUiFont,
-                fontSize: 11,
+                fontFamily: fonts.bodyMedium,
+                fontSize: 12,
                 color: accentRgb,
                 fontWeight: "500",
                 lineHeight: 16,
@@ -259,7 +289,11 @@ function ListRow({
           ) : null}
         </View>
 
-        <AntDesign name="right" size={12} color={mutedFgRgb} />
+        <AntDesign
+          name={isRTL ? "left" : "right"}
+          size={12}
+          color={mutedFgRgb}
+        />
       </Pressable>
 
       {showDivider ? (
@@ -284,6 +318,7 @@ function ListSection({
   items: AudienceItem[];
   onPressItem: (id: string) => void;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
 
@@ -293,7 +328,7 @@ function ListSection({
       <View className="px-6">
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "700",
             letterSpacing: 0.6,
@@ -331,6 +366,9 @@ function Section({
   onPressItem: (id: string) => void;
   onPressSeeAll?: () => void;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ",")})`;
   const mutedFgRgb = `rgb(${colors.mutedForeground.replace(/ /g, ",")})`;
@@ -342,7 +380,7 @@ function Section({
         <Text
           style={{
             flex: 1,
-            fontFamily: platformUiFont,
+            fontFamily: fonts.bodySemibold,
             fontSize: 13,
             fontWeight: "700",
             letterSpacing: 0.6,
@@ -352,27 +390,33 @@ function Section({
         >
           {label}
         </Text>
-        <Pressable
-          onPress={onPressSeeAll}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`See all ${label}`}
-          className="flex-row items-center"
-        >
-          <Text
-            style={{
-              fontFamily: platformUiFont,
-              fontSize: 10,
-              textTransform: "uppercase",
-              color: mutedFgRgb,
-              letterSpacing: 0.4,
-              marginRight: 4,
-            }}
+        {onPressSeeAll ? (
+          <Pressable
+            onPress={onPressSeeAll}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t("discover.seeAllLabel", { label })}
+            className="flex-row items-center"
           >
-            See all
-          </Text>
-          <AntDesign name="arrow-right" size={10} color={mutedFgRgb} />
-        </Pressable>
+            <Text
+              style={{
+                fontFamily: fonts.body,
+                fontSize: 10,
+                textTransform: "uppercase",
+                color: mutedFgRgb,
+                letterSpacing: 0.4,
+                marginEnd: 4,
+              }}
+            >
+              {t("discover.seeAll")}
+            </Text>
+            <AntDesign
+              name={isRTL ? "arrow-left" : "arrow-right"}
+              size={10}
+              color={mutedFgRgb}
+            />
+          </Pressable>
+        ) : null}
       </View>
       <View
         style={{
@@ -409,6 +453,7 @@ function EmptyState({
   title: string;
   subtitle?: string;
 }) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -431,7 +476,7 @@ function EmptyState({
       </View>
       <Text
         style={{
-          fontFamily: platformUiFont,
+          fontFamily: fonts.bodySemibold,
           fontSize: 14,
           fontWeight: "600",
           color: fgRgb,
@@ -443,7 +488,7 @@ function EmptyState({
       {subtitle ? (
         <Text
           style={{
-            fontFamily: platformUiFont,
+            fontFamily: fonts.body,
             fontSize: 12,
             color: mutedFgRgb,
             textAlign: "center",
@@ -474,8 +519,28 @@ export default function AudienceBrowse({
   allTabFooter,
   kind = "events",
   initialFilter,
+  filters: filtersProp,
+  matchFilter,
 }: Props) {
-  const [filter, setFilter] = useState<AudienceFilter>(initialFilter ?? "All");
+  const { t } = useTranslation();
+
+  // When the caller doesn't supply pills, fall back to the built-in audience
+  // set — translating the labels while keeping the keys stable (the keys are
+  // the filter identity that `matchesAudience` switches on).
+  const defaultFilters = useMemo<BrowseFilter[]>(
+    () => [
+      { key: "All", label: t("common.all") },
+      { key: "Kids", label: t("discover.audienceKids") },
+      { key: "Youth", label: t("discover.audienceYouth") },
+      { key: "Adults", label: t("discover.audienceAdults") },
+    ],
+    [t],
+  );
+  const filters = filtersProp ?? defaultFilters;
+  const allKey = filters[0]?.key ?? "All";
+  const match = matchFilter ?? ((item, key) => matchesAudience(item, key as Exclude<AudienceFilter, "All">));
+
+  const [filter, setFilter] = useState<string>(initialFilter ?? allKey);
   const [direction, setDirection] = useState<"left" | "right">("right");
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -487,49 +552,63 @@ export default function AudienceBrowse({
     if (initialFilter) setFilter(initialFilter);
   }, [initialFilter]);
 
+  const indexOfKey = (key: string) => filters.findIndex((f) => f.key === key);
+
   // Change filter while recording the swipe/tap direction so the new content
   // slides in from the matching side.
-  const goToFilter = (next: AudienceFilter) => {
+  const goToFilter = (next: string) => {
     if (next === filter) return;
-    setDirection(FILTERS.indexOf(next) > FILTERS.indexOf(filter) ? "right" : "left");
+    setDirection(indexOfKey(next) > indexOfKey(filter) ? "right" : "left");
     setFilter(next);
   };
 
-  const grouped = useMemo(() => {
-    const kids: AudienceItem[] = [];
-    const youth: AudienceItem[] = [];
-    const adults: AudienceItem[] = [];
-    for (const item of items) {
-      if (item.isKids) kids.push(item);
-      else if (item.isYouth) youth.push(item);
-      else adults.push(item);
-    }
-    return { kids, youth, adults };
-  }, [items]);
+  const nonAllFilters = useMemo(
+    () => filters.filter((f) => f.key !== allKey),
+    [filters, allKey],
+  );
 
-  const showAudienceList = filter !== "All";
+  // All-tab carousels: one per filter, plus a catch-all for items matching none
+  // (empty for the audience default; holds uncategorized programs otherwise).
+  const allViewSections = useMemo(() => {
+    const sections = nonAllFilters.map((f) => ({
+      key: f.key,
+      label: f.label,
+      items: items.filter((item) => match(item, f.key)),
+    }));
+    const uncategorized = items.filter(
+      (item) => !nonAllFilters.some((f) => match(item, f.key)),
+    );
+    return { sections, uncategorized };
+  }, [items, nonAllFilters, match]);
+
+  const showAudienceList = filter !== allKey;
 
   const itemsForAudience = useMemo(() => {
     if (!showAudienceList) return [];
-    return items.filter((item) => matchesAudience(item, filter));
-  }, [items, filter, showAudienceList]);
+    return items.filter((item) => match(item, filter));
+  }, [items, filter, showAudienceList, match]);
 
-  const allLabel = kind === "programs" ? "All programs" : "All events";
+  const activeLabel = filters.find((f) => f.key === filter)?.label ?? filter;
+  const allLabel =
+    kind === "programs"
+      ? t("discover.allPrograms")
+      : t("discover.allEvents");
   const secondaryLabel =
-    kind === "programs" ? "Weekly programs" : "Upcoming events";
+    kind === "programs"
+      ? t("discover.weeklyPrograms")
+      : t("discover.upcomingEvents");
   const secondaryFilter = (item: AudienceItem) =>
     kind === "programs" ? item.isWeekly === true : item.isUpcoming === true;
 
-  const showKids = filter === "All" || filter === "Kids";
-  const showYouth = filter === "All" || filter === "Youth";
-  const showAdults = filter === "All" || filter === "Adults";
+  const kindNoun =
+    kind === "programs"
+      ? t("discover.nounPrograms")
+      : t("discover.nounEvents");
 
-  const kindNoun = kind === "programs" ? "programs" : "events";
-
-  // Swipe horizontally to move through the All / Kids / Youth / Adults filters.
+  // Swipe horizontally to move through the filters.
   const cycleFilter = (dir: 1 | -1) => {
-    const next = FILTERS.indexOf(filter) + dir;
-    if (next >= 0 && next < FILTERS.length) goToFilter(FILTERS[next]);
+    const next = indexOfKey(filter) + dir;
+    if (next >= 0 && next < filters.length) goToFilter(filters[next].key);
   };
 
   const swipe = useMemo(
@@ -543,14 +622,14 @@ export default function AudienceBrowse({
           if (e.translationX < -55 || e.velocityX < -600) runOnJS(cycleFilter)(1);
           else if (e.translationX > 55 || e.velocityX > 600) runOnJS(cycleFilter)(-1);
         }),
-    [filter],
+    [filter, filters],
   );
 
   return (
     <GestureDetector gesture={swipe}>
     <View>
       <View style={{ marginTop: 22 }}>
-        <FilterPills active={filter} onSelect={goToFilter} />
+        <FilterPills filters={filters} active={filter} onSelect={goToFilter} />
       </View>
 
       <View style={{ overflow: "hidden" }}>
@@ -572,8 +651,11 @@ export default function AudienceBrowse({
       {showAudienceList ? (
         itemsForAudience.length === 0 ? (
           <EmptyState
-            title={`No ${filter.toLowerCase()} ${kindNoun}`}
-            subtitle="Check back soon or try another filter."
+            title={t("discover.emptyAudienceTitle", {
+              audience: activeLabel.toLowerCase(),
+              kind: kindNoun,
+            })}
+            subtitle={t("discover.emptyAudienceSubtitle")}
           />
         ) : (
           <>
@@ -591,48 +673,34 @@ export default function AudienceBrowse({
         )
       ) : items.length === 0 ? (
         <EmptyState
-          title={`No ${kindNoun} yet`}
-          subtitle={`New ${kindNoun} will appear here when they're added.`}
+          title={t("discover.emptyKindTitle", { kind: kindNoun })}
+          subtitle={t("discover.emptyKindSubtitle", { kind: kindNoun })}
         />
       ) : (
         <>
-          {showKids ? (
+          {allViewSections.sections.map((s) => (
             <Section
-              label="Kids"
-              items={grouped.kids}
+              key={s.key}
+              label={s.label}
+              items={s.items}
               onPressItem={onPressItem}
               onPressSeeAll={() => {
-                if (onPressSeeAll) onPressSeeAll("Kids");
-                else goToFilter("Kids");
+                if (onPressSeeAll) onPressSeeAll(s.key);
+                else goToFilter(s.key);
               }}
             />
-          ) : null}
-          {showYouth ? (
+          ))}
+          {allViewSections.uncategorized.length > 0 ? (
             <Section
-              label="Youth"
-              items={grouped.youth}
+              label={t("discover.otherKind", { kind: kindNoun })}
+              items={allViewSections.uncategorized}
               onPressItem={onPressItem}
-              onPressSeeAll={() => {
-                if (onPressSeeAll) onPressSeeAll("Youth");
-                else goToFilter("Youth");
-              }}
-            />
-          ) : null}
-          {showAdults ? (
-            <Section
-              label="Adults"
-              items={grouped.adults}
-              onPressItem={onPressItem}
-              onPressSeeAll={() => {
-                if (onPressSeeAll) onPressSeeAll("Adults");
-                else goToFilter("Adults");
-              }}
             />
           ) : null}
         </>
       )}
 
-      {filter === "All" && allTabFooter ? (
+      {filter === allKey && allTabFooter ? (
         <View className="px-6" style={{ marginTop: 24 }}>
           {allTabFooter}
         </View>

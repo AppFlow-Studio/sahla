@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CardField } from '@stripe/stripe-react-native';
+
+import { Icon } from '@/src/components/ui/icon';
 
 /**
  * Skeuomorphic Stripe credit-card visual with an embedded, always-interactive
@@ -62,12 +63,13 @@ const BRAND_THEMES: Record<string, { colors: [string, string]; text: string; lab
   },
 };
 
-const DEFAULT_THEME = {
-  colors: ['#e8e4de', '#d5d0c8'] as [string, string],
-  text: '#3a3a3a',
-  label: '',
-  chipBg: 'rgba(0,0,0,0.08)',
-};
+// Scale every channel of a comma-separated "R,G,B" string toward black so we can
+// derive a darker second gradient stop from the masjid foreground.
+const darkenCsv = (csv: string, factor: number) =>
+  csv
+    .split(',')
+    .map((n) => Math.round(Number(n) * factor))
+    .join(',');
 
 export function CardVisual({
   brand,
@@ -99,7 +101,15 @@ export function CardVisual({
   onFocus: (field: string | null) => void;
   accentRgb: string;
 }) {
-  const theme = BRAND_THEMES[brand] ?? DEFAULT_THEME;
+  // No-brand fallback (before a card brand is detected) follows the masjid
+  // theme instead of a fixed beige card. `fg` is a "R,G,B" triplet.
+  const defaultTheme = {
+    colors: [`rgb(${fg})`, `rgb(${darkenCsv(fg, 0.8)})`] as [string, string],
+    text: '#ffffff',
+    label: '',
+    chipBg: 'rgba(255,255,255,0.18)',
+  };
+  const theme = BRAND_THEMES[brand] ?? defaultTheme;
   const textColor = theme.text;
 
   // Flip via scaleX squeeze — no 3D rotation so CardField stays interactive
@@ -178,7 +188,7 @@ export function CardVisual({
                   <View style={{ width: 24, height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 2 }} />
                   <View style={{ width: 24, height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 2 }} />
                 </View>
-                <Ionicons name="wifi-outline" size={20} color={`${textColor}40`} style={{ transform: [{ rotate: '90deg' }] }} />
+                <Icon name="wifi-outline" size={20} color={`${textColor}40`} style={{ transform: [{ rotate: '90deg' }] }} />
               </View>
               {theme.label ? (
                 <Text
@@ -194,7 +204,7 @@ export function CardVisual({
                   {theme.label}
                 </Text>
               ) : (
-                <Ionicons name="card-outline" size={20} color={`${textColor}50`} />
+                <Icon name="card-outline" size={20} color={`${textColor}50`} />
               )}
             </View>
           ) : (

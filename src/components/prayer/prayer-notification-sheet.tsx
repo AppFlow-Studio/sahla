@@ -1,5 +1,5 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Dimensions,
@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { Icon } from '@/src/components/ui/icon';
 import {
   type PrayerName,
   NOTIF_TOKENS,
@@ -22,32 +23,43 @@ const SCREEN_H = Dimensions.get('window').height;
 
 type Option = {
   token: NotifToken | 'mute';
-  label: string;
-  subtitle: string;
+  labelKey: string;
+  subtitleKey: string;
 };
 
 const OPTIONS: Option[] = [
   {
     token: NOTIF_TOKENS.PRAYER_TIME,
-    label: 'Notify at Prayer Time',
-    subtitle: "Get notified exactly when it's time to pray",
+    labelKey: 'notifyPrayerTime',
+    subtitleKey: 'notifyPrayerTimeDesc',
   },
   {
     token: NOTIF_TOKENS.IQAMAH_TIME,
-    label: 'Notify at Iqamah Time',
-    subtitle: "Get notified when it's time to gather at the masjid",
+    labelKey: 'notifyIqamahTime',
+    subtitleKey: 'notifyIqamahTimeDesc',
   },
   {
     token: NOTIF_TOKENS.THIRTY_MIN,
-    label: '30-Minute Reminder',
-    subtitle: 'Get reminded 30 minutes before the next prayer time',
+    labelKey: 'reminder30Min',
+    subtitleKey: 'reminder30MinDesc',
   },
   {
     token: 'mute',
-    label: 'Mute',
-    subtitle: 'Disable all notifications for this prayer',
+    labelKey: 'mute',
+    subtitleKey: 'muteDesc',
   },
 ];
+
+// Map a raw prayer name to its i18n key suffix for translation.
+function prayerNameKey(name: string): string | null {
+  const n = name.toLowerCase();
+  if (n.includes('fajr')) return 'fajr';
+  if (n.includes('dhuhr') || n.includes('zuhr') || n.includes('duhr')) return 'dhuhr';
+  if (n.includes('asr')) return 'asr';
+  if (n.includes('maghrib')) return 'maghrib';
+  if (n.includes('isha')) return 'isha';
+  return null;
+}
 
 type Props = {
   prayer: PrayerName | null;
@@ -64,6 +76,7 @@ export function PrayerNotificationSheet({
   onApplyToAll,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
@@ -256,7 +269,14 @@ export function PrayerNotificationSheet({
                   color: primaryRgb,
                 }}
               >
-                {activePrayer} notification settings
+                {t('prayer.notificationSettingsTitle', {
+                  prayer: activePrayer
+                    ? (() => {
+                        const k = prayerNameKey(activePrayer);
+                        return k ? t(`prayer.${k}`) : activePrayer;
+                      })()
+                    : '',
+                })}
               </Text>
               <Pressable
                 onPress={onClose}
@@ -270,7 +290,7 @@ export function PrayerNotificationSheet({
                   backgroundColor: 'rgba(0,0,0,0.06)',
                 }}
               >
-                <MaterialCommunityIcons name="close" size={16} color={primaryRgb} />
+                <Icon name="close" size={16} color={primaryRgb} />
               </Pressable>
             </View>
 
@@ -299,12 +319,12 @@ export function PrayerNotificationSheet({
                       backgroundColor: checked ? accentRgb : 'transparent',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      marginRight: 14,
+                      marginEnd: 14,
                       marginTop: 1,
                     }}
                   >
                     {checked && (
-                      <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
+                      <Icon name="check" size={16} color="#FFFFFF" />
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
@@ -315,7 +335,7 @@ export function PrayerNotificationSheet({
                         color: primaryRgb,
                       }}
                     >
-                      {opt.label}
+                      {t(`prayer.${opt.labelKey}`)}
                     </Text>
                     <Text
                       style={{
@@ -325,7 +345,7 @@ export function PrayerNotificationSheet({
                         lineHeight: 16,
                       }}
                     >
-                      {opt.subtitle}
+                      {t(`prayer.${opt.subtitleKey}`)}
                     </Text>
                   </View>
                 </Pressable>
@@ -352,7 +372,7 @@ export function PrayerNotificationSheet({
                   color: accentRgb,
                 }}
               >
-                Apply to All Prayers
+                {t('prayer.applyToAll')}
               </Text>
             </Pressable>
 
@@ -369,11 +389,11 @@ export function PrayerNotificationSheet({
                 flexDirection: 'row',
               }}
             >
-              <MaterialCommunityIcons
+              <Icon
                 name="check"
                 size={18}
                 color="#FFFFFF"
-                style={{ marginRight: 6 }}
+                style={{ marginEnd: 6 }}
               />
               <Text
                 style={{
@@ -382,7 +402,7 @@ export function PrayerNotificationSheet({
                   color: '#FFFFFF',
                 }}
               >
-                Save
+                {t('common.save')}
               </Text>
             </Pressable>
           </View>

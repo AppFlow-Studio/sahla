@@ -1,4 +1,3 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -27,6 +26,7 @@ import ReAnimated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 
 const SCREEN_H = Dimensions.get('window').height;
@@ -216,7 +216,7 @@ export function SendFeedback({
             >
               <View style={styles.headerRow}>
                 <View style={styles.iconCircle}>
-                  <MaterialCommunityIcons
+                  <Icon
                     name="message-outline"
                     size={22}
                     color={fgRgb}
@@ -236,7 +236,7 @@ export function SendFeedback({
                   accessibilityLabel="Close"
                   hitSlop={8}
                 >
-                  <MaterialCommunityIcons
+                  <Icon
                     name="close"
                     size={18}
                     color={`rgba(${fg},0.45)`}
@@ -265,7 +265,7 @@ export function SendFeedback({
                 accessibilityState={{ disabled: !canSend }}
                 style={[styles.cta, !canSend && styles.ctaDisabled]}
               >
-                <MaterialCommunityIcons
+                <Icon
                   name="send"
                   size={18}
                   color={bgRgb}
@@ -281,7 +281,7 @@ export function SendFeedback({
                 style={[styles.thanksWrap, { opacity: stepProgress }]}
               >
                 <View style={styles.checkCircle}>
-                  <MaterialCommunityIcons
+                  <Icon
                     name="check"
                     size={36}
                     color={accentRgb}

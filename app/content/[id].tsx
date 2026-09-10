@@ -1,13 +1,10 @@
 import { useAuth } from "@clerk/clerk-expo";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dimensions,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -24,6 +21,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useRequireAccount } from "@/src/components/auth/sign-in-prompt";
+import { Icon } from "@/src/components/ui/icon";
 import SpeakerInfoModal from "@/components/Discover/SpeakerInfoModal";
 import { ContentNotificationSettingsSheet } from "@/components/content/ContentNotificationSettingsSheet";
 import {
@@ -33,27 +32,32 @@ import {
 import { useContentNotifSettings } from "@/src/hooks/use-content-notification-settings";
 import { useIsSaved, useToggleSave } from "@/src/hooks/use-saved-content";
 import { useSupabase } from "@/src/hooks/use-supabase";
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
+import { useStatusBarStyle } from "@/src/hooks/use-status-bar-style";
 import { useConfigStore } from "@/src/stores/config-store";
+import { useIsRTL } from "@/src/hooks/use-is-rtl";
 
-const BUSH = "#0A261E";
-const TRAY_BG = "#EFEDE6";
-const CARD_BG = "#F5F3EE";
-const CHIP_BG = "#F3EBD2";
-const CHIP_TEXT = "#8B6F1A";
-const MUTED = "rgba(10,38,30,0.55)";
-const SHEET_RADIUS = 40;
+// Layout constants from Figma `program-bottomsheet-v2` (node 365:3818, 402×874).
+// v2 floats the sheet inside the screen instead of running it full-bleed off the
+// bottom edge, so all four corners are rounded and the dimmed home screen shows
+// around it.
+const SHEET_RADIUS = 48; //     Rectangle 4231 corner radius
+const SHEET_INSET_X = 9; //     sheet left/right gap (9 → 385 wide in a 402 frame)
+const SHEET_BOTTOM = 13; //     874 - 23 - 838
+const CONTENT_PAD = 25; //      Frame 69 starts at x=34, sheet at x=9
+const COVER_RATIO = 385 / 259; // Mask group is 384×259 across the sheet width
+const SAVE_HEIGHT = 43; //      div.donate-banner
+const SAVE_RADIUS = 20;
+const SAVE_GAP = 12; //         --item-spacing/12 between the heart and the label
 
-const platformTitleFont = Platform.select({
-  ios: "SF Pro Display",
-  android: "Roboto",
-  default: "system-ui",
-});
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
+// Colors come from the active masjid theme (`useMasjidConfig().colors`), which
+// stores each value as a `"R G B"` triplet. These helpers turn a triplet into a
+// usable CSS color so the screen re-themes per tenant instead of shipping a
+// fixed green/gold palette.
+const rgb = (triplet: string) => `rgb(${triplet.replace(/ /g, ",")})`;
+const rgba = (triplet: string, alpha: number) =>
+  `rgba(${triplet.replace(/ /g, ",")},${alpha})`;
 
 type Detail = {
   content_id: string;
@@ -66,7 +70,7 @@ type Detail = {
   speakers: string[] | null;
 };
 
-function SkeletonPulse({ width, height, borderRadius = 8, style }: { width: number | string; height: number; borderRadius?: number; style?: any }) {
+function SkeletonPulse({ width, height, borderRadius = 8, style, color }: { width: number | string; height: number; borderRadius?: number; style?: any; color: string }) {
   const opacity = useSharedValue(0.35);
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.8, { duration: 900 }), -1, true);
@@ -74,34 +78,38 @@ function SkeletonPulse({ width, height, borderRadius = 8, style }: { width: numb
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   return (
     <Animated.View
-      style={[{ width, height, borderRadius, backgroundColor: "rgba(10,38,30,0.1)" }, animStyle, style]}
+      style={[{ width, height, borderRadius, backgroundColor: color }, animStyle, style]}
     />
   );
 }
 
-function ContentSkeleton() {
-  const screenWidth = Dimensions.get("window").width;
+/** Loading placeholder — mirrors the v2 body order: cover, title, hairline,
+ *  speaker line, description lines. */
+function ContentSkeleton({ pulseColor }: { pulseColor: string }) {
+  const sheetWidth = Dimensions.get("window").width - SHEET_INSET_X * 2;
   return (
     <View style={{ flex: 1 }}>
-      {/* Image placeholder — square to match the 1:1 flyer */}
-      <SkeletonPulse width="100%" height={screenWidth} borderRadius={0} style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }} />
+      <SkeletonPulse
+        color={pulseColor}
+        width="100%"
+        height={sheetWidth / COVER_RATIO}
+        borderRadius={0}
+        style={{ borderTopLeftRadius: SHEET_RADIUS, borderTopRightRadius: SHEET_RADIUS }}
+      />
 
-      <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
+      <View style={{ paddingHorizontal: CONTENT_PAD, paddingTop: 28 }}>
         {/* Title */}
-        <SkeletonPulse width="75%" height={28} borderRadius={6} style={{ marginBottom: 10 }} />
-        <SkeletonPulse width="50%" height={28} borderRadius={6} style={{ marginBottom: 20 }} />
+        <SkeletonPulse color={pulseColor} width="70%" height={20} borderRadius={6} style={{ marginBottom: 10 }} />
+        {/* Hairline */}
+        <SkeletonPulse color={pulseColor} width="100%" height={1} borderRadius={0} style={{ marginBottom: 11 }} />
+        {/* Speaker line */}
+        <SkeletonPulse color={pulseColor} width={150} height={18} borderRadius={4} style={{ marginBottom: 22 }} />
 
-        {/* Speaker chip */}
-        <SkeletonPulse width={140} height={36} borderRadius={18} style={{ marginBottom: 24 }} />
-
-        {/* Description card */}
-        <View style={{ backgroundColor: CARD_BG, borderRadius: 16, padding: 16 }}>
-          <SkeletonPulse width={60} height={10} borderRadius={4} style={{ marginBottom: 14 }} />
-          <SkeletonPulse width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-          <SkeletonPulse width="60%" height={12} borderRadius={4} />
-        </View>
+        {/* Description */}
+        <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+        <SkeletonPulse color={pulseColor} width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+        <SkeletonPulse color={pulseColor} width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+        <SkeletonPulse color={pulseColor} width="60%" height={12} borderRadius={4} />
       </View>
     </View>
   );
@@ -138,14 +146,31 @@ function CircleButton({
 }
 
 export default function ContentDetailScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { id } = useLocalSearchParams<{ id: string }>();
   const supabase = useSupabase();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
-  const toastBg = `rgb(${colors.foreground.replace(/ /g, ",")})`;
-  const toastText = `rgb(${colors.background.replace(/ /g, ",")})`;
+  useStatusBarStyle('light');
+  const toastBg = rgb(colors.foreground);
+  const toastText = rgb(colors.background);
+
+  // Themed palette (was a hardcoded green/gold set). Each maps to a theme token
+  // so the screen follows the active masjid's branding. The v2 Figma palette maps
+  // 1:1 onto these tokens: #0A261E → foreground, #FFFBF2 → background,
+  // #B8922A → accent, so nothing needs hardcoding.
+  const BUSH = rgb(colors.foreground); //     title text + save-button fill
+  const SURFACE = rgb(colors.muted); //       image placeholder / skeleton pulses
+  const TRAY_BG = SURFACE;
+  const SHEET_BG = rgb(colors.background); // #FFFBF2 sheet + save-button label
+  const ACCENT = rgb(colors.accent); //       #B8922A speaker name + save heart
+  const DIVIDER = rgba(colors.foreground, 0.12); // hairline under the title
+  const BODY_TEXT = rgba(colors.foreground, 0.6); // description (Figma 0.6 alpha)
+  const MUTED = rgba(colors.foreground, 0.55); // muted/secondary text
   const [detail, setDetail] = useState<Detail | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
@@ -154,6 +179,7 @@ export default function ContentDetailScreen() {
   const [speakerModalOpen, setSpeakerModalOpen] = useState(false);
 
   const { data: isSaved = false } = useIsSaved(id);
+  const requireAccount = useRequireAccount();
   const toggleSave = useToggleSave(id, mosqueUuid);
   const saveDisabled = !userId || !mosqueUuid || toggleSave.isPending;
 
@@ -234,6 +260,7 @@ export default function ContentDetailScreen() {
   }));
 
   const handleToggleSave = () => {
+    if (!requireAccount('save')) return;
     const willSave = !isSaved;
     toggleSave.mutate(isSaved);
     if (willSave) setShowSaveToast(true);
@@ -251,12 +278,14 @@ export default function ContentDetailScreen() {
   // Toast copy reflects the actual reminder timing: the user's custom offsets
   // when set, otherwise the masjid default (which the client doesn't know the
   // exact value of, so we stay generic instead of hardcoding "30 minutes").
-  const reminderEventName = detail?.name ?? "this event";
+  const reminderEventName = detail?.name ?? t("content.thisEvent");
   const reminderMessage = hasCustomTimings
-    ? `We'll remind you ${(notifSettings ?? [])
-        .map((o) => (o === "At start time" ? "at start time" : o.toLowerCase()))
-        .join(" and ")} · ${reminderEventName}`
-    : `We'll remind you before ${reminderEventName} starts`;
+    ? `${t("content.remindYou", {
+        timing: (notifSettings ?? [])
+          .map((o) => (o === "At start time" ? "at start time" : o.toLowerCase()))
+          .join(` ${t("content.and")} `),
+      })} · ${reminderEventName}`
+    : t("content.remindYouBefore", { event: reminderEventName });
 
   useEffect(() => {
     let cancelled = false;
@@ -283,7 +312,7 @@ export default function ContentDetailScreen() {
         return;
       }
       if (!data?.row) {
-        setError("Content not found");
+        setError(t("content.contentNotFound"));
         setStatus("error");
         return;
       }
@@ -294,7 +323,7 @@ export default function ContentDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, supabase]);
+  }, [id, supabase, t]);
 
   const firstSpeaker = detail?.speakers?.[0];
   const screenHeight = Dimensions.get("window").height;
@@ -360,32 +389,41 @@ export default function ContentDetailScreen() {
       <Pressable
         onPress={dismiss}
         className="absolute inset-0"
-        accessibilityLabel="Close"
+        accessibilityLabel={t("common.close")}
       />
 
       <Animated.View
         className="flex-1"
         style={[
           {
+            // v2 floats the sheet: inset on all four sides, fully rounded, with
+            // a fixed height that fills what's left between the safe area and
+            // the bottom gap. Figma's literal 23px top would tuck the cover (and
+            // the close button) under the status bar and dynamic island, so the
+            // top offset follows the safe area the way the previous sheet did.
             marginTop: Math.max(insets.top, 24) + 12,
-            borderTopLeftRadius: SHEET_RADIUS,
-            borderTopRightRadius: SHEET_RADIUS,
-            backgroundColor: "#FFFFFF",
+            marginHorizontal: SHEET_INSET_X,
+            marginBottom: SHEET_BOTTOM,
+            borderRadius: SHEET_RADIUS,
+            backgroundColor: SHEET_BG,
             overflow: "hidden",
           },
           sheetStyle,
         ]}
       >
         {status === "loading" ? (
-          <ContentSkeleton />
+          <ContentSkeleton pulseColor={rgba(colors.foreground, 0.1)} />
         ) : status === "error" || !detail ? (
           <View className="flex-1 items-center justify-center px-6">
-            <Text style={{ color: BUSH }}>{error ?? "Not found"}</Text>
+            <Text style={{ color: BUSH, textAlign: "center" }}>
+              {error ?? t("content.notFound")}
+            </Text>
           </View>
         ) : (
           <>
             <ScrollView
               showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
               contentContainerStyle={{ paddingBottom: 24 }}
             >
               <GestureDetector gesture={panGesture}>
@@ -393,7 +431,7 @@ export default function ContentDetailScreen() {
                 <View
                   style={{
                     width: "100%",
-                    aspectRatio: 1,
+                    aspectRatio: COVER_RATIO,
                     backgroundColor: TRAY_BG,
                     borderTopLeftRadius: SHEET_RADIUS,
                     borderTopRightRadius: SHEET_RADIUS,
@@ -409,10 +447,14 @@ export default function ContentDetailScreen() {
                   ) : null}
                 </View>
 
+                {/* v2 draws a bare `x` glyph here. Kept on the translucent disc:
+                    a bare glyph is unreadable over arbitrary cover art, and the
+                    disc preserves the 40pt tap target for the reminder controls
+                    the mock omits. */}
                 <View
                   style={{
                     position: "absolute",
-                    top: 28,
+                    top: 18,
                     left: 16,
                     right: 16,
                   }}
@@ -420,9 +462,9 @@ export default function ContentDetailScreen() {
                 >
                   <CircleButton
                     onPress={dismiss}
-                    accessibilityLabel="Close"
+                    accessibilityLabel={t("common.close")}
                   >
-                    <AntDesign name="close" size={16} color="#1A1A1A" />
+                    <Icon name="close" size={16} color={BUSH} />
                   </CircleButton>
                   <View className="flex-row items-center" style={{ gap: 8 }}>
                     {isNotifOptedIn && !isPast ? (
@@ -435,17 +477,17 @@ export default function ContentDetailScreen() {
                           height: 28,
                         }}
                         accessibilityRole="button"
-                        accessibilityLabel="Customize reminder timing"
+                        accessibilityLabel={t("content.customizeReminderTiming")}
                       >
                         <Text
                           style={{
-                            fontFamily: platformUiFont,
+                            fontFamily: fonts.bodySemibold,
                             fontSize: 12,
                             fontWeight: "600",
                             color: BUSH,
                           }}
                         >
-                          Customize
+                          {t("content.customize")}
                         </Text>
                       </Pressable>
                     ) : null}
@@ -456,13 +498,16 @@ export default function ContentDetailScreen() {
                           onPress={notifDisabled ? undefined : handleToggleNotif}
                           disabled={notifDisabled}
                           accessibilityLabel={
-                            isNotifOptedIn ? "Turn off reminders" : "Turn on reminders"
+                            isNotifOptedIn
+                              ? t("content.turnOffReminders")
+                              : t("content.turnOnReminders")
                           }
                         >
-                          <Ionicons
+                          <Icon
                             name={isNotifOptedIn ? "notifications" : "notifications-outline"}
                             size={16}
-                            color="#1A1A1A"
+                            color={BUSH}
+                            fill={isNotifOptedIn ? BUSH : "none"}
                           />
                         </CircleButton>
                         {hasCustomTimings && isNotifOptedIn ? (
@@ -488,44 +533,49 @@ export default function ContentDetailScreen() {
               </Animated.View>
               </GestureDetector>
 
-              <View className="px-5 pt-6">
+              {/* v2 body: title → hairline → accent speaker line → plain
+                  description. The old "ABOUT" card wrapper is gone. */}
+              <View style={{ paddingHorizontal: CONTENT_PAD, paddingTop: 28 }}>
                 <Text
                   style={{
-                    fontFamily: platformTitleFont,
-                    fontSize: 19,
-                    lineHeight: 24,
-                    fontWeight: "700",
+                    fontFamily: fonts.displayRegular,
+                    fontSize: 20,
+                    lineHeight: 26,
                     color: BUSH,
                   }}
                 >
-                  {detail.name ?? "Untitled"}
+                  {detail.name ?? t("content.untitled")}
                 </Text>
+
+                <View
+                  style={{ height: 1, marginTop: 10, backgroundColor: DIVIDER }}
+                />
 
                 {firstSpeaker ? (
                   <Pressable
                     onPress={() => setSpeakerModalOpen(true)}
                     accessibilityRole="button"
-                    accessibilityLabel={`View bio for ${firstSpeaker}`}
-                    className="mt-4 flex-row items-center self-start rounded-full px-4 py-2"
-                    style={{ backgroundColor: CHIP_BG }}
+                    accessibilityLabel={t("content.viewBioFor", { name: firstSpeaker })}
+                    hitSlop={8}
+                    className="flex-row items-center self-start active:opacity-70"
+                    style={{ marginTop: 11 }}
                   >
-                    <Feather name="user" size={14} color={CHIP_TEXT} />
                     <Text
                       style={{
-                        marginLeft: 8,
-                        fontFamily: platformUiFont,
+                        fontFamily: fonts.bodySemibold,
                         fontSize: 13,
-                        fontWeight: "700",
-                        color: CHIP_TEXT,
+                        lineHeight: 18,
+                        fontWeight: "600",
+                        color: ACCENT,
                       }}
                     >
                       {firstSpeaker}
                     </Text>
-                    <AntDesign
-                      name="right"
-                      size={12}
-                      color={CHIP_TEXT}
-                      style={{ marginLeft: 6 }}
+                    <Icon
+                      name={isRTL ? "chevron-back" : "right"}
+                      size={9}
+                      color={ACCENT}
+                      style={{ marginStart: 8 }}
                     />
                   </Pressable>
                 ) : null}
@@ -536,80 +586,69 @@ export default function ContentDetailScreen() {
                       marginTop: 12,
                       fontSize: 13,
                       color: MUTED,
-                      fontFamily: platformUiFont,
+                      fontFamily: fonts.body,
                     }}
                   >
-                    This already happened
+                    {t("content.alreadyHappened")}
                   </Text>
                 ) : null}
 
                 {detail.description ? (
-                  <View
-                    className="mt-5 rounded-2xl p-4"
-                    style={{ backgroundColor: CARD_BG }}
+                  <Text
+                    style={{
+                      marginTop: 22,
+                      fontFamily: fonts.body,
+                      fontSize: 12,
+                      lineHeight: 20,
+                      color: BODY_TEXT,
+                    }}
                   >
-                    <Text
-                      style={{
-                        fontFamily: platformUiFont,
-                        fontSize: 11,
-                        fontWeight: "700",
-                        letterSpacing: 1.4,
-                        textTransform: "uppercase",
-                        color: MUTED,
-                      }}
-                    >
-                      About
-                    </Text>
-                    <Text
-                      style={{
-                        marginTop: 10,
-                        fontFamily: platformUiFont,
-                        fontSize: 12,
-                        lineHeight: 18,
-                        color: BUSH,
-                      }}
-                    >
-                      {detail.description}
-                    </Text>
-                  </View>
+                    {detail.description}
+                  </Text>
                 ) : null}
               </View>
             </ScrollView>
 
+            {/* v2 pins a dark accent-hearted pill inside the sheet — no footer
+                bar, no divider, sitting on the sheet's own background. */}
             <View
               style={{
-                paddingHorizontal: 16,
+                paddingHorizontal: CONTENT_PAD,
                 paddingTop: 12,
-                paddingBottom: Math.max(insets.bottom - 8, 12),
-                backgroundColor: "#FFFFFF",
-                borderTopWidth: 1,
-                borderTopColor: "rgba(10,38,30,0.08)",
+                paddingBottom: 27,
+                backgroundColor: SHEET_BG,
               }}
             >
               <Pressable
                 onPress={handleToggleSave}
                 disabled={saveDisabled}
-                className="flex-row items-center justify-center rounded-2xl py-4 active:opacity-80"
-                style={{ backgroundColor: CARD_BG, opacity: saveDisabled ? 0.6 : 1 }}
+                className="flex-row items-center justify-center active:opacity-80"
+                style={{
+                  height: SAVE_HEIGHT,
+                  borderRadius: SAVE_RADIUS,
+                  backgroundColor: BUSH,
+                  opacity: saveDisabled ? 0.6 : 1,
+                }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSaved, disabled: saveDisabled }}
-                accessibilityLabel={isSaved ? "Remove from Library" : "Save to Library"}
+                accessibilityLabel={isSaved ? t("content.removeFromLibrary") : t("content.saveToLibrary")}
               >
-                <Ionicons
+                <Icon
                   name={isSaved ? "heart" : "heart-outline"}
-                  size={18}
-                  color={BUSH}
+                  size={17}
+                  color={ACCENT}
+                  fill={isSaved ? ACCENT : "none"}
                 />
                 <Text
                   style={{
-                    marginLeft: 8,
-                    fontFamily: platformUiFont,
-                    fontSize: 16,
-                    fontWeight: "700",
-                    color: BUSH,
+                    marginStart: SAVE_GAP,
+                    fontFamily: fonts.bodySemibold,
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: SHEET_BG,
                   }}
                 >
-                  {isSaved ? "Saved to Library" : "Save to Library"}
+                  {isSaved ? t("content.savedToLibrary") : t("content.saveToLibrary")}
                 </Text>
               </Pressable>
             </View>
@@ -640,36 +679,36 @@ export default function ContentDetailScreen() {
           <Pressable
             onPress={handleOpenReminders}
             accessibilityRole="button"
-            accessibilityLabel="Reminder set. View your reminders."
+            accessibilityLabel={t("content.reminderSetA11y")}
             className="flex-row items-center active:opacity-80"
             style={{ paddingVertical: 14, paddingHorizontal: 16 }}
           >
-            <Ionicons name="checkmark-circle" size={20} color={toastText} />
-            <View style={{ flex: 1, marginLeft: 10, marginRight: 8 }}>
+            <Icon name="checkmark-circle" size={20} color={toastText} />
+            <View style={{ flex: 1, marginStart: 10, marginEnd: 8 }}>
               <Text
                 style={{
                   color: toastText,
                   fontSize: 14,
                   fontWeight: "700",
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                 }}
               >
-                Reminder set
+                {t("content.reminderSet")}
               </Text>
               <Text
                 style={{
                   color: toastText,
                   opacity: 0.75,
                   fontSize: 12,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   marginTop: 1,
                 }}
               >
                 {reminderMessage}
               </Text>
             </View>
-            <Ionicons
-              name="chevron-forward"
+            <Icon
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={16}
               color={toastText}
               style={{ opacity: 0.7 }}
@@ -701,36 +740,36 @@ export default function ContentDetailScreen() {
           <Pressable
             onPress={handleOpenLibrary}
             accessibilityRole="button"
-            accessibilityLabel="Saved to library. View your library."
+            accessibilityLabel={t("content.savedToLibraryA11y")}
             className="flex-row items-center active:opacity-80"
             style={{ paddingVertical: 14, paddingHorizontal: 16 }}
           >
-            <Ionicons name="heart" size={20} color={toastText} />
-            <View style={{ flex: 1, marginLeft: 10, marginRight: 8 }}>
+            <Icon name="heart" size={20} color={toastText} fill={toastText} />
+            <View style={{ flex: 1, marginStart: 10, marginEnd: 8 }}>
               <Text
                 style={{
                   color: toastText,
                   fontSize: 14,
                   fontWeight: "700",
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.bodySemibold,
                 }}
               >
-                Saved to library
+                {t("content.savedToLibraryToast")}
               </Text>
               <Text
                 style={{
                   color: toastText,
                   opacity: 0.75,
                   fontSize: 12,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   marginTop: 1,
                 }}
               >
-                {detail?.name ?? "This"} is in your library
+                {t("content.itemInLibrary", { item: detail?.name ?? t("content.thisItem") })}
               </Text>
             </View>
-            <Ionicons
-              name="chevron-forward"
+            <Icon
+              name={isRTL ? "chevron-back" : "chevron-forward"}
               size={16}
               color={toastText}
               style={{ opacity: 0.7 }}

@@ -1,9 +1,11 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -14,10 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import Mandala from '@/assets/onboarding/mandala.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useUserPreferences } from '@/src/hooks/use-user-preferences';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
-
-const SERIF = 'PlayfairDisplay_500Medium';
 
 const MANDALA_SIZE = 402;
 const HALO_SIZE = 324;
@@ -46,6 +49,10 @@ function CreamHalo() {
 export default function AllSetScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const fonts = useFontFamily();
+  const { t } = useTranslation();
+  const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.onboardingSurface);
   const { markPersonalizationComplete } = useUserPreferences();
 
   // Reaching this screen means the personalization flow is finished — stamp it
@@ -57,7 +64,9 @@ export default function AllSetScreen() {
 
   const storedName = useOnboardingStore((s) => s.firstName);
   const firstName =
-    user?.firstName?.trim() || storedName.trim().split(/\s+/)[0] || 'Friend';
+    user?.firstName?.trim() ||
+    storedName.trim().split(/\s+/)[0] ||
+    t('personalization.allSetDefaultName');
 
   // Mandala rotates continuously — 60s per revolution, linear, infinite. Slow
   // enough to feel meditative rather than busy.
@@ -93,6 +102,19 @@ export default function AllSetScreen() {
     opacity: bottomOpacity.value,
   }));
 
+  // Tapping "Explore" fades a green layer (the same green the notification
+  // takeover uses) over this cream screen, THEN navigates — so the hand-off into
+  // `(main)` lands already-green and the onboarding reads as one continuous
+  // motion into the notifications prompt rather than a cream→green jump.
+  const leave = useSharedValue(0);
+  const leaveStyle = useAnimatedStyle(() => ({ opacity: leave.value }));
+  const goToApp = () => router.replace('/(main)/discover');
+  const onExplore = () => {
+    leave.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) }, (done) => {
+      if (done) runOnJS(goToApp)();
+    });
+  };
+
   return (
     <View className="flex-1 bg-onboarding-surface">
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
@@ -127,13 +149,13 @@ export default function AllSetScreen() {
               <View style={{ alignItems: 'center' }}>
                 <Text
                   className="text-onboarding-bg"
-                  style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 28 }}
+                  style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28 }}
                 >
-                  You&rsquo;re all set
+                  {t('personalization.allSetTitle')}
                 </Text>
                 <Text
                   className="text-onboarding-bg mt-1"
-                  style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 28 }}
+                  style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28 }}
                 >
                   {firstName}
                 </Text>
@@ -147,18 +169,26 @@ export default function AllSetScreen() {
             className="text-onboarding-bg/60 mb-5 text-center"
             style={{ fontSize: 12, lineHeight: 16 }}
           >
-            We&rsquo;ll use your preferences to show you the most relevant programs and events
+            {t('personalization.allSetSubtitle')}
           </Text>
           <Pressable
-            onPress={() => router.replace('/(main)/discover')}
+            onPress={onExplore}
             className="h-[43px] items-center justify-center rounded-full bg-onboarding-bg active:opacity-90"
           >
             <Text className="text-onboarding-surface" style={{ fontSize: 14, fontWeight: '600' }}>
-              Explore
+              {t('personalization.allSetExplore')}
             </Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
+
+      {/* Green wipe that covers the cream screen on "Explore", so the next
+          surface (the notifications takeover) appears already-green. */}
+      <Animated.View
+        pointerEvents="none"
+        className="absolute inset-0 bg-onboarding-bg"
+        style={leaveStyle}
+      />
     </View>
   );
 }

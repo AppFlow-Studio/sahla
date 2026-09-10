@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Image, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   interpolate,
 } from "react-native-reanimated";
-
+import { Image } from "expo-image";
+import { CalendarIcon, SearchIcon } from "./DiscoverIcons";
+import { useFontFamily } from "@/src/hooks/use-font-family";
 import { useMasjidConfig } from "@/src/hooks/use-masjid-config";
 
 const TABS = ["All", "For You", "Events", "Programs"] as const;
@@ -22,13 +24,9 @@ type Props = {
   onChangeSearch?: (value: string) => void;
 };
 
-const platformUiFont = Platform.select({
-  ios: "SF Pro Text",
-  android: "Roboto",
-  default: "system-ui",
-});
-
 const DURATION = 250;
+
+const CALENDAR_SIZE = 18;
 
 export default function DiscoverHeader({
   title = "Discover",
@@ -38,6 +36,7 @@ export default function DiscoverHeader({
   searchValue,
   onChangeSearch,
 }: Props) {
+  const fonts = useFontFamily();
   const { colors } = useMasjidConfig();
   const fg = colors.foreground.replace(/ /g, ",");
   const fgRgb = `rgb(${fg})`;
@@ -72,6 +71,13 @@ export default function DiscoverHeader({
     transform: [{ translateX: interpolate(progress.value, [0, 1], [40, 0]) }],
   }));
 
+  // The calendar collapses its width (not just its opacity) so the search bar
+  // takes over the space instead of stopping short of the screen edge.
+  const calendarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.4], [1, 0]),
+    width: interpolate(progress.value, [0, 1], [CALENDAR_SIZE, 0]),
+  }));
+
   return (
     <View className="px-6 pt-6">
       <View className="flex-row items-center" style={{ height: 36 }}>
@@ -85,7 +91,7 @@ export default function DiscoverHeader({
             <View className="flex-row items-center">
               <Text
                 style={{
-                  fontFamily: "PlayfairDisplay_500Medium",
+                  fontFamily: fonts.display,
                   fontSize: 30,
                   lineHeight: 36,
                   color: fgRgb,
@@ -99,13 +105,13 @@ export default function DiscoverHeader({
                 hitSlop={12}
                 accessibilityRole="button"
                 accessibilityLabel="Search"
-                style={{ marginRight: 16 }}
+                style={{ marginRight: 16, marginTop: 4 }}
               >
-                <Image
-                  source={require("@/assets/images/search_icon.png")}
-                  style={{ width: 18, height: 18 }}
-                  resizeMode="contain"
-                />
+                {/* Bumped to 32pt so the visible magnifier glyph reads
+                    the same size as the 24pt calendar. The Figma
+                    export's 29×29 viewBox has ~40% empty padding around
+                    the glyph, so a straight 24pt size looks smaller. */}
+                <SearchIcon size={32} color={fgRgb} />
               </Pressable>
             </View>
           </Animated.View>
@@ -130,11 +136,7 @@ export default function DiscoverHeader({
               className="flex-1 flex-row items-center rounded-full px-3"
               style={{ backgroundColor: pillBg, height: 36 }}
             >
-              <Image
-                source={require("@/assets/images/search_icon.png")}
-                style={{ width: 16, height: 16, opacity: 0.6 }}
-                resizeMode="contain"
-              />
+              <SearchIcon size={18} color={mutedFgRgb} opacity={1} />
               <TextInput
                 ref={inputRef}
                 placeholder="Search..."
@@ -151,7 +153,7 @@ export default function DiscoverHeader({
                 style={{
                   flex: 1,
                   marginLeft: 8,
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   fontSize: 14,
                   color: fgRgb,
                   paddingVertical: 0,
@@ -180,7 +182,7 @@ export default function DiscoverHeader({
             >
               <Text
                 style={{
-                  fontFamily: platformUiFont,
+                  fontFamily: fonts.body,
                   fontSize: 11,
                   color: fgRgb,
                 }}
@@ -191,42 +193,54 @@ export default function DiscoverHeader({
           </Animated.View>
         </View>
 
-        {/* Calendar button — always in place */}
-        <Pressable
-          onPress={onPressCalendar}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Events calendar"
+        {/* Calendar button — collapses away while searching, returns on Cancel */}
+        <Animated.View
+          style={[{ height: CALENDAR_SIZE, overflow: "hidden" }, calendarStyle]}
+          pointerEvents={isSearching ? "none" : "auto"}
         >
-          <Image
-            source={require("@/assets/images/discover_calendar_icon_next_to_search_bar.png")}
-            style={{ width: 18, height: 18 }}
-            resizeMode="contain"
-          />
-        </Pressable>
+          <Pressable
+            onPress={onPressCalendar}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Events calendar"
+            accessibilityElementsHidden={isSearching}
+            importantForAccessibility={isSearching ? "no-hide-descendants" : "auto"}
+          >
+            <Image
+              source={require("@/assets/images/discover_calendar_icon_next_to_search_bar.png")}
+              style={{ width: CALENDAR_SIZE, height: CALENDAR_SIZE }}
+              resizeMode="contain"
+            />
+          </Pressable>
+        </Animated.View>
       </View>
 
-      <View className="mt-4 flex-row items-center gap-4">
+      <View className="mt-4 flex-row items-center gap-6">
         {TABS.map((tab) => {
           const isActive = tab === active;
           return (
             <Pressable key={tab} onPress={() => onSelect?.(tab)}>
               <Text
                 style={{
-                  fontFamily: platformUiFont,
-                  fontSize: 12,
+                  fontFamily: isActive ? fonts.bodySemibold : fonts.bodyMedium,
+                  fontSize: 15,
                   fontWeight: isActive ? "600" : "500",
                   color: isActive ? fgRgb : mutedFgRgb,
                 }}
               >
                 {tab}
               </Text>
-              {isActive ? (
-                <View
-                  className="mt-1 h-px w-4"
-                  style={{ backgroundColor: fgRgb }}
-                />
-              ) : null}
+              {/* Underline space is always reserved (transparent when
+                  inactive) so the label height never changes — the text
+                  stays put instead of nudging up when a tab activates. */}
+              <View
+                className="self-stretch"
+                style={{
+                  height: 1,
+                  marginTop: 4,
+                  backgroundColor: isActive ? fgRgb : "transparent",
+                }}
+              />
             </Pressable>
           );
         })}

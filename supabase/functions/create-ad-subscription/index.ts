@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+import { resolveConnectedCustomer } from "../_shared/stripe-customer.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -130,44 +131,13 @@ serve(async (req: Request) => {
     const submissionId = submissionRow.submission_id;
 
     // ── Find or create Stripe Customer on connected account ──
-    let existingStripeId: string | null = null;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("stripe_id")
-      .eq("id", user_id)
-      .single();
-    existingStripeId = profile?.stripe_id ?? null;
-
-    let customer: Stripe.Customer;
-    if (existingStripeId) {
-      customer = (await stripe.customers.retrieve(
-        existingStripeId,
-        stripeAccountOpts,
-      )) as Stripe.Customer;
-    } else if (customer_email) {
-      const existing = await stripe.customers.list(
-        { email: customer_email, limit: 1 },
-        stripeAccountOpts,
-      );
-      if (existing.data.length > 0) {
-        customer = existing.data[0];
-      } else {
-        customer = await stripe.customers.create(
-          { email: customer_email },
-          stripeAccountOpts,
-        );
-      }
-    } else {
-      customer = await stripe.customers.create({}, stripeAccountOpts);
-    }
-
-    // Save customer ID to profile
-    if (!existingStripeId) {
-      await supabase
-        .from("profiles")
-        .update({ stripe_id: customer.id })
-        .eq("id", user_id);
-    }
+    const customer = await resolveConnectedCustomer({
+      stripe,
+      supabase,
+      connectedAccountId,
+      userId: user_id,
+      email: customer_email,
+    });
 
     // ── Find or create Product + Price on connected account ──
     let product: Stripe.Product | undefined;

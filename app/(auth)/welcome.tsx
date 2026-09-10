@@ -1,8 +1,10 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, Text, View } from 'react-native';
 
+import { useGuestStore } from '@/src/stores/guest-store';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
 import Animated, {
   Easing,
@@ -17,9 +19,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import Mosque from '@/assets/onboarding/mosque.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
-const SERIF = 'PlayfairDisplay_500Medium';
 const ARABIC = 'Amiri_400Regular';
 
 const triplet = (t: string) => `rgb(${t.replace(/ /g, ',')})`;
@@ -51,9 +54,13 @@ function Halo({
 }
 
 export default function WelcomeScreen() {
+  const enterGuest = useGuestStore((s) => s.enterGuest);
   const router = useRouter();
+  const { t } = useTranslation();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const { signOut, isSignedIn } = useAuth();
+  useAutoStatusBarStyle(config.colors.onboardingBackground);
   const resetOnboarding = useOnboardingStore((s) => s.reset);
 
   const mosqueY = useSharedValue(200);
@@ -109,11 +116,13 @@ export default function WelcomeScreen() {
         className="absolute inset-x-0 bottom-0"
         style={[{ height: '66%' }, mosqueStyle]}
       >
+        {/* mosque.svg draws in `currentColor`; the silhouette is the tenant's
+            layering color so it reads as depth against its own background. */}
         <Mosque
           width="100%"
           height="100%"
           preserveAspectRatio="xMidYMax meet"
-          color="#071F18"
+          color={triplet(config.colors.onboardingLayer)}
         />
       </Animated.View>
 
@@ -123,10 +132,10 @@ export default function WelcomeScreen() {
             <Text
               onPress={() => {
                 console.log('[DEV] Logout pressed, isSignedIn:', isSignedIn);
-                Alert.alert('Dev Logout', `Signed in: ${isSignedIn}`, [
-                  { text: 'Cancel' },
+                Alert.alert(t('auth.devLogoutTitle'), t('auth.devLogoutMessage', { signedIn: isSignedIn }), [
+                  { text: t('common.cancel') },
                   {
-                    text: 'Sign out & reset',
+                    text: t('auth.devSignOutAndReset'),
                     style: 'destructive',
                     onPress: async () => {
                       console.log('[DEV] Signing out...');
@@ -143,13 +152,13 @@ export default function WelcomeScreen() {
               }}
               style={{
                 fontSize: 12,
-                color: '#EF4444',
+                color: triplet(config.colors.danger),
                 fontWeight: '600',
                 marginBottom: 8,
                 padding: 8,
               }}
             >
-              [DEV] Sign out &amp; reset
+              {t('auth.devSignOutReset')}
             </Text>
           )}
           <Text
@@ -160,9 +169,9 @@ export default function WelcomeScreen() {
           </Text>
           <Text
             className="text-onboarding-surface"
-            style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', marginTop: 6 }}
+            style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', marginTop: 6 }}
           >
-            Welcome
+            {t('auth.welcome')}
           </Text>
           <Text
             className="text-onboarding-accent"
@@ -180,21 +189,37 @@ export default function WelcomeScreen() {
             className="h-[38px] items-center justify-center rounded-full bg-onboarding-surface active:opacity-90"
           >
             <Text className="text-onboarding-bg" style={{ fontSize: 14, fontWeight: '600' }}>
-              Get Started
+              {t('auth.getStarted')}
             </Text>
           </Pressable>
           <View className="mt-4 flex-row justify-center">
             <Text className="text-onboarding-surface/50" style={{ fontSize: 12 }}>
-              Already a member?{' '}
+              {t('auth.alreadyMember')}
             </Text>
             <Link
               href="/(auth)/sign-in"
               className="text-onboarding-accent"
               style={{ fontSize: 12, fontWeight: '500' }}
             >
-              Sign In
+              {t('auth.signIn')}
             </Link>
           </View>
+          {/* Browsing without an account: prayer times, programs, the reels
+              feed and the Quran all work signed out, so requiring registration
+              to see any of it would be gating features that don't need it. */}
+          <Pressable
+            onPress={enterGuest}
+            hitSlop={8}
+            accessibilityRole="button"
+            className="mt-5 items-center py-2 active:opacity-60"
+          >
+            <Text
+              className="text-onboarding-surface/60"
+              style={{ fontSize: 12, fontWeight: '500', textDecorationLine: 'underline' }}
+            >
+              {t('auth.browseAsGuest')}
+            </Text>
+          </Pressable>
         </Animated.View>
       </SafeAreaView>
     </View>

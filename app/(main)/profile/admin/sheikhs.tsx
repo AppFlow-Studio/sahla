@@ -21,9 +21,12 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
+import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import {
   useCreateSpeaker,
   useDeleteSpeaker,
@@ -32,13 +35,16 @@ import {
   type SpeakerRow,
 } from '@/src/hooks/use-speakers';
 import { useUploadSpeakerPhoto } from '@/src/hooks/use-upload-speaker-photo';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const SCREEN_H = Dimensions.get('window').height;
 
 export default function SheikhsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.card);
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
   const borderColor = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.1)`;
@@ -62,12 +68,12 @@ export default function SheikhsScreen() {
 
   const handleDelete = (speaker: SpeakerRow) => {
     Alert.alert(
-      'Remove Sheikh',
-      `Are you sure you want to remove ${speaker.speaker_name ?? 'this sheikh'}? They will also be unassigned from any Jummah slots.`,
+      t('admin.removeSheikhTitle'),
+      t('admin.removeSheikhMessage', { name: speaker.speaker_name ?? t('admin.thisSheikh') }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('admin.remove'),
           style: 'destructive',
           onPress: () => deleteSpeaker.mutate(speaker.speaker_id),
         },
@@ -80,15 +86,13 @@ export default function SheikhsScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-5" style={{ height: 52 }}>
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={fgRgb} />
-          </Pressable>
-          <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginLeft: 12 }}>
-            Sheikhs
+          <BackButton color={fgRgb} />
+          <Text style={{ color: fgRgb, fontSize: 16, fontWeight: '600', marginStart: 12 }}>
+            {t('admin.sheikhs')}
           </Text>
         </View>
         <TouchableOpacity onPress={handleAdd} activeOpacity={0.7} hitSlop={8}>
-          <Ionicons name="add-circle-outline" size={26} color={accentRgb} />
+          <Icon name="add-circle-outline" size={26} color={accentRgb} />
         </TouchableOpacity>
       </View>
 
@@ -98,9 +102,9 @@ export default function SheikhsScreen() {
         </View>
       ) : speakers.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
-          <Ionicons name="people-outline" size={48} color={mutedRgb} />
+          <Icon name="people-outline" size={48} color={mutedRgb} />
           <Text style={{ color: mutedRgb, fontSize: 14, marginTop: 12, textAlign: 'center' }}>
-            No sheikhs added yet. Tap + to add one.
+            {t('admin.noSheikhsAdded')}
           </Text>
         </View>
       ) : (
@@ -147,6 +151,7 @@ function SpeakerCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       style={{
@@ -164,21 +169,21 @@ function SpeakerCard({
           borderRadius: 22,
           overflow: 'hidden',
           backgroundColor: borderColor,
-          marginRight: 12,
+          marginEnd: 12,
         }}
       >
         {speaker.speaker_img ? (
           <Image source={{ uri: speaker.speaker_img }} style={{ width: 44, height: 44 }} />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <Ionicons name="person" size={20} color={mutedRgb} />
+            <Icon name="person" size={20} color={mutedRgb} />
           </View>
         )}
       </View>
 
       <View className="flex-1">
         <Text style={{ color: fgRgb, fontSize: 14, fontWeight: '600' }}>
-          {speaker.speaker_name ?? 'Unnamed'}
+          {speaker.speaker_name ?? t('admin.unnamed')}
         </Text>
         {speaker.speaker_creds && speaker.speaker_creds.length > 0 && (
           <Text style={{ color: mutedRgb, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
@@ -187,11 +192,11 @@ function SpeakerCard({
         )}
       </View>
 
-      <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginRight: 12 }}>
-        <Ionicons name="pencil-outline" size={18} color={mutedRgb} />
+      <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginEnd: 12 }}>
+        <Icon name="pencil-outline" size={18} color={mutedRgb} />
       </TouchableOpacity>
       <TouchableOpacity onPress={onDelete} hitSlop={8}>
-        <Ionicons name="trash-outline" size={18} color="rgb(239,68,68)" />
+        <Icon name="trash-outline" size={18} color="rgb(239,68,68)" />
       </TouchableOpacity>
     </View>
   );
@@ -208,6 +213,7 @@ function SpeakerFormModal({
   speaker: SpeakerRow | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const insets = useSafeAreaInsets();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
@@ -395,7 +401,7 @@ function SpeakerFormModal({
                 textTransform: 'uppercase',
               }}
             >
-              {isEditing ? 'Edit Sheikh' : 'Add Sheikh'}
+              {isEditing ? t('admin.editSheikh') : t('admin.addSheikh')}
             </Text>
           </View>
 
@@ -423,11 +429,11 @@ function SpeakerFormModal({
                 ) : photoUrl ? (
                   <Image source={{ uri: photoUrl }} style={{ width: 72, height: 72 }} />
                 ) : (
-                  <Ionicons name="camera-outline" size={24} color={mutedRgb} />
+                  <Icon name="camera-outline" size={24} color={mutedRgb} />
                 )}
               </View>
               <Text style={{ color: labelColor, fontSize: 10, textAlign: 'center', marginTop: 4 }}>
-                {photoUrl ? 'Change Photo' : 'Add Photo'}
+                {photoUrl ? t('admin.changePhoto') : t('admin.addPhoto')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -445,12 +451,12 @@ function SpeakerFormModal({
                   marginBottom: 6,
                 }}
               >
-                Name
+                {t('admin.name')}
               </Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
-                placeholder="e.g. Sh. Tarek Allan"
+                placeholder={t('admin.namePlaceholder')}
                 placeholderTextColor={placeholderColor}
                 autoCapitalize="words"
                 style={{
@@ -475,12 +481,12 @@ function SpeakerFormModal({
                   marginBottom: 6,
                 }}
               >
-                Credentials (comma separated)
+                {t('admin.credentials')}
               </Text>
               <TextInput
                 value={creds}
                 onChangeText={setCreds}
-                placeholder="e.g. Ijazah in Qiraat, MA Islamic Studies"
+                placeholder={t('admin.credentialsPlaceholder')}
                 placeholderTextColor={placeholderColor}
                 autoCapitalize="sentences"
                 style={{
@@ -506,12 +512,12 @@ function SpeakerFormModal({
               style={{ height: 43, opacity: canSave ? 1 : 0.5 }}
             >
               <Text className="text-[14px] font-semibold text-primary-foreground">
-                {mutation.isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Sheikh'}
+                {mutation.isPending ? t('admin.saving') : isEditing ? t('admin.saveChanges') : t('admin.addSheikh')}
               </Text>
             </TouchableOpacity>
             {mutation.isError && (
               <Text className="mt-2 text-center text-[11px] text-red-500">
-                {mutation.error?.message ?? 'Failed to save'}
+                {mutation.error?.message ?? t('admin.failedToSave')}
               </Text>
             )}
           </View>

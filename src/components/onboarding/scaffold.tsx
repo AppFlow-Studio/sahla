@@ -1,12 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import Pattern from '@/assets/onboarding/pattern.svg';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
-
-const SERIF = 'PlayfairDisplay_500Medium';
+import { BackButton } from '@/src/components/ui/back-button';
+import { OnboardingPattern } from './onboarding-pattern';
 
 type OnboardingScaffoldProps = {
   step: number;
@@ -34,19 +34,22 @@ export function OnboardingScaffold({
   primaryDisabled = false,
   secondaryLabel,
   onSecondary,
-  footerNote = 'By continuing you agree to our Terms of Service',
+  footerNote,
   scrollable = false,
 }: OnboardingScaffoldProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const config = useMasjidConfig();
+  const fonts = useFontFamily();
   const surfaceRgb = `rgba(${config.colors.onboardingSurface.replace(/ /g, ',')}, 0.6)`;
+  const resolvedFooterNote = footerNote ?? t('onboarding.footerTerms');
 
   const content = (
     <>
       <View style={{ marginTop: 48 }}>
         <Text
           className="text-onboarding-surface"
-          style={{ fontFamily: SERIF, fontSize: 30, fontWeight: '500', lineHeight: 36 }}
+          style={{ fontFamily: fonts.display, fontSize: 30, fontWeight: '500', lineHeight: 36 }}
         >
           {title}
         </Text>
@@ -65,19 +68,22 @@ export function OnboardingScaffold({
 
   return (
     <View className="flex-1 bg-onboarding-bg z-100">
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
-        <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin slice" />
+      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '10%' }}>
+        <OnboardingPattern />
       </View>
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-5 pt-2">
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            className="mr-3 h-6 w-6 items-center justify-center"
-          >
-            <Ionicons name="arrow-back" size={20} color={surfaceRgb} />
-          </Pressable>
+          <BackButton
+            color={surfaceRgb}
+            style={{
+              marginEnd: 12,
+              width: 24,
+              height: 24,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          />
           <View className="flex-1 flex-row" style={{ gap: 6 }}>
             {Array.from({ length: totalSteps }).map((_, i) => (
               <View
@@ -87,8 +93,8 @@ export function OnboardingScaffold({
               />
             ))}
           </View>
-          <Text className="text-onboarding-surface/40 ml-3" style={{ fontSize: 8 }}>
-            STEP {step} OF {totalSteps}
+          <Text className="text-onboarding-surface/40 ms-3" style={{ fontSize: 8 }}>
+            {t('onboarding.stepOf', { step, total: totalSteps })}
           </Text>
         </View>
 
@@ -129,7 +135,27 @@ export function OnboardingScaffold({
             className="text-onboarding-surface/20 mt-6 text-center"
             style={{ fontSize: 10 }}
           >
-            {footerNote}
+            {footerNote !== undefined ? (
+              resolvedFooterNote
+            ) : (
+              <>
+                {t('auth.agreeLead')}
+                <Text
+                  style={{ textDecorationLine: 'underline' }}
+                  onPress={() => router.push('/legal/terms')}
+                >
+                  {t('auth.agreeTerms')}
+                </Text>
+                {t('auth.agreeMid')}
+                <Text
+                  style={{ textDecorationLine: 'underline' }}
+                  onPress={() => router.push('/legal/privacy')}
+                >
+                  {t('auth.agreePrivacy')}
+                </Text>
+                {t('auth.agreeTail')}
+              </>
+            )}
           </Text>
         </View>
       </SafeAreaView>

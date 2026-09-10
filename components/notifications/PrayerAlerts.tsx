@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Fragment, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import {
   type PrayerName,
   usePrayerAlerts,
@@ -11,16 +13,12 @@ import {
 import { PrayerNotificationSheet } from '@/src/components/prayer/prayer-notification-sheet';
 
 import { Toggle } from './Toggle';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const INK = '#0A261E';
 const INK_MUTED = 'rgba(10,38,30,0.6)';
 const SURFACE = '#FFFBF2';
 const HAIRLINE = 'rgba(10,38,30,0.1)';
-
-const PLAYFAIR = Platform.select({
-  ios: 'PlayfairDisplay-Medium',
-  default: 'PlayfairDisplay_500Medium',
-});
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -89,20 +87,20 @@ function PrayerRow({
 
 export function PrayerAlerts({ onBack }: { onBack?: () => void }) {
   const insets = useSafeAreaInsets();
+  const fonts = useFontFamily();
   const { toggles, getSettings, savePrayerSettings, applyToAll } = usePrayerAlerts();
   const [sheetPrayer, setSheetPrayer] = useState<PrayerName | null>(null);
+  useStatusBarStyle('dark');
 
   const handleBack = onBack ?? (() => router.back());
 
   return (
     <View style={{ flex: 1, backgroundColor: SURFACE, paddingTop: insets.top }}>
       <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
-        <Pressable onPress={handleBack} hitSlop={12} style={{ marginBottom: 12 }}>
-          <Ionicons name="arrow-back" size={22} color={INK_MUTED} />
-        </Pressable>
+        <BackButton onPress={handleBack} color={INK_MUTED} style={{ marginBottom: 12 }} />
         <Text
           style={{
-            fontFamily: PLAYFAIR,
+            fontFamily: fonts.display,
             fontWeight: '500',
             fontSize: 30,
             lineHeight: 38,

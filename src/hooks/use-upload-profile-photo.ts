@@ -20,15 +20,18 @@ async function loadImagePicker(): Promise<ImagePickerModule> {
   }
 }
 
-const BUCKET = 'profile-pics';
-
 type Source = 'camera' | 'gallery';
 
 /**
- * Picks an image (camera or library), uploads it to the `profile-pics`
- * bucket under the user's folder, and writes the resulting public URL to
- * `profiles.profile_pic`. Cache-busts the URL so RN's Image cache doesn't
- * keep serving the previous avatar after a re-upload.
+ * Picks an image (camera or library) and posts it to the `upload-profile-pic`
+ * edge function, which uploads it to Bunny Edge Storage and updates
+ * `profiles.profile_pic` with the public CDN URL. The function does the DB
+ * write server-side using the service role, so this hook just consumes the
+ * returned URL for cache invalidation.
+ *
+ * Previously this uploaded to Supabase Storage's `profile-pics` bucket; that
+ * was migrated to Bunny on 2026-06-08 — see [SCAFFOLD] notes in the
+ * upload-profile-pic edge function for the auth model.
  */
 export function useUploadProfilePhoto() {
   const { userId } = useAuth();
@@ -72,37 +75,26 @@ export function useUploadProfilePhoto() {
       if (result.canceled || !result.assets?.[0]) return null;
       const asset = result.assets[0];
 
-      // Read the local URI as bytes for the upload.
-      const response = await fetch(asset.uri);
-      const arrayBuffer = await response.arrayBuffer();
-
-      // Derive extension + content type. ImagePicker yields jpeg by default
-      // when quality is set, but PNG sources stay PNG; respect what we got.
-      const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
-      const contentType = asset.mimeType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-      const path = `${userId}/avatar.${ext}`;
-
       setIsUploading(true);
       try {
-        const { error: uploadErr } = await supabase.storage
-          .from(BUCKET)
-          .upload(path, arrayBuffer, { contentType, upsert: true });
-        if (uploadErr) throw new Error(uploadErr.message);
+        const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase();
 
-        const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-        // Cache-bust so the avatar refresh is visible immediately.
-        const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+        const form = new FormData();
+        form.append('file', {
+          uri: asset.uri,
+          name: `avatar.${ext}`,
+          type: asset.mimeType ?? `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+        } as unknown as Blob);
 
-        const { error: dbErr } = await supabase
-          .from('profiles')
-          .upsert(
-            { id: userId, profile_pic: publicUrl },
-            { onConflict: 'id' },
-          );
-        if (dbErr) throw new Error(dbErr.message);
+        const { data, error } = await supabase.functions.invoke<{
+          url: string;
+          error?: string;
+        }>('upload-profile-pic', { body: form });
+        if (error) throw new Error(error.message);
+        if (!data?.url) throw new Error('Upload succeeded but no URL returned');
 
         queryClient.invalidateQueries({ queryKey: ['profile', userId] });
-        return publicUrl;
+        return data.url;
       } finally {
         setIsUploading(false);
       }

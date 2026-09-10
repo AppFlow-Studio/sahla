@@ -1,16 +1,19 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, Platform, Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import Pattern from '@/assets/onboarding/pattern.svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import EvilIcons from '@expo/vector-icons/EvilIcons';
+import { Icon } from '@/src/components/ui/icon';
 import { ProfilePhotoModal } from '@/components/profile/ProfilePhotoModal';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useProfile } from '@/src/hooks/use-profile';
+import { useSetupCompleteness } from '@/src/hooks/use-setup-completeness';
 import { useUploadProfilePhoto } from '@/src/hooks/use-upload-profile-photo';
 import { useOnboardingStore } from '@/src/stores/onboarding-store';
-import EditProfileSheet from './EditProfileSheet';
 
 import {
   useFonts,
@@ -18,21 +21,31 @@ import {
   CormorantGaramond_600SemiBold,
 } from '@expo-google-fonts/cormorant-garamond';
 
-export default function ProfileHeader() {
+type Props = {
+  /** Lifted to the parent so the body's setup row + the header CTA both
+   *  trigger the same EditProfileSheet instance. */
+  onPressEdit: () => void;
+  /** Routes the user to whatever's outstanding when "Complete Profile" is tapped.
+   *  Parent decides based on `useSetupCompleteness().firstIncomplete`. */
+  onPressCompleteProfile: () => void;
+};
+
+export default function ProfileHeader({ onPressEdit, onPressCompleteProfile }: Props) {
+  const { t } = useTranslation();
   const { profile, status, error } = useProfile();
   const { user } = useUser();
   const { clerkOrgId, colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const insets = useSafeAreaInsets();
+  const setup = useSetupCompleteness();
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
-  const depthRgb = `rgb(${colors.depth.replace(/ /g, ',')})`;
+  const primaryRgba0 = `rgba(${colors.primary.replace(/ /g, ',')}, 0)`;
   const fgRgb = `rgb(${colors.primaryForeground.replace(/ /g, ',')})`;
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
 
-  const [headerHeight, setHeaderHeight] = useState(0);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const { takePhoto, chooseFromGallery, isUploading } = useUploadProfilePhoto();
-  const [editVisible, setEditVisible] = useState(false);
 
   const handlePhotoSource = useCallback(
     async (source: 'camera' | 'gallery') => {
@@ -42,12 +55,12 @@ export default function ProfileHeader() {
         return result;
       } catch (e) {
         Alert.alert(
-          'Could not update photo',
-          e instanceof Error ? e.message : 'Unknown error',
+          t('profile.couldNotUpdatePhoto'),
+          e instanceof Error ? e.message : t('profile.unknownError'),
         );
       }
     },
-    [takePhoto, chooseFromGallery],
+    [takePhoto, chooseFromGallery, t],
   );
 
   const [fontsLoaded] = useFonts({
@@ -83,48 +96,44 @@ export default function ProfileHeader() {
   const firstName =
     profile?.first_name ?? metaFirstName ?? (storedFirstName.trim() || null) ?? user?.firstName;
   const lastName = profile?.last_name ?? user?.lastName;
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (user?.primaryEmailAddress?.emailAddress ?? 'Unknown');
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || (user?.primaryEmailAddress?.emailAddress ?? t('profile.unknownName'));
   const createdYear = profile?.created_at
     ? new Date(profile.created_at).getFullYear()
     : user?.createdAt
       ? new Date(user.createdAt).getFullYear()
       : undefined;
 
-  const nonEmpty = (s: string | null | undefined) => (s?.trim().length ?? 0) > 0;
-  const isProfileComplete =
-    nonEmpty(firstName) &&
-    nonEmpty(lastName) &&
-    nonEmpty(profile?.profile_email) &&
-    nonEmpty(profile?.phone_number) &&
-    hasPhoto;
+  // "Complete Profile" CTA gates on profile fields only (name + phone + photo) —
+  // personalization/notifications get their own ProfileBody rows. Once profile
+  // fields are done, only the (enlarged, centered) "Edit Profile" button shows.
+  const showCompleteCTA = !setup.profile;
 
   const initial = firstName?.charAt(0) ?? '?';
 
-  const vectorHeight =
-    headerHeight > 0 ? Math.round(headerHeight * 0.60) : undefined;
-
   return (
     <View className="relative w-full overflow-hidden bg-primary">
-      <LinearGradient
-        colors={[depthRgb, primaryRgb]}
+      <View
         className="w-full"
-        style={{ paddingTop: insets.top + 20, paddingBottom: 48 }}
-        onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          if (h > 0) setHeaderHeight(h);
-        }}
+        style={{ backgroundColor: primaryRgb, paddingTop: insets.top + 20, paddingBottom: 48 }}
       >
-        <ImageBackground
-          source={require('@/assets/images/Vector.png')}
-          resizeMode="cover"
-          className="absolute left-0 right-0 top-0 w-full"
-          style={{
-            height: vectorHeight ?? 200,
-            opacity: 0.78,
-            zIndex: 1,
-            pointerEvents: 'none',
-          }}
-        />
+        {/* Golden geometric pattern (same SVG as the create-account screen),
+            flush to the top edge. Rendered once at the SVG's natural aspect so
+            the full motif shows (zoomed out, not a tight crop), then faded so it
+            dissolves into the header with no seam. */}
+        <View
+          pointerEvents="none"
+          className="absolute left-0 right-0 top-0"
+          style={{ zIndex: 1, aspectRatio: 424 / 262 }}
+        >
+          <View style={{ ...StyleSheet.absoluteFillObject, opacity: 0.55 }}>
+            <Pattern width="100%" height="100%" preserveAspectRatio="xMidYMin meet" />
+          </View>
+          <LinearGradient
+            colors={[primaryRgba0, primaryRgb]}
+            locations={[0, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
 
         <View className="relative z-10 w-full items-center px-4">
         {/* Avatar */}
@@ -140,7 +149,7 @@ export default function ProfileHeader() {
               <Text
                 className="text-5xl text-primary-foreground text-center "
                 style={{
-                  fontFamily: 'CormorantGaramond_500Medium',
+                  fontFamily: fonts.display,
                   lineHeight: 48,
                 }}
               >
@@ -153,7 +162,7 @@ export default function ProfileHeader() {
             hitSlop={10}
             className="absolute -bottom-2 -right-2 rounded-full bg-accent p-1 active:opacity-80"
           >
-            <EvilIcons name="pencil" size={14} color={fgRgb} />
+            <Icon name="pencil" size={14} color={fgRgb} />
           </Pressable>
         </View>
 
@@ -161,7 +170,7 @@ export default function ProfileHeader() {
           <Text
             className="mt-3 text-center text-primary-foreground"
             style={{
-              fontFamily: 'CormorantGaramond_600SemiBold',
+              fontFamily: fonts.display,
               fontSize: 21,
             }}
           >
@@ -173,22 +182,21 @@ export default function ProfileHeader() {
             <Text
               className="text-center text-primary-foreground/60"
               style={{
-                fontFamily: Platform.select({
-                  android: 'Roboto',
-                  default: undefined,
-                }),
+                fontFamily: fonts.body,
                 fontWeight: '400',
                 fontSize: 10,
               }}
             >
-              Member Since {createdYear}
+              {t('profile.memberSince', { year: createdYear })}
             </Text>
           )}
 
-          {/* Action buttons */}
+          {/* Action buttons — when nothing's outstanding, only "Edit Profile"
+              shows so the row stays centered with no empty gap. */}
           <View className="mt-2.5 flex-row items-center justify-center gap-2">
-            {!isProfileComplete && (
+            {showCompleteCTA && (
               <Pressable
+                onPress={onPressCompleteProfile}
                 className="flex-row items-center justify-center rounded-full border-accent/50 active:opacity-80"
                 style={{
                   borderWidth: 0.75,
@@ -196,31 +204,36 @@ export default function ProfileHeader() {
                   paddingVertical: 4,
                 }}
               >
-                <View className="mr-1 items-center justify-center">
+                <View className="me-1 items-center justify-center">
                   <View className="absolute h-2.5 w-2.5 rounded-full bg-accent opacity-20" />
                   <View className="rounded-full bg-accent" style={{ width: 4, height: 4 }} />
                 </View>
                 <Text className="text-accent" style={{ fontSize: 9, fontWeight: '500' }}>
-                  Complete Profile
+                  {t('profile.completeProfile')}
                 </Text>
               </Pressable>
             )}
             <Pressable
-              onPress={() => setEditVisible(true)}
+              onPress={onPressEdit}
               className="items-center justify-center rounded-full border-primary-foreground/50 active:opacity-80"
               style={{
                 borderWidth: 0.75,
-                paddingHorizontal: 11,
-                paddingVertical: 4,
+                // When the Complete CTA is hidden this is the only button, so
+                // make it a prominent, centered standalone action.
+                paddingHorizontal: !showCompleteCTA ? 18 : 11,
+                paddingVertical: !showCompleteCTA ? 5 : 4,
               }}
             >
-              <Text className="text-primary-foreground" style={{ fontSize: 9, fontWeight: '500' }}>
-                Edit Profile
+              <Text
+                className="text-primary-foreground"
+                style={{ fontSize: !showCompleteCTA ? 10.5 : 9, fontWeight: '500' }}
+              >
+                {t('profile.editProfile')}
               </Text>
             </Pressable>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <ProfilePhotoModal
         visible={photoModalOpen}
@@ -229,7 +242,6 @@ export default function ProfileHeader() {
         onChooseFromGallery={() => handlePhotoSource('gallery')}
         isUploading={isUploading}
       />
-      <EditProfileSheet visible={editVisible} onClose={() => setEditVisible(false)} />
     </View>
   );
 }

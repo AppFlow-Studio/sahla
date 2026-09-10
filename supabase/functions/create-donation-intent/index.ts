@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+import { resolveConnectedCustomer } from "../_shared/stripe-customer.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -94,52 +95,16 @@ serve(async (req: Request) => {
     }
 
     const connectedAccountId = mosque.stripe_account_id;
-
-    // Check if user already has a Stripe customer ID
-    let existingStripeId: string | null = null;
-    if (user_id) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("stripe_id")
-        .eq("id", user_id)
-        .single();
-      existingStripeId = profile?.stripe_id ?? null;
-    }
-
     const stripeAccountOpts = { stripeAccount: connectedAccountId };
 
-    // Find or create a Stripe customer on the connected account
-    let customer: Stripe.Customer | undefined;
-    if (existingStripeId) {
-      // Reuse existing Stripe customer
-      customer = await stripe.customers.retrieve(
-        existingStripeId,
-        stripeAccountOpts,
-      ) as Stripe.Customer;
-    } else if (customer_email) {
-      const existing = await stripe.customers.list(
-        { email: customer_email, limit: 1 },
-        stripeAccountOpts,
-      );
-      if (existing.data.length > 0) {
-        customer = existing.data[0];
-      } else {
-        customer = await stripe.customers.create(
-          { email: customer_email },
-          stripeAccountOpts,
-        );
-      }
-    } else {
-      customer = await stripe.customers.create({}, stripeAccountOpts);
-    }
-
-    // Save Stripe customer ID to profile if not already saved
-    if (user_id && !existingStripeId) {
-      await supabase
-        .from("profiles")
-        .update({ stripe_id: customer.id })
-        .eq("id", user_id);
-    }
+    // Resolve a customer that exists on THIS mosque's connected account.
+    const customer = await resolveConnectedCustomer({
+      stripe,
+      supabase,
+      connectedAccountId,
+      userId: user_id,
+      email: customer_email,
+    });
 
     // Create an ephemeral key for the mobile SDK on the connected account
     // apiVersion MUST match what @stripe/stripe-react-native expects (0.65.0 → 2024-12-18.acacia)

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,13 +12,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassView } from 'expo-glass-effect';
+import { GlassSurface } from '../components/ui/glass-surface';
+import { Icon } from '../components/ui/icon';
+import { Tappable } from '../components/ui/tappable';
+import { CENTERED_GLYPH } from '../lib/text-styles';
+import { SvgXml } from 'react-native-svg';
 import {
   PageTurnView,
   type PageTurnViewRef,
 } from '../components/quran/PageTurnView';
-import SurahOrnamentTop from '../../assets/surah-ornament-top.svg';
-import SurahOrnamentBottom from '../../assets/surah-ornament-bottom.svg';
+import { IOSPageCurlView } from 'ios-page-curl';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -27,15 +31,15 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import {
-  BISMILLAH_TEXT,
-  getMushafPage,
   getPageForAyah,
   TOTAL_MUSHAF_PAGES,
-  type MushafLine,
   type Surah,
 } from '../db/quranDb';
 import { useTrackPage } from '../hooks/use-track-page';
+import { useMushafPageSvg } from '../hooks/use-mushaf-page-svg';
+import { MUSHAF_PAGE_CONTENT_CENTER } from '../db/mushafSvgBBoxes';
 import { useQuranPalette, type QuranPalette } from '../hooks/use-quran-palette';
+import { BackButton } from '@/src/components/ui/back-button';
 
 type Props = {
   initialPage: number;
@@ -53,6 +57,23 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
   // Synchronously set surah on jump so the footer updates instantly, then
   // the page→surah hook can correct it when the pager settles.
   const [surahOverride, setSurahOverride] = useState<Surah | null>(null);
+
+  // Apple-Books-style chrome toggle. Tap the page → hide back button +
+  // bottom sheet so the user can read distraction-free. Tap again →
+  // they come back.
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const chromeProgress = useSharedValue(1);
+  useEffect(() => {
+    chromeProgress.value = withTiming(chromeVisible ? 1 : 0, { duration: 220 });
+  }, [chromeVisible, chromeProgress]);
+  const toolbarAnimStyle = useAnimatedStyle(() => ({
+    opacity: chromeProgress.value,
+    transform: [{ translateY: (1 - chromeProgress.value) * -40 }],
+  }));
+  const footerAnimStyle = useAnimatedStyle(() => ({
+    opacity: chromeProgress.value,
+    transform: [{ translateY: (1 - chromeProgress.value) * 60 }],
+  }));
 
   const resolvedSurah = useSurahForPage(currentPage, surahs);
   const currentSurah = surahOverride ?? resolvedSurah;
@@ -85,41 +106,71 @@ export default function MushafPageScreen({ initialPage, surahs, onBack }: Props)
     <View style={styles.root}>
       {/* Mushaf fills the entire screen — no dark header band. */}
       <View style={{ flex: 1, backgroundColor: palette.cream }}>
-        <PageTurnView
-          ref={pageTurnRef}
-          pageNumber={currentPage}
-          totalPages={TOTAL_MUSHAF_PAGES}
-          direction="rtl"
-          onPageChange={setCurrentPage}
-          pageBackgroundColor={palette.cream}
-          renderPage={(p) => <MushafPage pageNumber={p} surahs={surahs} />}
-        />
+        {Platform.OS === 'ios' ? (
+          // iOS: Apple-native UIPageViewController with the .pageCurl
+          // transition style — the iBooks / Apple Books curl. iOS only;
+          // Android falls through to the Skia implementation below.
+          <IOSPageCurlView
+            pageNumber={currentPage}
+            totalPages={TOTAL_MUSHAF_PAGES}
+            direction="rtl"
+            onPageChange={setCurrentPage}
+            pageBackgroundColor={palette.cream}
+            renderPage={(p) => <MushafPage pageNumber={p} />}
+            onTap={() => setChromeVisible((v) => !v)}
+          />
+        ) : (
+          <PageTurnView
+            ref={pageTurnRef}
+            pageNumber={currentPage}
+            totalPages={TOTAL_MUSHAF_PAGES}
+            direction="rtl"
+            onPageChange={setCurrentPage}
+            pageBackgroundColor={palette.cream}
+            renderPage={(p) => <MushafPage pageNumber={p} />}
+          />
+        )}
       </View>
 
-      {/* Floating toolbar over the mushaf — back button + page counter. */}
-      <View
-        pointerEvents="box-none"
-        style={[styles.toolbar, { paddingTop: insets.top + 8 }]}
+      {/* Floating toolbar — back button + page counter. Hidden when
+          the user taps the page (Apple Books style). */}
+      <Animated.View
+        pointerEvents={chromeVisible ? 'box-none' : 'none'}
+        style={[
+          styles.toolbar,
+          { paddingTop: insets.top + 8 },
+          toolbarAnimStyle,
+        ]}
       >
-        <Pressable onPress={onBack} hitSlop={10} style={styles.backCircle}>
-          <Text style={styles.backArrow}>←</Text>
-        </Pressable>
+        <BackButton
+          onPress={onBack}
+          color={palette.brandDark}
+          size={18}
+          variant="circle"
+          circleColor={palette.cream}
+          circleBorderColor={palette.divider08}
+        />
         <View style={{ flex: 1 }} />
         <Text style={styles.pageCounter}>
           {currentPage} / {TOTAL_MUSHAF_PAGES}
         </Text>
-      </View>
+      </Animated.View>
 
-      {/* Morphing footer → sheet */}
-      <MorphingFooter
-        expanded={pickerOpen}
-        onExpand={() => setPickerOpen(true)}
-        onCollapse={() => setPickerOpen(false)}
-        currentPage={currentPage}
-        currentSurah={currentSurah}
-        surahs={surahs}
-        onSelectSurah={jumpToSurah}
-      />
+      {/* Morphing footer → sheet. Same chrome toggle as the toolbar. */}
+      <Animated.View
+        pointerEvents={chromeVisible ? 'box-none' : 'none'}
+        style={[StyleSheet.absoluteFill, footerAnimStyle]}
+      >
+        <MorphingFooter
+          expanded={pickerOpen}
+          onExpand={() => setPickerOpen(true)}
+          onCollapse={() => setPickerOpen(false)}
+          currentPage={currentPage}
+          currentSurah={currentSurah}
+          surahs={surahs}
+          onSelectSurah={jumpToSurah}
+        />
+      </Animated.View>
     </View>
   );
 }
@@ -239,10 +290,12 @@ export function MorphingFooter({
           onPress={expanded ? undefined : onExpand}
           style={{ flex: 1 }}
         >
-          <GlassView
+          <GlassSurface
             glassEffectStyle="regular"
             isInteractive
             style={styles.morphingInner}
+            fallbackColor={palette.cream}
+            fallbackBorderColor={palette.divider}
           >
             <Animated.View style={[styles.morphingRadius, innerRadiusStyle]} />
 
@@ -285,9 +338,9 @@ export function MorphingFooter({
               <View style={styles.sheetHeader}>
                 <View style={{ width: 24 }} />
                 <Text style={styles.sheetTitle}>Surahs</Text>
-                <Pressable onPress={onCollapse} hitSlop={8}>
-                  <Text style={styles.sheetClose}>✕</Text>
-                </Pressable>
+                <Tappable onPress={onCollapse} hitSlop={8}>
+                  <Icon name="close" size={18} color={palette.brandDark} />
+                </Tappable>
               </View>
 
               <FlatList
@@ -302,7 +355,7 @@ export function MorphingFooter({
                     currentSurah?.surah_number === item.surah_number;
                   const pageNum = getPageForAyah(item.surah_number, 1) ?? 1;
                   return (
-                    <Pressable
+                    <Tappable
                       style={styles.sheetRow}
                       onPress={() => onSelectSurah(item)}
                     >
@@ -335,22 +388,24 @@ export function MorphingFooter({
                       </View>
                       {isCurrent ? (
                         <View style={styles.sheetCheck}>
-                          <Text style={styles.sheetCheckMark}>✓</Text>
+                          <Icon name="checkmark" size={11} color={palette.cream} strokeWidth={3} />
                         </View>
                       ) : null}
                       <Text style={styles.sheetPage}>p. {pageNum}</Text>
-                      <Text style={styles.sheetChevron}>›</Text>
-                    </Pressable>
+                      <Icon name="chevron-forward" size={16} color={palette.mutedInk} />
+                    </Tappable>
                   );
                 }}
               />
 
-              <GlassView
+              <GlassSurface
                 glassEffectStyle="regular"
                 isInteractive
                 style={styles.sheetSearchWrap}
+                fallbackColor={palette.track}
+                fallbackBorderColor={palette.divider}
               >
-                <Text style={styles.sheetSearchIcon}>⌕</Text>
+                <Icon name="search" size={14} color={palette.mutedInk} />
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
@@ -360,9 +415,9 @@ export function MorphingFooter({
                   placeholderTextColor={palette.placeholderText}
                   style={styles.sheetSearchInput}
                 />
-              </GlassView>
+              </GlassSurface>
             </Animated.View>
-          </GlassView>
+          </GlassSurface>
         </Pressable>
       </Animated.View>
     </>
@@ -370,54 +425,55 @@ export function MorphingFooter({
 }
 
 function useSurahForPage(page: number, surahs: Surah[]) {
-  const [surah, setSurah] = useState<Surah | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    getMushafPage(page)
-      .then((lines) => {
-        if (cancelled || lines.length === 0) return;
-        // Find the primary surah for the page: prefer surah_name line,
-        // otherwise any line's surah_number (ayah lines don't carry it, so
-        // we fall back to the first surah_name occurrence).
-        const surahLine = lines.find((l) => l.surah_number != null);
-        if (surahLine?.surah_number) {
-          setSurah(surahs[surahLine.surah_number - 1] ?? null);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+  // Synchronous range lookup: the surah containing `page` is the latest
+  // surah whose first ayah's page is ≤ `page`. Surahs are sorted by
+  // surah_number, and their first pages are monotonically increasing, so a
+  // single pass is enough. This works for *any* mushaf page — not just
+  // pages that happen to carry a `surah_name` line — so resuming mid-surah
+  // (Continue Reading) and swiping across surah boundaries both stay in
+  // sync without depending on the async page-content read.
+  return useMemo(() => {
+    if (surahs.length === 0) return null;
+    let candidate: Surah | null = null;
+    for (const s of surahs) {
+      const first = getPageForAyah(s.surah_number, 1);
+      if (first == null) continue;
+      if (first <= page) candidate = s;
+      else break;
+    }
+    return candidate;
   }, [page, surahs]);
-  return surah;
 }
+
+const MUSHAF_ZOOM = 1.5;
+const SVG_VIEWBOX_W = 382.68;
+const SVG_VIEWBOX_H = 547.09;
+const SVG_VIEWBOX_CX = SVG_VIEWBOX_W / 2;
+const SVG_VIEWBOX_CY = SVG_VIEWBOX_H / 2;
+
+const AYA_MARK_GROUP_RE = /(<g id="md-aya-mark-[^"]+"[^>]*?)>/g;
 
 const MushafPage = React.memo(function MushafPage({
   pageNumber,
-  surahs,
 }: {
   pageNumber: number;
-  surahs: Surah[];
 }) {
   const palette = useQuranPalette();
   const styles = useMemo(() => makeStyles(palette), [palette]);
-  const [lines, setLines] = useState<MushafLine[] | null>(null);
+  const svgXml = useMushafPageSvg(pageNumber);
+  const { width: screenW } = useWindowDimensions();
 
-  useEffect(() => {
-    let cancelled = false;
-    getMushafPage(pageNumber)
-      .then((rows) => {
-        if (!cancelled) setLines(rows);
-      })
-      .catch(() => {
-        if (!cancelled) setLines([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [pageNumber]);
+  // Tint each aya-mark group (the rosette + number inside) with the masjid
+  // accent so it adopts the tenant theme color. The source SVGs leave fill
+  // unset on these groups, so an injected `fill` cascades cleanly to every
+  // path inside (ornament + digit).
+  const ayaMarkColor = palette.gold;
+  const tintedXml = useMemo(() => {
+    if (!svgXml) return null;
+    return svgXml.replace(AYA_MARK_GROUP_RE, `$1 fill="${ayaMarkColor}">`);
+  }, [svgXml, ayaMarkColor]);
 
-  if (!lines) {
+  if (!tintedXml) {
     return (
       <View style={[styles.pageBody, styles.center]}>
         <ActivityIndicator color={palette.gold} />
@@ -425,65 +481,33 @@ const MushafPage = React.memo(function MushafPage({
     );
   }
 
-  return (
-    <ScrollView
-      style={styles.pageScroll}
-      contentContainerStyle={styles.pageBody}
-      showsVerticalScrollIndicator={false}
-    >
-      {lines.map((line, i) => (
-        <MushafLineRow
-          key={`${pageNumber}-${line.line_number}-${i}`}
-          line={line}
-          surahs={surahs}
-          styles={styles}
-        />
-      ))}
-    </ScrollView>
-  );
-});
+  // Render at screenW * MUSHAF_ZOOM and clip the overflow — preserveAspectRatio
+  // inside the SVG means we can't zoom by shrinking the viewBox.
+  const renderW = screenW * MUSHAF_ZOOM;
+  const renderH = renderW * (SVG_VIEWBOX_H / SVG_VIEWBOX_W);
+  const pxPerUnit = renderW / SVG_VIEWBOX_W;
 
-function MushafLineRow({
-  line,
-  surahs,
-  styles,
-}: {
-  line: MushafLine;
-  surahs: Surah[];
-  styles: MushafStyles;
-}) {
-  if (line.line_type === 'surah_name') {
-    const surah =
-      line.surah_number != null ? surahs[line.surah_number - 1] : null;
-    return (
-      <View style={styles.ornamentBlock}>
-        <SurahOrnamentTop width={240} height={48} />
-        <Text style={styles.surahOrnamentText}>
-          {surah ? `سُورَةُ ${surah.name_arabic}` : ''}
-        </Text>
-        <View style={{ transform: [{ scaleY: -1 }] }}>
-          <SurahOrnamentBottom width={240} height={48} />
-        </View>
-      </View>
-    );
-  }
-
-  if (line.line_type === 'basmallah') {
-    return (
-      <View style={styles.basmallahBlock}>
-        <Text style={styles.basmallahText}>{BISMILLAH_TEXT}</Text>
-      </View>
-    );
-  }
+  // Source SVGs were authored for two-page spreads, so odd pages drift left
+  // and even pages drift right relative to their viewBox center. Shift each
+  // SVG so its content bbox center lands on the screen center.
+  const [contentCx, contentCy] =
+    MUSHAF_PAGE_CONTENT_CENTER[pageNumber] ?? [SVG_VIEWBOX_CX, SVG_VIEWBOX_CY];
+  const offsetX = (SVG_VIEWBOX_CX - contentCx) * pxPerUnit;
+  const offsetY = (SVG_VIEWBOX_CY - contentCy) * pxPerUnit;
 
   return (
-    <View style={[styles.ayahLine, line.is_centered ? styles.centered : null]}>
-      <Text style={styles.ayahText}>{line.text}</Text>
+    <View style={styles.pageBody}>
+      <SvgXml
+        xml={tintedXml}
+        width={renderW}
+        height={renderH}
+        style={{
+          transform: [{ translateX: offsetX }, { translateY: offsetY }],
+        }}
+      />
     </View>
   );
-}
-
-type MushafStyles = ReturnType<typeof makeStyles>;
+});
 
 function makeStyles(p: QuranPalette) {
   return StyleSheet.create({
@@ -523,32 +547,24 @@ function makeStyles(p: QuranPalette) {
       // Sits over the mushaf — no background so the page colour shows through.
       backgroundColor: 'transparent',
     },
-    backCircle: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: p.cream,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: p.divider08,
-    },
-    backArrow: { color: p.brandDark, fontSize: 14 },
-    pageCounter: { color: p.mutedInk, fontSize: 12 },
+    pageCounter: { ...CENTERED_GLYPH, color: p.mutedInk, fontSize: 12 },
 
     pageScroll: {
       flex: 1,
       backgroundColor: p.cream,
     },
     pageBody: {
-      flexGrow: 1,
-      paddingHorizontal: 18,
-      // Top padding leaves room for the floating toolbar; bottom keeps clear
-      // of the morphing footer pill.
-      paddingTop: 64,
-      paddingBottom: 110,
+      flex: 1,
+      paddingHorizontal: 0,
+      paddingTop: 36,
+      paddingBottom: 56,
       backgroundColor: p.cream,
-      justifyContent: 'space-between',
+      alignItems: 'center',
+      justifyContent: 'center',
+      // SVG is rendered at MUSHAF_ZOOM × container width to actually
+      // enlarge the text; the overflow is clipped here so the
+      // off-screen margin doesn't leak into the floating toolbar.
+      overflow: 'hidden',
     },
 
     ornamentBlock: {
@@ -640,6 +656,7 @@ function makeStyles(p: QuranPalette) {
       justifyContent: 'center',
     },
     footerBadgeText: {
+      ...CENTERED_GLYPH,
       color: p.cream,
       fontSize: 11,
       fontWeight: '600',
@@ -711,10 +728,6 @@ function makeStyles(p: QuranPalette) {
       fontWeight: '600',
       color: p.brandDark,
     },
-    sheetClose: {
-      fontSize: 18,
-      color: p.brandDark,
-    },
     sheetSeparator: {
       height: StyleSheet.hairlineWidth,
       backgroundColor: p.divider08,
@@ -738,6 +751,7 @@ function makeStyles(p: QuranPalette) {
       backgroundColor: p.brandDark,
     },
     sheetBadgeText: {
+      ...CENTERED_GLYPH,
       fontSize: 11,
       fontWeight: '600',
       color: p.brandDark,
@@ -771,19 +785,10 @@ function makeStyles(p: QuranPalette) {
       justifyContent: 'center',
       marginRight: 8,
     },
-    sheetCheckMark: {
-      color: p.cream,
-      fontSize: 11,
-      fontWeight: '700',
-    },
     sheetPage: {
       fontSize: 10,
       color: p.faintTextDarker,
       marginRight: 6,
-    },
-    sheetChevron: {
-      fontSize: 16,
-      color: p.mutedInk,
     },
     sheetSearchWrap: {
       flexDirection: 'row',
@@ -795,10 +800,6 @@ function makeStyles(p: QuranPalette) {
       height: 42,
       borderRadius: 20,
       overflow: 'hidden',
-    },
-    sheetSearchIcon: {
-      color: p.mutedInk,
-      fontSize: 14,
     },
     sheetSearchInput: {
       flex: 1,

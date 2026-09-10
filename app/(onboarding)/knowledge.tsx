@@ -1,23 +1,27 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import { OnboardingScaffold } from '@/src/components/onboarding/scaffold';
 import { useOnboardingDraft } from '@/src/contexts/onboarding-draft-context';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
-const TILES: { key: string; label: string; description: string }[] = [
-  { key: 'starting', label: 'Just starting out', description: 'New to learning about Islam' },
-  { key: 'basics', label: 'Learning the basics', description: 'Building a foundation' },
-  { key: 'practicing', label: 'Practicing & growing', description: 'Deepening my practice' },
-  { key: 'deeper', label: 'Studying deeper', description: 'Advanced study & scholarship' },
+const TILES: { key: string; labelKey: string; descriptionKey: string }[] = [
+  { key: 'starting', labelKey: 'knowledgeStartingLabel', descriptionKey: 'knowledgeStartingDesc' },
+  { key: 'basics', labelKey: 'knowledgeBasicsLabel', descriptionKey: 'knowledgeBasicsDesc' },
+  { key: 'practicing', labelKey: 'knowledgePracticingLabel', descriptionKey: 'knowledgePracticingDesc' },
+  { key: 'deeper', labelKey: 'knowledgeDeeperLabel', descriptionKey: 'knowledgeDeeperDesc' },
 ];
 
 export default function KnowledgeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { knowledgeLevel, setKnowledgeLevel } = useOnboardingDraft();
   const [selected, setSelected] = useState<string | null>(knowledgeLevel);
   const { colors } = useMasjidConfig();
+  useAutoStatusBarStyle(colors.onboardingBackground);
 
   const accentRgb = `rgb(${colors.onboardingAccent.replace(/ /g, ',')})`;
   const surfaceRgb = `rgba(${colors.onboardingSurface.replace(/ /g, ',')}, 0.12)`;
@@ -32,8 +36,8 @@ export default function KnowledgeScreen() {
   return (
     <OnboardingScaffold
       step={3}
-      title={"Where would you say you are\nin your Islamic learning?"}
-      primaryLabel="Continue"
+      title={t('onboarding.knowledgeTitle')}
+      primaryLabel={t('onboarding.continue')}
       onPrimary={handleContinue}
       primaryDisabled={!selected}
     >
@@ -59,13 +63,13 @@ export default function KnowledgeScreen() {
                 className={isSelected ? 'text-onboarding-accent' : 'text-onboarding-surface'}
                 style={{ fontSize: 14, fontWeight: '600' }}
               >
-                {tile.label}
+                {t(`onboarding.${tile.labelKey}`)}
               </Text>
               <Text
                 className="text-onboarding-surface/50"
                 style={{ fontSize: 11, marginTop: 2 }}
               >
-                {tile.description}
+                {t(`onboarding.${tile.descriptionKey}`)}
               </Text>
             </Pressable>
           );

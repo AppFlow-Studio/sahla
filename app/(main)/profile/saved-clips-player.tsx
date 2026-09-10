@@ -1,20 +1,27 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
+import { Icon } from '@/src/components/ui/icon';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { ReelItem } from '@/app/(main)/watch';
-import type { Reel } from '@/src/hooks/use-reels';
-import { useSavedReels } from '@/src/hooks/use-saved-reels';
+import {
+  filterSavedReels,
+  useSavedReels,
+  type SavedClipsFilter,
+  type SavedReel,
+} from '@/src/hooks/use-saved-reels';
+import { BackButton } from '@/src/components/ui/back-button';
 
 /**
  * Full-screen player for the user's Saved Clips list — opened by tapping a
@@ -23,36 +30,44 @@ import { useSavedReels } from '@/src/hooks/use-saved-reels';
  * instead of the full feed. The tapped cell's index is passed as a route
  * param so we open at that exact reel.
  */
+const VALID_FILTERS: SavedClipsFilter[] = ['all', 'today', 'week', 'month'];
+
 export default function SavedClipsPlayerScreen() {
-  const { index } = useLocalSearchParams<{ index?: string }>();
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  useStatusBarStyle('light');
+  const { index, filter } = useLocalSearchParams<{ index?: string; filter?: string }>();
   // Floor + clamp the param so a malformed value can't break initialScrollIndex.
   const initialIndex = Math.max(0, Math.floor(Number(index ?? 0)) || 0);
+  const activeFilter: SavedClipsFilter = VALID_FILTERS.includes(filter as SavedClipsFilter)
+    ? (filter as SavedClipsFilter)
+    : 'all';
 
   const { data, isPending } = useSavedReels();
-  const reels = data ?? [];
+  // Mirror the grid's filter so the swipe-through list matches what the user
+  // just saw. If the grid was on "Today", the player only swipes through today.
+  const reels = useMemo(
+    () => filterSavedReels(data ?? [], activeFilter),
+    [data, activeFilter],
+  );
 
   const isFocused = useIsFocused();
   const { height } = useWindowDimensions();
-  const listRef = useRef<FlatList<Reel>>(null);
+  const listRef = useRef<FlatList<SavedReel>>(null);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
-  // Same feed-level mute pattern as Watch — tap a reel to unmute, sticks.
-  const [muted, setMuted] = useState(true);
-  const toggleMuted = useCallback(() => setMuted((m) => !m), []);
 
   const renderItem = useCallback(
-    ({ item, index: i }: { item: Reel; index: number }) => (
+    ({ item, index: i }: { item: SavedReel; index: number }) => (
       <ReelItem
         reel={item}
         height={height}
         isActive={i === activeIndex && isFocused}
-        muted={muted}
-        onToggleMuted={toggleMuted}
       />
     ),
-    [height, activeIndex, isFocused, muted, toggleMuted],
+    [height, activeIndex, isFocused],
   );
 
-  const keyExtractor = useCallback((item: Reel) => item.reel_id, []);
+  const keyExtractor = useCallback((item: SavedReel) => item.reel_id, []);
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 });
   const onViewableItemsChanged = useRef(
@@ -73,7 +88,7 @@ export default function SavedClipsPlayerScreen() {
   if (!reels.length) {
     return (
       <View className="flex-1 bg-black items-center justify-center px-8">
-        <Text style={{ color: '#fffbf2' }}>No saved clips</Text>
+        <Text style={{ color: '#fffbf2' }}>{t('profile.noSavedClips')}</Text>
       </View>
     );
   }
@@ -105,22 +120,12 @@ export default function SavedClipsPlayerScreen() {
         edges={['top']}
         style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="active:opacity-70"
-          style={{
-            margin: 12,
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="chevron-back" size={22} color="#ffffff" />
-        </Pressable>
+        <BackButton
+          color="#ffffff"
+          variant="circle"
+          circleColor="rgba(0,0,0,0.4)"
+          style={{ margin: 12 }}
+        />
       </SafeAreaView>
     </View>
   );

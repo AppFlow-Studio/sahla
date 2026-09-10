@@ -1,0 +1,10 @@
+{
+  "name": "ios-page-curl",
+  "version": "0.0.1",
+  "private": true,
+  "description": "iOS-only local Expo module wrapping UIPageViewController with the .pageCurl transition style (the Apple Books / iBooks curl).",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "platforms": ["ios"],
+  "license": "MIT"
+}

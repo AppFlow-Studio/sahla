@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@17.7.0?target=deno";
+import { findConnectedCustomerId } from "../_shared/stripe-customer.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -36,20 +37,6 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Look up user's Stripe customer ID
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("stripe_id")
-      .eq("id", user_id)
-      .single();
-
-    if (!profile?.stripe_id) {
-      return new Response(
-        JSON.stringify({ payments: [] }),
-        { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
-      );
-    }
-
     // Look up mosque's connected Stripe account
     const { data: mosque, error: mosqueError } = await supabase
       .from("mosques")
@@ -66,6 +53,12 @@ serve(async (req: Request) => {
 
     const connectedAccountId = mosque.stripe_account_id;
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("profile_email")
+      .eq("id", user_id)
+      .single();
+
     const stripe = new Stripe(stripeSecret, {
       apiVersion: "2024-12-18.acacia",
       httpClient: Stripe.createFetchHttpClient(),
@@ -73,9 +66,25 @@ serve(async (req: Request) => {
 
     const stripeAccountOpts = { stripeAccount: connectedAccountId };
 
+    // History lives under the customer on THIS connected account.
+    const customerId = await findConnectedCustomerId({
+      stripe,
+      supabase,
+      connectedAccountId,
+      userId: user_id,
+      email: profile?.profile_email,
+    });
+
+    if (!customerId) {
+      return new Response(
+        JSON.stringify({ payments: [] }),
+        { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
     // Fetch payment intents for this customer on the connected account
     const paymentIntents = await stripe.paymentIntents.list(
-      { customer: profile.stripe_id, limit: 100 },
+      { customer: customerId, limit: 100 },
       stripeAccountOpts,
     );
 

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /**
@@ -23,34 +26,102 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 type BuildTimeMasjid = { displayName: string };
 
 const BUILD_TIME_MASJIDS: Record<string, BuildTimeMasjid> = {
-  sahla: { displayName: "Sahla Demo Masjid" },
+  sahla: { displayName: "Sahla App" },
   "mas-cnj": { displayName: "MAS Central New Jersey" },
+  "mas-brooklyn-mqb18esx": { displayName: "MAS BK" },
+  "sahla-demo-masjid-mt93mzuj": { displayName: "Sahla" },
 };
 
 const MASJID_ID = process.env.MASJID_ID ?? "sahla";
 const masjid = BUILD_TIME_MASJIDS[MASJID_ID] ?? { displayName: "Sahla" };
 
-const IOS_BUNDLE_ID = `com.sahla.${MASJID_ID}`;
-const ANDROID_PACKAGE = `com.sahla.${MASJID_ID.replace(/-/g, "_")}`;
+/** "10 38 30" -> "#0A261E" */
+const tripletToHex = (triplet: string) =>
+  "#" +
+  triplet
+    .trim()
+    .split(/\s+/)
+    .map((c) => Number(c).toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+
+/**
+ * Reads one color token out of the active tenant's runtime config so nothing
+ * brand-related is written twice. The native chrome configured below (splash
+ * background, notification tint, Android icon plate) has to be baked into the
+ * binary, but it stays the *same* color the JS theme paints at runtime — a
+ * masjid with a navy theme gets a navy splash, not Sahla's green.
+ *
+ * The evaluator can't follow TS imports (see the note above), so this reads
+ * the file rather than importing it, and falls through to `default.ts` for any
+ * token the tenant didn't override.
+ */
+function themeColor(token: string): string {
+  const files = [
+    join(process.cwd(), `src/config/masjids/${MASJID_ID}.ts`),
+    join(process.cwd(), "src/config/default.ts"),
+  ];
+  for (const file of files) {
+    try {
+      const match = readFileSync(file, "utf8").match(
+        new RegExp(`${token}:\\s*["']([\\d\\s]+)["']`),
+      );
+      if (match) return tripletToHex(match[1]);
+    } catch {
+      // Tenant has no bundled config file yet — fall through to the default.
+    }
+  }
+  throw new Error(`app.config: no "${token}" color found for "${MASJID_ID}"`);
+}
+
+/** Matches the animated BootSplash background (`colors.onboardingBackground`). */
+const SPLASH_BG = themeColor("onboardingBackground");
+/** The masjid's brand color, used for native chrome outside the JS theme. */
+const BRAND_COLOR = themeColor("primary");
+
+/**
+ * Bundle id / package normally derive from `MASJID_ID`, so every tenant is
+ * unique and two variants coexist on one device / store. A build profile may
+ * override them via env when a store app was registered under a pre-existing
+ * identifier that doesn't follow the `com.sahla.<slug>` scheme (e.g. the
+ * `sahla-demo-masjid-mt93mzuj-prod` profile pins `com.sahlamasjiddemo.com`).
+ * Falls back to the
+ * derived id for every profile that sets neither.
+ */
+const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID ?? `com.sahla.${MASJID_ID}`;
+const ANDROID_PACKAGE =
+  process.env.ANDROID_PACKAGE ?? `com.sahlaco.${MASJID_ID.replace(/-/g, "_")}`;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: masjid.displayName,
   slug: "sahla",
-  version: "1.0.2",
+  version: "1.0.7",
   orientation: "portrait",
   icon: "./assets/images/sahla-logo-arabic.png",
-  scheme: `sahla-${MASJID_ID}`,
+  // Per-tenant scheme for deep links, plus a shared `sahlaauth` scheme every
+  // masjid app carries so Clerk's mobile-SSO redirect allowlist is configured
+  // once (see src/lib/oauth-redirect.ts). First entry stays the primary.
+  scheme: [`sahla-${MASJID_ID}`, "sahlaauth"],
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  updates: {
+    url: "https://u.expo.dev/f5b5a34b-5283-4351-9e3c-b1059c5671a0",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
     usesAppleSignIn: true,
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
+      backgroundColor: BRAND_COLOR,
       foregroundImage: "./assets/images/sahla-logo-arabic.png",
     },
     edgeToEdgeEnabled: true,
@@ -71,6 +142,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-router",
+    "expo-localization",
     "expo-sqlite",
     "expo-asset",
     "expo-apple-authentication",
@@ -96,18 +168,28 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-notifications",
       {
         icon: "./assets/images/sahla-logo-arabic.png",
-        color: "#0A261E",
+        color: BRAND_COLOR,
       },
     ],
     [
+      // The OS splash paints the masjid's brand color and nothing else — the
+      // logo animation is owned by `src/components/boot-splash.tsx`, which
+      // hides this one only after it has drawn its first frame.
+      //
+      // `image` is a deliberately blank transparent PNG rather than omitted:
+      // prebuild always writes `windowSplashScreenAnimatedIcon =
+      // @drawable/splashscreen_logo` into the Android theme, but only emits
+      // that drawable when an image is configured. With no image the reference
+      // dangles and `aapt2` fails the Android build with "resource
+      // drawable/splashscreen_logo not found".
       "expo-splash-screen",
       {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
+        image: "./assets/images/splash-blank.png",
+        imageWidth: 32,
         resizeMode: "contain",
-        backgroundColor: "#ffffff",
+        backgroundColor: SPLASH_BG,
         dark: {
-          backgroundColor: "#000000",
+          backgroundColor: SPLASH_BG,
         },
       },
     ],

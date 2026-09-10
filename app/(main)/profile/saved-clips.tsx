@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,9 +11,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
-import type { Reel } from '@/src/hooks/use-reels';
-import { useSavedReels } from '@/src/hooks/use-saved-reels';
+import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
+import { useStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import {
+  filterSavedReels,
+  useSavedReels,
+  type SavedClipsFilter,
+  type SavedReel,
+} from '@/src/hooks/use-saved-reels';
+import { BackButton } from '@/src/components/ui/back-button';
 
 const COLUMNS = 3;
 const GAP = 2; // YouTube Shorts has thin gaps between cells
@@ -45,18 +55,36 @@ function ReelThumb({ url }: { url: string }) {
   );
 }
 
+const FILTERS: { value: SavedClipsFilter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'common.all' },
+  { value: 'today', labelKey: 'profile.filterToday' },
+  { value: 'week', labelKey: 'profile.filterThisWeek' },
+  { value: 'month', labelKey: 'profile.filterThisMonth' },
+];
+
 export default function SavedClipsScreen() {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
+  const fonts = useFontFamily();
+  useStatusBarStyle('dark');
   const { data, isPending, isError, refetch } = useSavedReels();
   const { width } = useWindowDimensions();
-  const reels = data ?? [];
+  const [filter, setFilter] = useState<SavedClipsFilter>('all');
+  const allReels = data ?? [];
+  // Bucket client-side — rolling windows (last 24h / 7d / 30d). Cheap, instant
+  // switching, no extra round-trip. The player route receives the same filter
+  // so the swipe-through list matches what was visible in the grid.
+  const reels = useMemo(() => filterSavedReels(allReels, filter), [allReels, filter]);
 
   const cellWidth = (width - GAP * (COLUMNS - 1)) / COLUMNS;
   const cellHeight = cellWidth * (16 / 9); // portrait 9:16
 
-  const renderItem = ({ item, index }: { item: Reel; index: number }) => (
+  const renderItem = ({ item, index }: { item: SavedReel; index: number }) => (
     <Pressable
       onPress={() =>
-        router.push(`/profile/saved-clips-player?index=${index}` as Href)
+        router.push(
+          `/profile/saved-clips-player?index=${index}&filter=${filter}` as Href,
+        )
       }
       style={{
         width: cellWidth,
@@ -91,14 +119,10 @@ export default function SavedClipsScreen() {
           paddingVertical: 12,
         }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="active:opacity-60"
-          style={{ position: 'absolute', left: 12, padding: 4 }}
-        >
-          <Ionicons name="chevron-back" size={26} color={INK} />
-        </Pressable>
+        <BackButton
+          color={INK}
+          style={{ position: 'absolute', [isRTL ? 'right' : 'left']: 12, padding: 4 }}
+        />
         <Text
           style={{
             color: INK,
@@ -106,8 +130,37 @@ export default function SavedClipsScreen() {
             fontWeight: '600',
           }}
         >
-          Saved Clips
+          {t('profile.savedClips')}
         </Text>
+      </View>
+
+      {/* Filter tabs — rolling Today / Week / Month buckets, or All.
+          Visual style mirrors `components/Discover/DiscoverHeader.tsx`
+          (plain label + 16px underline on the active tab). */}
+      <View className="flex-row items-center gap-4 px-6 pb-3">
+        {FILTERS.map((f) => {
+          const active = filter === f.value;
+          return (
+            <Pressable key={f.value} onPress={() => setFilter(f.value)} hitSlop={6}>
+              <Text
+                style={{
+                  fontFamily: active ? fonts.bodySemibold : fonts.bodyMedium,
+                  fontSize: 12,
+                  fontWeight: active ? '600' : '500',
+                  color: active ? INK : INK_MUTED,
+                }}
+              >
+                {t(f.labelKey)}
+              </Text>
+              {active ? (
+                <View
+                  className="mt-1 h-px w-4"
+                  style={{ backgroundColor: INK }}
+                />
+              ) : null}
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* Body — loading / error / empty / grid */}
@@ -125,7 +178,7 @@ export default function SavedClipsScreen() {
               fontSize: 14,
             }}
           >
-            Couldn&apos;t load your saved clips.
+            {t('profile.couldNotLoadClips')}
           </Text>
           <Pressable
             onPress={() => refetch()}
@@ -139,13 +192,13 @@ export default function SavedClipsScreen() {
             }}
           >
             <Text style={{ color: INK, fontSize: 13, fontWeight: '600' }}>
-              Try again
+              {t('profile.tryAgain')}
             </Text>
           </Pressable>
         </View>
       ) : reels.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Ionicons
+          <Icon
             name="bookmark-outline"
             size={36}
             color="rgba(10,38,30,0.4)"
@@ -158,7 +211,7 @@ export default function SavedClipsScreen() {
               marginTop: 12,
             }}
           >
-            No saved clips yet
+            {allReels.length === 0 ? t('profile.noSavedClipsYet') : t('profile.nothingInThisWindow')}
           </Text>
           <Text
             style={{
@@ -169,7 +222,9 @@ export default function SavedClipsScreen() {
               lineHeight: 18,
             }}
           >
-            Tap the bookmark on any reel in{'\n'}Watch to save it here.
+            {allReels.length === 0
+              ? t('profile.noSavedClipsBody')
+              : t('profile.nothingInWindowBody')}
           </Text>
         </View>
       ) : (

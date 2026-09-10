@@ -20,9 +20,11 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-
+import { useTranslation } from 'react-i18next';
+import { Icon } from '@/src/components/ui/icon';
+import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { useIsRTL } from '@/src/hooks/use-is-rtl';
 import type { JummahSlot } from '@/src/hooks/use-jummah-schedule';
 
 const SCREEN_H = Dimensions.get('window').height;
@@ -34,7 +36,10 @@ export function JummahDetailSheet({
   slot: JummahSlot | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { colors } = useMasjidConfig();
+  const fonts = useFontFamily();
   const primary = colors.primary.replace(/ /g, ',');
   const mutedFg = colors.mutedForeground.replace(/ /g, ',');
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
@@ -140,7 +145,7 @@ export function JummahDetailSheet({
                   style={{
                     position: 'absolute',
                     top: 18,
-                    right: 22,
+                    [isRTL ? 'left' : 'right']: 22,
                     width: 30,
                     height: 30,
                     borderRadius: 15,
@@ -150,7 +155,7 @@ export function JummahDetailSheet({
                     zIndex: 10,
                   }}
                 >
-                  <MaterialCommunityIcons name="close" size={16} color={textRgb} />
+                  <Icon name="close" size={16} color={textRgb} />
                 </TouchableOpacity>
 
                 {activeSlot ? (
@@ -173,7 +178,7 @@ export function JummahDetailSheet({
                       style={{
                         color: textRgb,
                         fontSize: 26,
-                        fontFamily: 'PlayfairDisplay_400Regular',
+                        fontFamily: fonts.displayRegular,
                         marginBottom: 18,
                       }}
                     >
@@ -187,7 +192,7 @@ export function JummahDetailSheet({
                           height: 44,
                           borderRadius: 22,
                           overflow: 'hidden',
-                          marginRight: 12,
+                          marginEnd: 12,
                           borderWidth: 0.5,
                           borderColor: `rgba(${primary},0.15)`,
                           alignItems: 'center',
@@ -201,7 +206,7 @@ export function JummahDetailSheet({
                             style={{ width: 44, height: 44 }}
                           />
                         ) : (
-                          <MaterialCommunityIcons name="account" size={22} color={mutedRgb} />
+                          <Icon name="account" size={22} color={mutedRgb} />
                         )}
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
@@ -213,7 +218,7 @@ export function JummahDetailSheet({
                             textTransform: 'uppercase',
                           }}
                         >
-                          Given by
+                          {t('home.givenBy')}
                         </Text>
                         <Text style={{ color: textRgb, fontSize: 15, fontWeight: '600', marginTop: 2 }}>
                           {activeSlot.speaker}
