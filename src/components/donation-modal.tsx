@@ -61,9 +61,8 @@ import ThankYouOrnament from '@/assets/thank-you-ornament.svg';
 
 
 const PRESETS = [25, 50, 100];
+const DEFAULT_AMOUNT = 50;
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const KEYPAD_HEIGHT = 200;
-
 
 const KEYS: (string | 'back')[] = [
   '1', '2', '3',
@@ -71,6 +70,14 @@ const KEYS: (string | 'back')[] = [
   '7', '8', '9',
   '.', '0', 'back',
 ];
+
+const KEYPAD_COLS = 3;
+const KEY_HEIGHT = 52;
+const KEYPAD_PAD_TOP = 12; // matches the keypad's `pt-3`
+// Derived so the clipping container can never be shorter than the rows it
+// holds — a hardcoded height silently cut off the bottom row.
+const KEYPAD_HEIGHT =
+  Math.ceil(KEYS.length / KEYPAD_COLS) * KEY_HEIGHT + KEYPAD_PAD_TOP;
 
 type Step = 'amount' | 'card' | 'newcard' | 'processing' | 'thanks';
 
@@ -116,7 +123,7 @@ export function DonationModal({
   const fgRgb = `rgb(${fg})`;
   const bgRgb = `rgb(${bg})`;
 
-  const [amount, setAmount] = useState(50);
+  const [amount, setAmount] = useState(DEFAULT_AMOUNT);
   const [customMode, setCustomMode] = useState(false);
   const [customValue, setCustomValue] = useState('');
   const [saveCard, setSaveCard] = useState(false);
@@ -286,6 +293,7 @@ export function DonationModal({
   const resetState = () => {
     setStripeAccountId(undefined);
     setMounted(false);
+    setAmount(DEFAULT_AMOUNT);
     setCustomMode(false);
     setCustomValue('');
     setStep('amount');
@@ -436,8 +444,15 @@ export function DonationModal({
     // the donor re-enters the card flow.
     if (clientSecret) cancelPendingIntent(clientSecret);
 
+    // `displayAmount` is only the custom value while customMode is on, so the
+    // keypad value has to be committed to `amount` before the keypad collapses
+    // — otherwise every later step (card, Apple Pay, button, thanks) snaps back
+    // to the DEFAULT_AMOUNT preset.
+    const chargeAmount = displayAmount;
     setStep('processing');
+    setAmount(chargeAmount);
     setCustomMode(false);
+    setCustomValue('');
 
     try {
       const authHeaders = { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` };
@@ -445,7 +460,7 @@ export function DonationModal({
         supabase.functions.invoke('create-donation-intent', {
           headers: authHeaders,
           body: {
-            amount: displayAmount,
+            amount: chargeAmount,
             mosque_id: mosqueUuid,
             customer_email: profile?.profile_email ?? undefined,
             // The customer is always attached; whether the card is saved is
@@ -703,7 +718,7 @@ export function DonationModal({
                       activeOpacity={0.4}
                       onPress={() => onKeyPress(k)}
                       className="items-center justify-center"
-                      style={{ width: '33.333%', height: 52 }}
+                      style={{ width: `${100 / KEYPAD_COLS}%`, height: KEY_HEIGHT }}
                     >
                       {k === 'back' ? (
                         <Icon name="backspace-outline" size={22} color={`rgba(${fg},0.5)`} />
