@@ -891,7 +891,8 @@
     "noConnection": "Nuk ka lidhje",
     "noConnectionBody": "Kontrollo lidhjen tënde të internetit\ndhe provo përsëri",
     "tryAgain": "Provo përsëri",
-    "noReels": "Ende nuk ka reel-e"
+    "noReels": "Ende nuk ka reel-e",
+    "noReelsBody": "Klipet e reja nga xhamia jote\ndo të shfaqen këtu"
   },
   "legal": {
     "termsTitle": "Kushtet e përdorimit",

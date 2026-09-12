@@ -898,7 +898,8 @@
     "noConnection": "Nema veze",
     "noConnectionBody": "Provjerite svoju internet vezu\ni pokušajte ponovo",
     "tryAgain": "Pokušaj ponovo",
-    "noReels": "Još nema reelova"
+    "noReels": "Još nema reelova",
+    "noReelsBody": "Novi isječci iz tvoje džamije\npojavit će se ovdje"
   },
   "legal": {
     "termsTitle": "Uvjeti korištenja",

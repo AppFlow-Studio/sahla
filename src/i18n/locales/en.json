@@ -903,7 +903,8 @@
     "noConnection": "No connection",
     "noConnectionBody": "Check your internet connection\nand try again",
     "tryAgain": "Try again",
-    "noReels": "No reels yet"
+    "noReels": "No reels yet",
+    "noReelsBody": "New clips from your masjid\nwill appear here"
   },
   "tutorial": {
     "next": "Next",

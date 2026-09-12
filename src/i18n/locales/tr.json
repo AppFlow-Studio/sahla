@@ -891,7 +891,8 @@
     "noConnection": "Bağlantı yok",
     "noConnectionBody": "İnternet bağlantınızı kontrol edin\nve tekrar deneyin",
     "tryAgain": "Tekrar dene",
-    "noReels": "Henüz reel yok"
+    "noReels": "Henüz reel yok",
+    "noReelsBody": "Mescidinizden gelen yeni klipler\nburada görünecek"
   },
   "legal": {
     "termsTitle": "Kullanım Koşulları",

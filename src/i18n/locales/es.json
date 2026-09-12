@@ -891,7 +891,8 @@
     "noConnection": "Sin conexión",
     "noConnectionBody": "Comprueba tu conexión a internet\ne inténtalo de nuevo",
     "tryAgain": "Inténtalo de nuevo",
-    "noReels": "Aún no hay reels"
+    "noReels": "Aún no hay reels",
+    "noReelsBody": "Los nuevos clips de tu masjid\naparecerán aquí"
   },
   "legal": {
     "termsTitle": "Términos de uso",
