@@ -325,6 +325,8 @@
     "alreadyHaveAccount": "Zaten bir hesabınız var mı? ",
     "joinOrgFailed": "Kuruluşa katılınamadı. Lütfen tekrar deneyin.",
     "signInFailed": "Giriş başarısız",
+    "noAccountAtMasjid": "{{masjid}} için henüz bir hesabınız yok. Başlamak için bir hesap oluşturun.",
+    "savePreferencesFailed": "Tercihleriniz kaydedilemedi. Çıkış yapıp tekrar giriş yapmayı deneyin.",
     "additionalStepRequired": "Ek adım gerekli: {{status}}",
     "signInCouldNotComplete": "Giriş tamamlanamadı. Lütfen tekrar deneyin.",
     "createTitle": "Hesabınızı\noluşturun",

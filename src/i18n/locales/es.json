@@ -325,6 +325,8 @@
     "alreadyHaveAccount": "¿Ya tienes una cuenta? ",
     "joinOrgFailed": "Error al unirse a la organización. Inténtalo de nuevo.",
     "signInFailed": "Error al iniciar sesión",
+    "noAccountAtMasjid": "Aún no tienes una cuenta en {{masjid}}. Crea una para empezar.",
+    "savePreferencesFailed": "No pudimos guardar tus preferencias. Prueba a cerrar sesión y volver a entrar.",
     "additionalStepRequired": "Se requiere un paso adicional: {{status}}",
     "signInCouldNotComplete": "No se pudo completar el inicio de sesión. Inténtalo de nuevo.",
     "createTitle": "Crea tu\ncuenta",

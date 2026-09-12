@@ -325,6 +325,8 @@
     "alreadyHaveAccount": "Already have an account? ",
     "joinOrgFailed": "Failed to join organization. Please try again.",
     "signInFailed": "Sign-in failed",
+    "noAccountAtMasjid": "No account at {{masjid}} yet. Create one to get started.",
+    "savePreferencesFailed": "We couldn't save your preferences. Try signing out and back in.",
     "additionalStepRequired": "Additional step required: {{status}}",
     "signInCouldNotComplete": "Sign-in could not be completed. Please try again.",
     "createTitle": "Create your\naccount",

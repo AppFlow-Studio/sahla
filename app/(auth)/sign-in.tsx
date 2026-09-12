@@ -11,6 +11,7 @@ import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
+import { checkMasjidMembership } from '@/src/lib/check-masjid-membership';
 import { OAUTH_REDIRECT_URL } from '@/src/lib/oauth-redirect';
 import { BackButton } from '@/src/components/ui/back-button';
 
@@ -50,6 +51,18 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
+      // Every masjid app shares one Clerk instance, so valid credentials only
+      // prove the person has *a* Sahla account. Without a membership in THIS
+      // masjid's org the session carries no `org_id` claim and every
+      // tenant-scoped write fails later, so refuse the sign-in up front.
+      if (config.clerkOrgId) {
+        const isMember = await checkMasjidMembership(config.clerkOrgId, { email });
+        if (!isMember) {
+          setError(t('auth.noAccountAtMasjid', { masjid: config.displayName }));
+          return;
+        }
+      }
+
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === 'complete') {
         await setActive({ session: attempt.createdSessionId });
@@ -74,7 +87,7 @@ export default function SignInScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router, t]);
+  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router, config.clerkOrgId, config.displayName, t]);
 
   const activateOAuthSession = useCallback(
     async (result: any) => {

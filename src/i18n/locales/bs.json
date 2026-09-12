@@ -328,6 +328,8 @@
     "alreadyHaveAccount": "Već imate nalog? ",
     "joinOrgFailed": "Pridruživanje organizaciji nije uspjelo. Molimo pokušajte ponovo.",
     "signInFailed": "Prijava nije uspjela",
+    "noAccountAtMasjid": "Još nemate račun za {{masjid}}. Kreirajte ga da započnete.",
+    "savePreferencesFailed": "Nismo mogli sačuvati vaše postavke. Pokušajte se odjaviti i ponovo prijaviti.",
     "additionalStepRequired": "Potreban dodatni korak: {{status}}",
     "signInCouldNotComplete": "Prijava nije mogla biti dovršena. Molimo pokušajte ponovo.",
     "createTitle": "Kreirajte svoj\nnalog",

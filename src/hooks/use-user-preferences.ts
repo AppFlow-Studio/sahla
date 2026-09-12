@@ -3,6 +3,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useConfigStore } from '@/src/stores/config-store';
+import i18n from '@/src/i18n';
+
+/**
+ * Turn a PostgREST failure into something a member can read.
+ *
+ * The common cause here is a session with no active Clerk org: every
+ * `user_preferences` policy is `... AND mosque_id = requesting_mosque_id()`,
+ * and that helper reads the JWT's `org_id` claim, so a session without an
+ * active org is rejected with a raw "violates row-level security policy"
+ * string. That used to be shown to the user verbatim.
+ */
+function preferencesError(error: { message: string }): Error {
+  console.error('[user-preferences] write failed:', error.message);
+  const m = error.message.toLowerCase();
+  if (m.includes('row-level security') || m.includes('violates foreign key')) {
+    return new Error(i18n.t('auth.savePreferencesFailed'));
+  }
+  return new Error(error.message);
+}
 
 const COLUMNS =
   'id, user_id, mosque_id, attendance_reasons, programs_for, attendance_windows, additional_preferences, gender, birth_year, has_children, children_ages, is_revert, islamic_knowledge_level, preferred_days, preferred_times, preferred_language, personalization_completed_at, quran_daily_goal' as const;
@@ -54,7 +73,7 @@ export function useUserPreferences() {
         .eq('mosque_id', mosqueUuid!)
         .maybeSingle();
 
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
       // Cast via `unknown`: `quran_daily_goal` is declared in migration
       // 20260628120000_user_reading_goal_and_progress.sql but `database.types.ts`
       // is regenerated *after* a migration is applied to staging, so the
@@ -79,7 +98,7 @@ export function useUserPreferences() {
           },
           { onConflict: 'user_id,mosque_id' },
         );
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -101,7 +120,7 @@ export function useUserPreferences() {
           },
           { onConflict: 'user_id,mosque_id' },
         );
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -123,7 +142,7 @@ export function useUserPreferences() {
           },
           { onConflict: 'user_id,mosque_id' },
         );
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -145,7 +164,7 @@ export function useUserPreferences() {
           },
           { onConflict: 'user_id,mosque_id' },
         );
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -171,7 +190,7 @@ export function useUserPreferences() {
           },
           { onConflict: 'user_id,mosque_id' },
         );
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -200,7 +219,7 @@ export function useUserPreferences() {
           } as never,
           { onConflict: 'user_id,mosque_id' },
         );
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -223,7 +242,7 @@ export function useUserPreferences() {
           },
           { onConflict: 'user_id,mosque_id' },
         );
-      if (error) throw new Error(error.message);
+      if (error) throw preferencesError(error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });

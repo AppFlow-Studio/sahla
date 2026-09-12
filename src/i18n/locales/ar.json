@@ -337,6 +337,8 @@
     "alreadyHaveAccount": "هل لديك حساب بالفعل؟ ",
     "joinOrgFailed": "تعذّر الانضمام إلى المؤسسة. يرجى المحاولة مرة أخرى.",
     "signInFailed": "فشل تسجيل الدخول",
+    "noAccountAtMasjid": "لا يوجد حساب في {{masjid}} بعد. أنشئ حسابًا للبدء.",
+    "savePreferencesFailed": "تعذر حفظ تفضيلاتك. جرّب تسجيل الخروج ثم الدخول مرة أخرى.",
     "additionalStepRequired": "مطلوب خطوة إضافية: {{status}}",
     "signInCouldNotComplete": "تعذّر إكمال تسجيل الدخول. يرجى المحاولة مرة أخرى.",
     "createTitle": "أنشئ\nحسابك",
