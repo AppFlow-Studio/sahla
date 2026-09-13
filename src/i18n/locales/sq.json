@@ -325,6 +325,8 @@
     "alreadyHaveAccount": "Keni tashmë një llogari? ",
     "joinOrgFailed": "Bashkimi me organizatën dështoi. Ju lutemi provoni përsëri.",
     "signInFailed": "Kyçja dështoi",
+    "noAccountAtMasjid": "Ende nuk keni llogari në {{masjid}}. Krijoni një për të filluar.",
+    "savePreferencesFailed": "Nuk arritëm t’i ruajmë preferencat e tua. Provo të dilesh dhe të hysh sërish.",
     "additionalStepRequired": "Kërkohet hap shtesë: {{status}}",
     "signInCouldNotComplete": "Kyçja nuk u përfundua dot. Ju lutemi provoni përsëri.",
     "createTitle": "Krijo\nllogarinë tënde",
@@ -891,7 +893,8 @@
     "noConnection": "Nuk ka lidhje",
     "noConnectionBody": "Kontrollo lidhjen tënde të internetit\ndhe provo përsëri",
     "tryAgain": "Provo përsëri",
-    "noReels": "Ende nuk ka reel-e"
+    "noReels": "Ende nuk ka reel-e",
+    "noReelsBody": "Klipet e reja nga xhamia jote\ndo të shfaqen këtu"
   },
   "legal": {
     "termsTitle": "Kushtet e përdorimit",

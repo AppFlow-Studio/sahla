@@ -328,6 +328,8 @@
     "alreadyHaveAccount": "Već imate nalog? ",
     "joinOrgFailed": "Pridruživanje organizaciji nije uspjelo. Molimo pokušajte ponovo.",
     "signInFailed": "Prijava nije uspjela",
+    "noAccountAtMasjid": "Još nemate račun za {{masjid}}. Kreirajte ga da započnete.",
+    "savePreferencesFailed": "Nismo mogli sačuvati vaše postavke. Pokušajte se odjaviti i ponovo prijaviti.",
     "additionalStepRequired": "Potreban dodatni korak: {{status}}",
     "signInCouldNotComplete": "Prijava nije mogla biti dovršena. Molimo pokušajte ponovo.",
     "createTitle": "Kreirajte svoj\nnalog",
@@ -898,7 +900,8 @@
     "noConnection": "Nema veze",
     "noConnectionBody": "Provjerite svoju internet vezu\ni pokušajte ponovo",
     "tryAgain": "Pokušaj ponovo",
-    "noReels": "Još nema reelova"
+    "noReels": "Još nema reelova",
+    "noReelsBody": "Novi isječci iz tvoje džamije\npojavit će se ovdje"
   },
   "legal": {
     "termsTitle": "Uvjeti korištenja",

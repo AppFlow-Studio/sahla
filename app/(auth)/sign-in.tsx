@@ -11,8 +11,25 @@ import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { joinOrgDirect } from '@/src/lib/join-org-direct';
+import { checkMasjidMembership } from '@/src/lib/check-masjid-membership';
 import { OAUTH_REDIRECT_URL } from '@/src/lib/oauth-redirect';
 import { BackButton } from '@/src/components/ui/back-button';
+
+/**
+ * SSO failures used to be logged and swallowed, which on a release build (no
+ * Metro console) looked like a dead button: the spinner stopped and nothing
+ * else happened. Surface Clerk's own message so a failing provider config is
+ * visible on the device instead of only in a dev console.
+ */
+function ssoError(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'errors' in err) {
+    // @ts-expect-error Clerk error shape
+    const first = err.errors?.[0];
+    return first?.longMessage ?? first?.message ?? fallback;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -50,6 +67,18 @@ export default function SignInScreen() {
     setError(null);
     setSubmitting(true);
     try {
+      // Every masjid app shares one Clerk instance, so valid credentials only
+      // prove the person has *a* Sahla account. Without a membership in THIS
+      // masjid's org the session carries no `org_id` claim and every
+      // tenant-scoped write fails later, so refuse the sign-in up front.
+      if (config.clerkOrgId) {
+        const isMember = await checkMasjidMembership(config.clerkOrgId, { email });
+        if (!isMember) {
+          setError(t('auth.noAccountAtMasjid', { masjid: config.displayName }));
+          return;
+        }
+      }
+
       const attempt = await signIn.create({ identifier: email, password });
       if (attempt.status === 'complete') {
         await setActive({ session: attempt.createdSessionId });
@@ -74,7 +103,7 @@ export default function SignInScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router, t]);
+  }, [isLoaded, signIn, email, password, setActive, submitting, joinAndActivateOrg, clerk, router, config.clerkOrgId, config.displayName, t]);
 
   const activateOAuthSession = useCallback(
     async (result: any) => {
@@ -163,29 +192,35 @@ export default function SignInScreen() {
         result = await startAppleAuthenticationFlow();
       } else {
         result = await startSSOFlow({ strategy: 'oauth_apple', redirectUrl: OAUTH_REDIRECT_URL });
-        if (result.authSessionResult?.type === 'dismiss') return;
+        // Only a real user cancel is silent. Every other non-success (notably a
+        // redirect that never made it back to the app) falls through so
+        // activateOAuthSession reports it instead of looking like a dead button.
+        if (result.authSessionResult?.type === 'cancel') return;
       }
       await activateOAuthSession(result);
     } catch (err: any) {
       if (err?.code === 'ERR_REQUEST_CANCELED') return;
       console.error('[Auth] Apple error:', err);
+      setError(ssoError(err, t('auth.signInCouldNotComplete')));
     } finally {
       setSsoLoading(null);
     }
-  }, [startAppleAuthenticationFlow, startSSOFlow, activateOAuthSession]);
+  }, [startAppleAuthenticationFlow, startSSOFlow, activateOAuthSession, t]);
 
   const handleGoogle = useCallback(async () => {
     setSsoLoading('google');
     try {
       const result = await startSSOFlow({ strategy: 'oauth_google', redirectUrl: OAUTH_REDIRECT_URL });
-      if (result.authSessionResult?.type === 'dismiss') return;
+      // See handleApple: only a user cancel returns silently.
+      if (result.authSessionResult?.type === 'cancel') return;
       await activateOAuthSession(result);
     } catch (err) {
       console.error('[Auth] Google error:', err);
+      setError(ssoError(err, t('auth.signInCouldNotComplete')));
     } finally {
       setSsoLoading(null);
     }
-  }, [startSSOFlow, activateOAuthSession]);
+  }, [startSSOFlow, activateOAuthSession, t]);
 
   const surface = config.colors.onboardingSurface.replace(/ /g, ',');
   const surfaceHex = `rgb(${surface})`;

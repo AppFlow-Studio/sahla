@@ -325,6 +325,8 @@
     "alreadyHaveAccount": "¿Ya tienes una cuenta? ",
     "joinOrgFailed": "Error al unirse a la organización. Inténtalo de nuevo.",
     "signInFailed": "Error al iniciar sesión",
+    "noAccountAtMasjid": "Aún no tienes una cuenta en {{masjid}}. Crea una para empezar.",
+    "savePreferencesFailed": "No pudimos guardar tus preferencias. Prueba a cerrar sesión y volver a entrar.",
     "additionalStepRequired": "Se requiere un paso adicional: {{status}}",
     "signInCouldNotComplete": "No se pudo completar el inicio de sesión. Inténtalo de nuevo.",
     "createTitle": "Crea tu\ncuenta",
@@ -891,7 +893,8 @@
     "noConnection": "Sin conexión",
     "noConnectionBody": "Comprueba tu conexión a internet\ne inténtalo de nuevo",
     "tryAgain": "Inténtalo de nuevo",
-    "noReels": "Aún no hay reels"
+    "noReels": "Aún no hay reels",
+    "noReelsBody": "Los nuevos clips de tu masjid\naparecerán aquí"
   },
   "legal": {
     "termsTitle": "Términos de uso",

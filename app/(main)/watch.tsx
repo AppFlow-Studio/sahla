@@ -40,6 +40,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useRequireAccount } from '@/src/components/auth/sign-in-prompt';
 import { AppBlurView } from '@/src/components/ui/blur-view';
+import { ReelsEmptyState } from '@/src/components/watch/reels-empty-state';
 import { LIQUID_GLASS } from '@/src/components/ui/glass-surface';
 import { TAB_BAR_CLEARANCE } from '@/src/components/navigation/tab-bar';
 import { useIsFocused } from '@react-navigation/native';
@@ -1135,11 +1136,7 @@ export default function WatchScreen() {
     );
   }
   if (!reels.length) {
-    return (
-      <View className="flex-1 bg-black items-center justify-center">
-        <Text style={{ color: '#ffffff' }}>{t('watch.noReels')}</Text>
-      </View>
-    );
+    return <ReelsEmptyState />;
   }
 
   return (

@@ -22,6 +22,11 @@ verify_jwt = false
 [functions.join-org]
 verify_jwt = false
 
+# Called before a session exists (sign-in / password-reset gate), so it can
+# never require a user JWT.
+[functions.check-masjid-membership]
+verify_jwt = false
+
 [functions.sync-onboarding]
 verify_jwt = false
 
