@@ -8,7 +8,7 @@ import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 
-import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
+import { OnboardingPatternHeader } from '@/src/components/onboarding/onboarding-pattern';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
@@ -233,13 +233,7 @@ export default function CreateAccountScreen() {
 
   return (
     <View className="flex-1 bg-onboarding-bg">
-      <View
-        pointerEvents="none"
-        className="absolute inset-x-0 top-0"
-        style={{ height: '30%' }}
-      >
-        <OnboardingPattern />
-      </View>
+      <OnboardingPatternHeader />
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 justify-center" style={{ paddingHorizontal: 55 }}>
           <Text
