@@ -296,11 +296,7 @@
     "paymentLabel": "Ödeme",
     "thankYouAdvertising": "Bizimle reklam verdiğiniz için teşekkürler",
     "notChargedUntilConfirm": "Onaylayana kadar ücret alınmayacak",
-    "soonTitle": "Reklam yakında geliyor",
-    "soonBody": "İşletme ilanları bu sürümde henüz kullanılamıyor. Aktif olduğunda sizinle iletişime geçeceğiz.",
-    "soonCta": "Anladım",
-    "reachLine": "İşletmenizi uygulama üzerinden 3.000'den fazla topluluk üyesine tanıtın.",
-    "pricingComingSoon": "Fiyatlandırma, reklam hizmeti aktif olduğunda paylaşılacaktır."
+    "reachLine": "İşletmenizi uygulama üzerinden 3.000'den fazla topluluk üyesine tanıtın."
   },
   "auth": {
     "devSignOutReset": "[DEV] Çıkış yap ve sıfırla",
@@ -329,6 +325,8 @@
     "alreadyHaveAccount": "Zaten bir hesabınız var mı? ",
     "joinOrgFailed": "Kuruluşa katılınamadı. Lütfen tekrar deneyin.",
     "signInFailed": "Giriş başarısız",
+    "noAccountAtMasjid": "{{masjid}} için henüz bir hesabınız yok. Başlamak için bir hesap oluşturun.",
+    "savePreferencesFailed": "Tercihleriniz kaydedilemedi. Çıkış yapıp tekrar giriş yapmayı deneyin.",
     "additionalStepRequired": "Ek adım gerekli: {{status}}",
     "signInCouldNotComplete": "Giriş tamamlanamadı. Lütfen tekrar deneyin.",
     "createTitle": "Hesabınızı\noluşturun",
@@ -525,10 +523,7 @@
     "errorTitle": "Hata",
     "somethingWentWrong": "Bir şeyler ters gitti.",
     "paymentNotCompleted": "Ödeme tamamlanmadı.",
-    "paymentFailedTitle": "Ödeme başarısız",
-    "soonTitle": "Bağışlar yakında geliyor",
-    "soonBody": "Bağış yapma bu sürümde henüz kullanılamıyor. Aktif olur olmaz size haber vereceğiz.",
-    "soonCta": "Anladım"
+    "paymentFailedTitle": "Ödeme başarısız"
   },
   "home": {
     "greeting": "Esselamü Aleyküm",
@@ -834,8 +829,6 @@
     "failedToRemoveCard": "Kart kaldırılamadı",
     "securedByStripe": "STRIPE TARAFINDAN GÜVENCE ALTINDA",
     "stripeSecurityBody": "Ödeme yöntemleriniz Stripe tarafından güvenli bir şekilde saklanır. Kart bilgileri asla sunucularımızda saklanmaz.",
-    "comingSoon": "Yakında",
-    "cardManagementSoon": "Kart yönetimi yakında kullanılabilir olacak.",
     "addNewCard": "Yeni Kart Ekle",
     "noSavedCards": "Kaydedilen Kart Yok",
     "noSavedCardsBody": "Hızlı gelecek bağışlar için bir ödeme yöntemi kaydetmek üzere \"Yeni Kart Ekle\" seçeneğine dokunun.",
@@ -859,7 +852,11 @@
     "termsRow": "Kullanım Koşulları",
     "privacyRow": "Gizlilik Politikası",
     "sectionLegal": "Yasal",
-    "legalRow": "Koşullar ve Gizlilik"
+    "legalRow": "Koşullar ve Gizlilik",
+    "addingCard": "Kart ekleniyor…",
+    "addCardErrorTitle": "Kart eklenemedi",
+    "addCardErrorBody": "Kartınız eklenirken bir sorun oluştu. Lütfen tekrar deneyin.",
+    "addCardUnavailable": "Kart yönetimi şu anda kullanılamıyor. Lütfen kısa süre sonra deneyin."
   },
   "watch": {
     "notInterested": "İlgilenmiyorum",
@@ -896,7 +893,8 @@
     "noConnection": "Bağlantı yok",
     "noConnectionBody": "İnternet bağlantınızı kontrol edin\nve tekrar deneyin",
     "tryAgain": "Tekrar dene",
-    "noReels": "Henüz reel yok"
+    "noReels": "Henüz reel yok",
+    "noReelsBody": "Mescidinizden gelen yeni klipler\nburada görünecek"
   },
   "legal": {
     "termsTitle": "Kullanım Koşulları",

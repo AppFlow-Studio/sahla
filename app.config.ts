@@ -96,7 +96,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: masjid.displayName,
   slug: "sahla",
-  version: "1.0.7",
+  version: "1.0.8",
   orientation: "portrait",
   icon: "./assets/images/sahla-logo-arabic.png",
   // Per-tenant scheme for deep links, plus a shared `sahlaauth` scheme every
@@ -160,7 +160,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "@stripe/stripe-react-native",
       {
-        merchantIdentifier: `merchant.${IOS_BUNDLE_ID}`,
+        // ONE Apple Pay merchant id shared across every tenant, not
+        // `merchant.${IOS_BUNDLE_ID}`. Apple lets a single merchant id serve
+        // many app bundle ids, so new masjids need no per-tenant Apple Pay
+        // setup (no extra merchant id / payment-processing cert / Stripe link).
+        // Must stay in lockstep with the `StripeProvider` `merchantIdentifier`
+        // prop in `app/_layout.tsx` — a mismatch silently breaks Apple Pay
+        // while card payments keep working.
+        merchantIdentifier: "merchant.com.sahla",
         enableGooglePay: true,
       },
     ],
