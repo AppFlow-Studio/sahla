@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
+import { OnboardingPatternHeader } from '@/src/components/onboarding/onboarding-pattern';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { checkMasjidMembership } from '@/src/lib/check-masjid-membership';
@@ -150,9 +150,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <View className="flex-1 bg-onboarding-bg">
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
-        <OnboardingPattern />
-      </View>
+      <OnboardingPatternHeader />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-5 pt-2">
