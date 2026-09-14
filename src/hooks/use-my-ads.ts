@@ -38,6 +38,17 @@ export function useMyAds() {
   });
 }
 
+/** Pull the JSON `error` field out of a failed functions.invoke() response. */
+async function functionErrorMessage(error: any): Promise<string> {
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return String(body.error);
+  } catch {
+    // Non-JSON body (or already consumed) — fall through to the generic message.
+  }
+  return error?.message ?? 'Request failed';
+}
+
 export function useCancelAdSubscription() {
   const { userId } = useAuth();
   const supabase = useSupabase();
@@ -50,7 +61,9 @@ export function useCancelAdSubscription() {
         headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
         body: { user_id: userId, submission_id: submissionId },
       });
-      if (error) throw new Error(error.message);
+      // invoke() collapses every non-2xx into "Edge Function returned a
+      // non-2xx status code" — read the response body for the real reason.
+      if (error) throw new Error(await functionErrorMessage(error));
       if (!data?.ok) throw new Error(data?.error ?? 'Cancellation failed');
     },
     onSuccess: () =>
