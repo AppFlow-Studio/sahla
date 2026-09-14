@@ -40,7 +40,7 @@ serve(async (req: Request) => {
     // incomplete Stripe subscriptions the advertiser never completed.
     const { data: subs, error: subErr } = await supabase
       .from("business_ads_submissions")
-      .select("submission_id, business_name, business_flyer_img, status, created_at")
+      .select("submission_id, business_name, business_address, business_flyer_img, personal_full_name, personal_email, personal_phone, status, created_at")
       .eq("user_id", user_id)
       .eq("mosque_id", mosque_id)
       .neq("status", "pending_payment")
@@ -72,6 +72,14 @@ serve(async (req: Request) => {
         start_date: adSub?.start_date ?? null,
         can_cancel:
           subscriptionStatus === "active" || subscriptionStatus === "past_due",
+        // Dead ad → offer a re-application prefilled from this business, so an
+        // advertiser with several businesses renews the right one. 'canceling'
+        // is excluded: that ad is still live until the period closes.
+        can_renew: subscriptionStatus === "canceled",
+        business_address: s.business_address,
+        personal_full_name: s.personal_full_name,
+        personal_email: s.personal_email,
+        personal_phone: s.personal_phone,
       };
     });
 

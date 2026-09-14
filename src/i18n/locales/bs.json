@@ -238,6 +238,7 @@
     "perMonth": "{{amount}}/mjesec",
     "endingSoonSuffix": " · uskoro završava",
     "cancelSubscription": "Otkaži pretplatu",
+    "renewSubscription": "Obnovi pretplatu",
     "cancelConfirmTitle": "Otkazati pretplatu?",
     "cancelConfirmMessage": "{{name}} će ostati aktivan do kraja trenutnog perioda naplate, a zatim se zaustaviti.",
     "keepIt": "Zadrži",

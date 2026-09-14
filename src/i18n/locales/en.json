@@ -235,6 +235,7 @@
     "perMonth": "{{amount}}/month",
     "endingSoonSuffix": " · ending soon",
     "cancelSubscription": "Cancel subscription",
+    "renewSubscription": "Renew subscription",
     "cancelConfirmTitle": "Cancel subscription?",
     "cancelConfirmMessage": "{{name}} will stay active until the end of the current billing period, then stop.",
     "keepIt": "Keep it",

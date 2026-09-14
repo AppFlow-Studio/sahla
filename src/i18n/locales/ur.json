@@ -235,6 +235,7 @@
     "perMonth": "{{amount}}/ماہ",
     "endingSoonSuffix": " · جلد ختم ہو رہا ہے",
     "cancelSubscription": "سبسکرپشن منسوخ کریں",
+    "renewSubscription": "سبسکرپشن تجدید کریں",
     "cancelConfirmTitle": "سبسکرپشن منسوخ کریں؟",
     "cancelConfirmMessage": "{{name}} موجودہ بلنگ مدت کے اختتام تک فعال رہے گا، پھر رک جائے گا۔",
     "keepIt": "اسے رکھیں",

@@ -247,6 +247,7 @@
     "perMonth": "{{amount}}/شهر",
     "endingSoonSuffix": " · ينتهي قريبًا",
     "cancelSubscription": "إلغاء الاشتراك",
+    "renewSubscription": "تجديد الاشتراك",
     "cancelConfirmTitle": "إلغاء الاشتراك؟",
     "cancelConfirmMessage": "سيبقى {{name}} نشطًا حتى نهاية فترة الفوترة الحالية، ثم يتوقف.",
     "keepIt": "الإبقاء عليه",

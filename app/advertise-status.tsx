@@ -52,6 +52,22 @@ export default function AdvertiseStatusScreen() {
   const toneColor = (tone: 'good' | 'warn' | 'muted') =>
     tone === 'good' ? '#15803d' : tone === 'warn' ? '#8a6d1f' : mutedRgb;
 
+  // Renewing is a brand-new application (new submission, new subscription, and
+  // the masjid reviews it again) — we just carry this business's details over
+  // so someone advertising several businesses doesn't retype the right one.
+  const renew = (ad: MyAd) =>
+    router.push({
+      pathname: '/advertise-apply',
+      params: {
+        fullName: ad.personal_full_name ?? '',
+        email: ad.personal_email ?? '',
+        phone: ad.personal_phone ?? '',
+        businessName: ad.business_name ?? '',
+        businessAddress: ad.business_address ?? '',
+        flyerUrl: ad.business_flyer_img ?? '',
+      },
+    });
+
   const confirmCancel = (ad: MyAd) => {
     Alert.alert(
       t('ads.cancelConfirmTitle'),
@@ -152,6 +168,15 @@ export default function AdvertiseStatusScreen() {
                       >
                         <Text className="text-[14px] font-semibold text-foreground/70">
                           {t('ads.cancelSubscription')}
+                        </Text>
+                      </Pressable>
+                    ) : ad.can_renew ? (
+                      <Pressable
+                        onPress={() => renew(ad)}
+                        className="mt-3 h-[42px] items-center justify-center rounded-full bg-foreground active:opacity-90"
+                      >
+                        <Text className="text-[14px] font-semibold text-background">
+                          {t('ads.renewSubscription')}
                         </Text>
                       </Pressable>
                     ) : null}

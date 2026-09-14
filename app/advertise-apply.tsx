@@ -1,6 +1,6 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useConfirmPayment } from '@stripe/stripe-react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { BackButton } from '@/src/components/ui/back-button';
@@ -63,12 +63,23 @@ export default function AdvertiseApplyScreen() {
   const accentRgb = `rgb(${colors.accent.replace(/ /g, ',')})`;
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
 
+  // Renewing an ended ad routes here with that business's details, so an
+  // advertiser running several businesses doesn't retype the right one.
+  const prefill = useLocalSearchParams<{
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    businessName?: string;
+    businessAddress?: string;
+    flyerUrl?: string;
+  }>();
+
   const [form, setForm] = useState<FormData>({
-    fullName: user?.fullName ?? '',
-    email: user?.primaryEmailAddress?.emailAddress ?? '',
-    phone: user?.primaryPhoneNumber?.phoneNumber ?? '',
-    businessName: '',
-    businessAddress: '',
+    fullName: prefill.fullName || user?.fullName || '',
+    email: prefill.email || user?.primaryEmailAddress?.emailAddress || '',
+    phone: prefill.phone || user?.primaryPhoneNumber?.phoneNumber || '',
+    businessName: prefill.businessName || '',
+    businessAddress: prefill.businessAddress || '',
   });
   const [step, setStep] = useState<Step>('form');
   const [submitting, setSubmitting] = useState(false);
@@ -81,7 +92,7 @@ export default function AdvertiseApplyScreen() {
   const [cardExpYear, setCardExpYear] = useState<number | undefined>(undefined);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [cvcFilled, setCvcFilled] = useState(false);
-  const [flyerUrl, setFlyerUrl] = useState<string | null>(null);
+  const [flyerUrl, setFlyerUrl] = useState<string | null>(prefill.flyerUrl || null);
   const [flyerUploading, setFlyerUploading] = useState(false);
 
   // Fetch mosque ad pricing
