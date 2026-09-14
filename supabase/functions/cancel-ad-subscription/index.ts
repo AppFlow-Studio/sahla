@@ -15,7 +15,12 @@ const json = (body: unknown, status = 200) =>
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 
-/** Reconcile our row when Stripe says the subscription is already gone. */
+/**
+ * Reconcile when Stripe says the subscription is already gone: the billing
+ * period is over, so stop billing AND take the ad down. Presence in
+ * approved_business_ads is what makes an ad live in Community Partners, so
+ * skipping that delete leaves a canceled advertiser's flyer up indefinitely.
+ */
 async function markCanceled(
   supabase: ReturnType<typeof createClient>,
   submissionId: string,
@@ -27,6 +32,14 @@ async function markCanceled(
       end_date: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
+    .eq("submission_id", submissionId);
+  await supabase
+    .from("approved_business_ads")
+    .delete()
+    .eq("submission_id", submissionId);
+  await supabase
+    .from("business_ads_submissions")
+    .update({ status: "canceled" })
     .eq("submission_id", submissionId);
 }
 
