@@ -236,6 +236,7 @@
     "endingSoonSuffix": " · përfundon së shpejti",
     "cancelSubscription": "Anulo abonimin",
     "renewSubscription": "Rinovo abonimin",
+    "advertiseAnother": "Reklamo një biznes tjetër",
     "cancelConfirmTitle": "Ta anuloni abonimin?",
     "cancelConfirmMessage": "{{name}} do të mbetet aktive deri në fund të periudhës aktuale të faturimit, pastaj ndalon.",
     "keepIt": "Mbaje",

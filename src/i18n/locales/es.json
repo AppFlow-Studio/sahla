@@ -236,6 +236,7 @@
     "endingSoonSuffix": " · finaliza pronto",
     "cancelSubscription": "Cancelar suscripción",
     "renewSubscription": "Renovar suscripción",
+    "advertiseAnother": "Anunciar otro negocio",
     "cancelConfirmTitle": "¿Cancelar suscripción?",
     "cancelConfirmMessage": "{{name}} permanecerá activo hasta el final del periodo de facturación actual y luego se detendrá.",
     "keepIt": "Conservarlo",

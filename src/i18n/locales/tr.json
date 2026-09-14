@@ -236,6 +236,7 @@
     "endingSoonSuffix": " · yakında sona eriyor",
     "cancelSubscription": "Aboneliği iptal et",
     "renewSubscription": "Aboneliği yenile",
+    "advertiseAnother": "Başka bir işletme tanıtın",
     "cancelConfirmTitle": "Abonelik iptal edilsin mi?",
     "cancelConfirmMessage": "{{name}} mevcut faturalandırma döneminin sonuna kadar aktif kalacak, ardından duracak.",
     "keepIt": "Devam ettir",

@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import { useAdsEnabled } from '@/src/hooks/use-ads-enabled';
 import { useMyAds, useCancelAdSubscription, type MyAd } from '@/src/hooks/use-my-ads';
 import { BackButton } from '@/src/components/ui/back-button';
 
@@ -47,6 +48,7 @@ export default function AdvertiseStatusScreen() {
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
 
   const { data: ads, isLoading } = useMyAds();
+  const adsEnabled = useAdsEnabled();
   const cancel = useCancelAdSubscription();
 
   const toneColor = (tone: 'good' | 'warn' | 'muted') =>
@@ -184,6 +186,20 @@ export default function AdvertiseStatusScreen() {
                 </View>
               );
             })}
+
+            {/* Renew (on each card) re-runs a business you've had before; this
+                is the only way to add a different one. */}
+            {adsEnabled ? (
+              <Pressable
+                onPress={() => router.push('/advertise-apply')}
+                className="mt-1 h-[46px] flex-row items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 active:opacity-70"
+              >
+                <Icon name="add" size={16} color={mutedRgb} />
+                <Text style={{ color: mutedRgb, fontSize: 14, fontWeight: '600' }}>
+                  {t('ads.advertiseAnother')}
+                </Text>
+              </Pressable>
+            ) : null}
           </ScrollView>
         )}
       </SafeAreaView>
