@@ -22,6 +22,15 @@ const QUICK_ACTIONS = [
   { id: 'quran', icon: 'book-open-variant' },
 ] as const;
 
+const TILE = 62;
+/**
+ * Gap to hold the row to when a tile is missing. justify-between across the
+ * full width flings four tiles ~29pt apart; this pulls them back together
+ * without touching the five-tile row, which still spreads edge to edge exactly
+ * as it always has.
+ */
+const SHORT_ROW_GAP = 16;
+
 export function QuickActions() {
   const { t } = useTranslation();
   const { colors } = useMasjidConfig();
@@ -46,8 +55,18 @@ export function QuickActions() {
     else if (id === 'quran') router.push('/quran');
   };
 
+  // Only constrain a short row — at full length the original layout is correct.
+  const shortRow =
+    actions.length < QUICK_ACTIONS.length
+      ? {
+          width: '100%' as const,
+          maxWidth: actions.length * TILE + (actions.length - 1) * SHORT_ROW_GAP,
+          alignSelf: 'center' as const,
+        }
+      : undefined;
+
   return (
-    <View className="flex-row justify-between">
+    <View className="flex-row justify-between" style={shortRow}>
       {actions.map((action) => (
         <TouchableOpacity
           key={action.id}
@@ -61,8 +80,8 @@ export function QuickActions() {
           <View
             className="items-center justify-center rounded-2xl border border-foreground/10 bg-muted"
             style={{
-              height: 62,
-              width: 62,
+              height: TILE,
+              width: TILE,
               paddingHorizontal: 3,
               shadowColor: fgRgb,
               shadowOffset: { width: 0, height: 6 },
