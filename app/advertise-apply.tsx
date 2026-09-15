@@ -71,6 +71,7 @@ export default function AdvertiseApplyScreen() {
   // Renewing an ended ad routes here with that business's details, so an
   // advertiser running several businesses doesn't retype the right one.
   const prefill = useLocalSearchParams<{
+    renewedFrom?: string;
     fullName?: string;
     email?: string;
     phone?: string;
@@ -232,6 +233,7 @@ export default function AdvertiseApplyScreen() {
             business_name: form.businessName.trim() || undefined,
             business_address: form.businessAddress.trim() || undefined,
             business_flyer_img: flyerUrl || undefined,
+            renewed_from: prefill.renewedFrom || undefined,
           },
         }),
         supabase.functions

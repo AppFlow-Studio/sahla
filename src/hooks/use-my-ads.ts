@@ -17,6 +17,8 @@ export type MyAd = {
   can_cancel: boolean;
   /** Subscription is over — offer a prefilled re-application for this business. */
   can_renew: boolean;
+  /** A later submission replaced this one, so it's history, not an option. */
+  renewed: boolean;
   business_address: string | null;
   personal_full_name: string | null;
   personal_email: string | null;

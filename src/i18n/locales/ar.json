@@ -248,6 +248,7 @@
     "endingSoonSuffix": " · ينتهي قريبًا",
     "cancelSubscription": "إلغاء الاشتراك",
     "renewSubscription": "تجديد الاشتراك",
+    "renewedLabel": "تم التجديد — استُبدل بإعلان أحدث",
     "advertiseAnother": "أعلن عن نشاط تجاري آخر",
     "cancelConfirmTitle": "إلغاء الاشتراك؟",
     "cancelConfirmMessage": "سيبقى {{name}} نشطًا حتى نهاية فترة الفوترة الحالية، ثم يتوقف.",

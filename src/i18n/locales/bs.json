@@ -239,6 +239,7 @@
     "endingSoonSuffix": " · uskoro završava",
     "cancelSubscription": "Otkaži pretplatu",
     "renewSubscription": "Obnovi pretplatu",
+    "renewedLabel": "Obnovljeno — zamijenjeno novijim oglasom",
     "advertiseAnother": "Oglasite još jedan posao",
     "cancelConfirmTitle": "Otkazati pretplatu?",
     "cancelConfirmMessage": "{{name}} će ostati aktivan do kraja trenutnog perioda naplate, a zatim se zaustaviti.",

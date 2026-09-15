@@ -61,6 +61,7 @@ export default function AdvertiseStatusScreen() {
     router.push({
       pathname: '/advertise-apply',
       params: {
+        renewedFrom: ad.submission_id,
         fullName: ad.personal_full_name ?? '',
         email: ad.personal_email ?? '',
         phone: ad.personal_phone ?? '',
@@ -132,6 +133,7 @@ export default function AdvertiseStatusScreen() {
                 <View
                   key={ad.submission_id}
                   className="overflow-hidden rounded-2xl border border-foreground/10 bg-muted/30"
+                  style={ad.renewed ? { opacity: 0.55 } : undefined}
                 >
                   {ad.business_flyer_img ? (
                     <Image
@@ -181,6 +183,12 @@ export default function AdvertiseStatusScreen() {
                           {t('ads.renewSubscription')}
                         </Text>
                       </Pressable>
+                    ) : ad.renewed ? (
+                      <View className="mt-3 h-[38px] items-center justify-center">
+                        <Text style={{ color: mutedRgb, fontSize: 13, fontWeight: '600' }}>
+                          {t('ads.renewedLabel')}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                 </View>
