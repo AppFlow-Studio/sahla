@@ -10,6 +10,48 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+/** Stripe statuses where a subscription will still try to bill this card. */
+const LIVE_SUB_STATUSES = new Set(["active", "past_due", "trialing", "unpaid"]);
+
+const idOf = (v: unknown): string | null =>
+  typeof v === "string" ? v : (v as { id?: string } | null)?.id ?? null;
+
+/**
+ * Ids of the customer's live subscriptions that would bill `paymentMethodId`.
+ * A subscription with no default of its own falls back to the customer's
+ * invoice default, so detaching that card breaks it just the same.
+ */
+async function subscriptionsUsingPaymentMethod({
+  stripe,
+  stripeAccountOpts,
+  customerId,
+  paymentMethodId,
+}: {
+  stripe: Stripe;
+  stripeAccountOpts: { stripeAccount: string };
+  customerId: string;
+  paymentMethodId: string;
+}): Promise<string[]> {
+  const subs = await stripe.subscriptions.list(
+    { customer: customerId, status: "all", limit: 100 },
+    stripeAccountOpts,
+  );
+  const live = subs.data.filter((sub) => LIVE_SUB_STATUSES.has(sub.status));
+  if (live.length === 0) return [];
+
+  let customerDefaultId: string | null = null;
+  if (live.some((sub) => !idOf(sub.default_payment_method))) {
+    const customer = await stripe.customers.retrieve(customerId, stripeAccountOpts);
+    if (!customer.deleted) {
+      customerDefaultId = idOf(customer.invoice_settings?.default_payment_method);
+    }
+  }
+
+  return live
+    .filter((sub) => (idOf(sub.default_payment_method) ?? customerDefaultId) === paymentMethodId)
+    .map((sub) => sub.id);
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS });
@@ -87,6 +129,37 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: "Payment method does not belong to this user" }),
         { status: 403, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
+
+    // A saved card on this connected customer can also be what a live
+    // business-ad subscription bills. Detaching it silently orphans that
+    // billing: the next renewal fails, dunning runs out, and the ad is
+    // canceled — so refuse and say which ad is using it.
+    const blocking = await subscriptionsUsingPaymentMethod({
+      stripe,
+      stripeAccountOpts,
+      customerId,
+      paymentMethodId,
+    });
+    if (blocking.length > 0) {
+      const { data: rows } = await supabase
+        .from("ad_subscriptions")
+        .select("submission_id, business_ads_submissions(business_name)")
+        .in("stripe_subscription_id", blocking);
+      const names = (rows ?? [])
+        .map((r: any) => r.business_ads_submissions?.business_name)
+        .filter(Boolean);
+      const which = names.length > 0 ? `"${names.join('", "')}"` : "an active";
+      return new Response(
+        JSON.stringify({
+          error:
+            `This card pays for your ${which} ad subscription. ` +
+            `Add another card and make it the default for that subscription before removing this one.`,
+          code: "in_use_by_subscription",
+          subscription_ids: blocking,
+        }),
+        { status: 409, headers: { ...CORS, "Content-Type": "application/json" } },
       );
     }
 
