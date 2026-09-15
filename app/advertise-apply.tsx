@@ -41,6 +41,11 @@ type FormData = {
   businessAddress: string;
 };
 
+/** A reusable card on this masjid's connected account (get-payment-methods). */
+type SavedCard = { id: string; brand: string; last4: string; expMonth: number; expYear: number };
+
+const formatBrand = (b: string) => (b ? b.charAt(0).toUpperCase() + b.slice(1) : 'Card');
+
 type Step = 'form' | 'payment' | 'processing' | 'success';
 
 export default function AdvertiseApplyScreen() {
@@ -92,6 +97,9 @@ export default function AdvertiseApplyScreen() {
   const [cardExpYear, setCardExpYear] = useState<number | undefined>(undefined);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [cvcFilled, setCvcFilled] = useState(false);
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [useNewCard, setUseNewCard] = useState(false);
   const [flyerUrl, setFlyerUrl] = useState<string | null>(prefill.flyerUrl || null);
   const [flyerUploading, setFlyerUploading] = useState(false);
 
@@ -208,9 +216,12 @@ export default function AdvertiseApplyScreen() {
 
     setSubmitting(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
-        'create-ad-subscription',
-        {
+      // Load the advertiser's existing cards on this masjid's connected account
+      // alongside the intent — an advertiser who has donated or run an ad here
+      // before shouldn't have to retype a card we already hold. Best-effort:
+      // a failure here just means they enter a new one.
+      const [{ data, error: fnError }, methodsRes] = await Promise.all([
+        supabase.functions.invoke('create-ad-subscription', {
           headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
           body: {
             user_id: user.id,
@@ -222,8 +233,19 @@ export default function AdvertiseApplyScreen() {
             business_address: form.businessAddress.trim() || undefined,
             business_flyer_img: flyerUrl || undefined,
           },
-        },
-      );
+        }),
+        supabase.functions
+          .invoke('get-payment-methods', {
+            headers: { Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+            body: { user_id: user.id, mosque_id: mosqueUuid },
+          })
+          .catch(() => ({ data: { methods: [] } })),
+      ]);
+
+      const methods: SavedCard[] = (methodsRes as any)?.data?.methods ?? [];
+      setSavedCards(methods);
+      setSelectedCardId(methods[0]?.id ?? null);
+      setUseNewCard(methods.length === 0);
 
       if (fnError || !data?.clientSecret) {
         let detail = 'Failed to create subscription';
@@ -255,15 +277,24 @@ export default function AdvertiseApplyScreen() {
     }
   }, [form, isFormValid, submitting, user, supabase, mosqueUuid, flyerUrl]);
 
+  // Saved cards short-circuit the card form unless the advertiser asks for a
+  // new one (or has none on this masjid's account).
+  const showSavedPicker = savedCards.length > 0 && !useNewCard;
+  const canPay = showSavedPicker ? !!selectedCardId : cardComplete;
+
   // Step 2 → Confirm payment
   const handleConfirmPayment = useCallback(async () => {
-    if (!clientSecret || !cardComplete) return;
+    const payWithSaved = !useNewCard && !!selectedCardId;
+    if (!clientSecret || (!payWithSaved && !cardComplete)) return;
     setStep('processing');
 
     try {
-      const { paymentIntent, error } = await confirmPayment(clientSecret, {
-        paymentMethodType: 'Card',
-      });
+      const { paymentIntent, error } = await confirmPayment(
+        clientSecret,
+        payWithSaved
+          ? { paymentMethodType: 'Card', paymentMethodData: { paymentMethodId: selectedCardId! } }
+          : { paymentMethodType: 'Card' },
+      );
 
       if (error) throw new Error(error.message);
 
@@ -281,7 +312,7 @@ export default function AdvertiseApplyScreen() {
       setStep('payment');
       Alert.alert(t('ads.paymentFailedTitle'), err.message ?? t('ads.somethingWentWrong'));
     }
-  }, [clientSecret, cardComplete, confirmPayment, setStripeAccountId]);
+  }, [clientSecret, cardComplete, useNewCard, selectedCardId, confirmPayment, setStripeAccountId]);
 
   return (
     <View className="flex-1 bg-background">
@@ -430,32 +461,99 @@ export default function AdvertiseApplyScreen() {
                   <Text className="mb-3 text-[11px] font-semibold uppercase tracking-[1.5px] text-foreground/40">
                     {t('ads.cardDetails')}
                   </Text>
-                  <CardVisual
-                    brand={cardBrand}
-                    cardComplete={cardComplete}
-                    flipped={cardFlipped}
-                    last4={cardLast4}
-                    expiryMonth={cardExpMonth}
-                    expiryYear={cardExpYear}
-                    cvcFilled={cvcFilled}
-                    profileName={form.fullName.trim() || undefined}
-                    bgRgb={bgRgb}
-                    fgRgb={fgRgb}
-                    fg={fg}
-                    accentRgb={accentRgb}
-                    onCardChange={(details) => {
-                      setCardComplete(details.complete);
-                      if (details.brand) setCardBrand(details.brand);
-                      setCardLast4(details.last4 || undefined);
-                      setCardExpMonth(details.expiryMonth ?? undefined);
-                      setCardExpYear(details.expiryYear ?? undefined);
-                      setCvcFilled(details.complete);
-                      if (cardFlipped && details.expiryYear == null) {
-                        setCardFlipped(false);
-                      }
-                    }}
-                    onFocus={(field) => setCardFlipped(field === 'Cvc')}
-                  />
+                  {showSavedPicker ? (
+                    <View className="gap-2.5">
+                      {savedCards.map((card) => {
+                        const selected = selectedCardId === card.id;
+                        return (
+                          <Pressable
+                            key={card.id}
+                            onPress={() => setSelectedCardId(card.id)}
+                            className="flex-row items-center gap-3 rounded-2xl px-4 py-3.5 active:opacity-70"
+                            style={{
+                              borderWidth: 1.5,
+                              borderColor: selected ? accentRgb : `rgba(${fg},0.1)`,
+                              backgroundColor: selected ? `rgba(${fg},0.03)` : 'transparent',
+                            }}
+                          >
+                            <Icon name="card" size={20} color={`rgba(${fg},0.5)`} />
+                            <View className="flex-1">
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: fgRgb }}>
+                                {formatBrand(card.brand)} •••• {card.last4}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: `rgba(${fg},0.4)`, marginTop: 2 }}>
+                                {t('ads.expires', {
+                                  expiry: `${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`,
+                                })}
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: 10,
+                                borderWidth: 2,
+                                borderColor: selected ? accentRgb : `rgba(${fg},0.2)`,
+                                backgroundColor: selected ? accentRgb : 'transparent',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {selected ? <Icon name="checkmark" size={12} color={bgRgb} /> : null}
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                      <Pressable
+                        onPress={() => setUseNewCard(true)}
+                        className="mt-1 h-[44px] flex-row items-center justify-center gap-2 rounded-2xl border border-dashed border-foreground/20 active:opacity-70"
+                      >
+                        <Icon name="add" size={15} color={`rgba(${fg},0.45)`} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: `rgba(${fg},0.45)` }}>
+                          {t('ads.useANewCard')}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <>
+                      <CardVisual
+                        brand={cardBrand}
+                        cardComplete={cardComplete}
+                        flipped={cardFlipped}
+                        last4={cardLast4}
+                        expiryMonth={cardExpMonth}
+                        expiryYear={cardExpYear}
+                        cvcFilled={cvcFilled}
+                        profileName={form.fullName.trim() || undefined}
+                        bgRgb={bgRgb}
+                        fgRgb={fgRgb}
+                        fg={fg}
+                        accentRgb={accentRgb}
+                        onCardChange={(details) => {
+                          setCardComplete(details.complete);
+                          if (details.brand) setCardBrand(details.brand);
+                          setCardLast4(details.last4 || undefined);
+                          setCardExpMonth(details.expiryMonth ?? undefined);
+                          setCardExpYear(details.expiryYear ?? undefined);
+                          setCvcFilled(details.complete);
+                          if (cardFlipped && details.expiryYear == null) {
+                            setCardFlipped(false);
+                          }
+                        }}
+                        onFocus={(field) => setCardFlipped(field === 'Cvc')}
+                      />
+                      {savedCards.length > 0 ? (
+                        <Pressable
+                          onPress={() => setUseNewCard(false)}
+                          className="mt-3 h-[40px] items-center justify-center active:opacity-70"
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: `rgba(${fg},0.45)` }}>
+                            {t('ads.useSavedCard')}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </>
+                  )}
                 </View>
 
                 {/* Business info recap */}
@@ -801,10 +899,10 @@ export default function AdvertiseApplyScreen() {
               ) : (
                 <Pressable
                   onPress={handleConfirmPayment}
-                  disabled={!cardComplete}
+                  disabled={!canPay}
                   className="h-[52px] flex-row items-center justify-center rounded-full active:opacity-90"
                   style={{
-                    backgroundColor: cardComplete
+                    backgroundColor: canPay
                       ? fgRgb
                       : `rgb(${colors.foreground.replace(/ /g, ',')} / 0.3)`,
                   }}
