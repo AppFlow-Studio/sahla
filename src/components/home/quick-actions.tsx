@@ -29,7 +29,7 @@ const TILE = 62;
  * without touching the five-tile row, which still spreads edge to edge exactly
  * as it always has.
  */
-const SHORT_ROW_GAP = 16;
+const SHORT_ROW_GAP = 22;
 
 export function QuickActions() {
   const { t } = useTranslation();
