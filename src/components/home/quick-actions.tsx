@@ -22,16 +22,6 @@ const QUICK_ACTIONS = [
   { id: 'quran', icon: 'book-open-variant' },
 ] as const;
 
-/**
- * Tiles flex to fill the row rather than sitting at a fixed 62px, so the set
- * still reads as one deliberate row when the Volunteer tile is absent. At the
- * usual five tiles the maths lands back on 62 (a 350pt content width less four
- * 10pt gaps, split five ways), so nothing moves for a masjid that has
- * volunteering set up. The cap stops four tiles from ballooning.
- */
-const TILE_GAP = 10;
-const TILE_MAX = 72;
-
 export function QuickActions() {
   const { t } = useTranslation();
   const { colors } = useMasjidConfig();
@@ -57,7 +47,7 @@ export function QuickActions() {
   };
 
   return (
-    <View className="flex-row" style={{ gap: TILE_GAP }}>
+    <View className="flex-row justify-between">
       {actions.map((action) => (
         <TouchableOpacity
           key={action.id}
@@ -65,15 +55,14 @@ export function QuickActions() {
           activeOpacity={0.7}
           onPress={() => handlePress(action.id)}
         >
-          {/* v2 (Figma node 365:4226): the label lives inside the tile under
-              the icon, in sentence case — it used to sit below the tile in
-              uppercase. */}
+          {/* v2 (Figma node 365:4226): the label lives inside the 62×62 tile
+              under the icon, in sentence case — it used to sit below the tile
+              in uppercase. */}
           <View
             className="items-center justify-center rounded-2xl border border-foreground/10 bg-muted"
             style={{
-              width: '100%',
-              maxWidth: TILE_MAX,
-              aspectRatio: 1,
+              height: 62,
+              width: 62,
               paddingHorizontal: 3,
               shadowColor: fgRgb,
               shadowOffset: { width: 0, height: 6 },
@@ -89,7 +78,7 @@ export function QuickActions() {
             />
             <Text
               // Longer translations ("رضاکارانہ خدمت" for volunteer) would
-              // overflow a narrow tile, so shrink to fit rather than ellipsize.
+              // overflow a 62px tile, so shrink to fit rather than ellipsize.
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.85}
