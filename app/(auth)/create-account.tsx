@@ -8,7 +8,7 @@ import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 
-import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
+import { OnboardingPatternHeader } from '@/src/components/onboarding/onboarding-pattern';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
@@ -59,6 +59,22 @@ function AuthButton({ label, variant, icon, onPress, loading }: AuthButtonProps)
       )}
     </Pressable>
   );
+}
+
+/**
+ * SSO failures used to be logged and swallowed, which on a release build (no
+ * Metro console) looked like a dead button: the spinner stopped and nothing
+ * else happened. Surface Clerk's own message so a failing provider config is
+ * visible on the device instead of only in a dev console.
+ */
+function ssoError(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'errors' in err) {
+    // @ts-expect-error Clerk error shape
+    const first = err.errors?.[0];
+    return first?.longMessage ?? first?.message ?? fallback;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
 }
 
 export default function CreateAccountScreen() {
@@ -179,16 +195,20 @@ export default function CreateAccountScreen() {
         result = await startAppleAuthenticationFlow();
       } else {
         result = await startSSOFlow({ strategy: 'oauth_apple', redirectUrl: OAUTH_REDIRECT_URL });
-        if (result.authSessionResult?.type === 'dismiss') return;
+        // Only a real user cancel is silent. Every other non-success (notably a
+        // redirect that never made it back to the app) falls through so
+        // activateOAuthSession reports it instead of looking like a dead button.
+        if (result.authSessionResult?.type === 'cancel') return;
       }
       await activateOAuthSession(result);
     } catch (err: any) {
       if (err?.code === 'ERR_REQUEST_CANCELED') return;
       console.error('[Auth] Apple error:', err);
+      setError(ssoError(err, t('auth.signInCouldNotComplete')));
     } finally {
       setLoading(null);
     }
-  }, [isSignedIn, signOut, startAppleAuthenticationFlow, startSSOFlow, activateOAuthSession]);
+  }, [isSignedIn, signOut, startAppleAuthenticationFlow, startSSOFlow, activateOAuthSession, t]);
 
   const handleGoogle = useCallback(async () => {
     console.log('[Auth] handleGoogle pressed');
@@ -196,14 +216,16 @@ export default function CreateAccountScreen() {
     setLoading('google');
     try {
       const result = await startSSOFlow({ strategy: 'oauth_google', redirectUrl: OAUTH_REDIRECT_URL });
-      if (result.authSessionResult?.type === 'dismiss') return;
+      // See handleApple: only a user cancel returns silently.
+      if (result.authSessionResult?.type === 'cancel') return;
       await activateOAuthSession(result);
     } catch (err) {
       console.error('[Auth] Google error:', err);
+      setError(ssoError(err, t('auth.signInCouldNotComplete')));
     } finally {
       setLoading(null);
     }
-  }, [isSignedIn, signOut, startSSOFlow, activateOAuthSession]);
+  }, [isSignedIn, signOut, startSSOFlow, activateOAuthSession, t]);
 
   const handleEmail = useCallback(() => {
     router.push('/(auth)/sign-up');
@@ -211,13 +233,7 @@ export default function CreateAccountScreen() {
 
   return (
     <View className="flex-1 bg-onboarding-bg">
-      <View
-        pointerEvents="none"
-        className="absolute inset-x-0 top-0"
-        style={{ height: '30%' }}
-      >
-        <OnboardingPattern />
-      </View>
+      <OnboardingPatternHeader />
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 justify-center" style={{ paddingHorizontal: 55 }}>
           <Text

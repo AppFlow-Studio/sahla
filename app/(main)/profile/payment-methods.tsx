@@ -32,7 +32,10 @@ import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 import { useSupabase } from '@/src/hooks/use-supabase';
 import { useProfile } from '@/src/hooks/use-profile';
 import { useConfigStore } from '@/src/stores/config-store';
+import { useStripeAccount } from '@/src/providers/stripe-account-provider';
 import { BackButton } from '@/src/components/ui/back-button';
+import { useStripe } from '@stripe/stripe-react-native';
+import * as Linking from 'expo-linking';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -146,9 +149,12 @@ export default function PaymentMethodsScreen() {
   const router = useRouter();
   const supabase = useSupabase();
   const { profile } = useProfile();
-  const { colors } = useMasjidConfig();
+  const config = useMasjidConfig();
+  const { colors } = config;
   useAutoStatusBarStyle(colors.background);
   const mosqueUuid = useConfigStore((s) => s.mosqueUuid);
+  const { setStripeAccountId } = useStripeAccount();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
@@ -162,6 +168,7 @@ export default function PaymentMethodsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [addingCard, setAddingCard] = useState(false);
 
   const loadCards = useCallback(async () => {
     if (!profile?.id || !mosqueUuid) return;
@@ -197,6 +204,80 @@ export default function PaymentMethodsScreen() {
     setRefreshing(true);
     loadCards().finally(() => setRefreshing(false));
   }, [loadCards]);
+
+  // Save a card with no charge. create-setup-intent returns a SetupIntent on
+  // the mosque's connected account; PaymentSheet in setup mode collects the
+  // card against it, so the result lands in get-payment-methods and the
+  // donation sheet's saved-card picker can charge it later.
+  const handleAddCard = useCallback(async () => {
+    if (addingCard) return;
+    if (!profile?.id || !mosqueUuid) {
+      Alert.alert(t('profile.addCardErrorTitle'), t('profile.addCardUnavailable'));
+      return;
+    }
+
+    setAddingCard(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-setup-intent', {
+        body: {
+          user_id: profile.id,
+          mosque_id: mosqueUuid,
+          customer_email: profile.profile_email ?? undefined,
+        },
+      });
+
+      if (error || !data?.clientSecret) {
+        const body = error?.context ? await error.context.json().catch(() => null) : null;
+        throw new Error(body?.error ?? data?.error ?? error?.message ?? 'setup intent failed');
+      }
+
+      // StripeProvider must re-render with the connected account before
+      // PaymentSheet initialises, same one-frame handoff the donation sheet uses.
+      setStripeAccountId(data.stripeAccountId);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: config.displayName,
+        setupIntentClientSecret: data.clientSecret,
+        customerId: data.customerId,
+        customerEphemeralKeySecret: data.ephemeralKey,
+        // Built from the app's own scheme rather than hardcoded: each tenant
+        // ships its own `sahla-<slug>` scheme, so a literal `sahla://` would
+        // not be registered and 3DS would never return to the app.
+        returnURL: Linking.createURL('stripe-redirect'),
+      });
+      if (initError) throw new Error(initError.message);
+
+      const { error: sheetError } = await presentPaymentSheet();
+      // Canceled is the user backing out, not a failure worth an alert.
+      if (sheetError) {
+        if (sheetError.code !== 'Canceled') throw new Error(sheetError.message);
+        return;
+      }
+
+      await loadCards();
+    } catch (err: any) {
+      Alert.alert(
+        t('profile.addCardErrorTitle'),
+        err?.message ?? t('profile.addCardErrorBody'),
+      );
+    } finally {
+      setStripeAccountId(undefined);
+      setAddingCard(false);
+    }
+  }, [
+    addingCard,
+    profile?.id,
+    profile?.profile_email,
+    mosqueUuid,
+    supabase,
+    setStripeAccountId,
+    initPaymentSheet,
+    presentPaymentSheet,
+    loadCards,
+    config.displayName,
+    t,
+  ]);
 
   const handleDelete = (card: SavedPaymentMethod) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -294,8 +375,9 @@ export default function PaymentMethodsScreen() {
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                Alert.alert(t('profile.comingSoon'), t('profile.cardManagementSoon'));
+                handleAddCard();
               }}
+              disabled={addingCard}
               style={{
                 backgroundColor: primaryRgb,
                 borderRadius: 14,
@@ -304,11 +386,16 @@ export default function PaymentMethodsScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 24,
+                opacity: addingCard ? 0.6 : 1,
               }}
             >
-              <Icon name="add" size={20} color={pfgRgb} />
+              {addingCard ? (
+                <ActivityIndicator size="small" color={pfgRgb} />
+              ) : (
+                <Icon name="add" size={20} color={pfgRgb} />
+              )}
               <Text style={{ fontSize: 15, fontWeight: '600', color: pfgRgb, marginStart: 8 }}>
-                {t('profile.addNewCard')}
+                {addingCard ? t('profile.addingCard') : t('profile.addNewCard')}
               </Text>
             </Pressable>
           </Animated.View>

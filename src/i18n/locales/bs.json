@@ -56,6 +56,15 @@
     "iqamahTimesSubtitle": "Postavi ikamet za svaki dnevni namaz",
     "businessAds": "Poslovni oglasi",
     "businessAdsSubtitle": "Pregledaj i odobri prijave za oglase",
+    "volunteer": "Volontiranje",
+    "volunteerSubtitle": "Gdje se članovi prijavljuju za pomoć",
+    "volunteerIntro": "Dodajte link na kojem vaš mesdžid prima prijave volontera — formular, stranicu na vašem sajtu ili bilo šta što već koristite. Otvara se unutar aplikacije preko dugmeta Volontiraj na početnoj.",
+    "volunteerLink": "Link za prijavu",
+    "volunteerPlaceholder": "https://vasmesdzid.org/volontiranje",
+    "volunteerInvalid": "Ovo ne izgleda kao ispravna web adresa.",
+    "volunteerEmptyHint": "Ostavite prazno da sakrijete dugme Volontiraj na početnoj.",
+    "volunteerSavedHint": "Članovi će ovo otvoriti preko dugmeta Volontiraj na početnoj.",
+    "volunteerPreview": "Otvori link i provjeri",
     "filter": "Filter",
     "clear": "Očisti",
     "selectDate": "Odaberi datum",
@@ -238,6 +247,9 @@
     "perMonth": "{{amount}}/mjesec",
     "endingSoonSuffix": " · uskoro završava",
     "cancelSubscription": "Otkaži pretplatu",
+    "renewSubscription": "Obnovi pretplatu",
+    "renewedLabel": "Obnovljeno — zamijenjeno novijim oglasom",
+    "advertiseAnother": "Oglasite još jedan posao",
     "cancelConfirmTitle": "Otkazati pretplatu?",
     "cancelConfirmMessage": "{{name}} će ostati aktivan do kraja trenutnog perioda naplate, a zatim se zaustaviti.",
     "keepIt": "Zadrži",
@@ -264,6 +276,9 @@
     "orderSummary": "Sažetak narudžbe",
     "processingPayment": "Obrada vaše uplate...",
     "cardDetails": "Podaci o kartici",
+    "expires": "Ističe {{expiry}}",
+    "useANewCard": "Koristi novu karticu",
+    "useSavedCard": "Koristi sačuvanu karticu",
     "applyingAs": "Prijava kao",
     "personalInformation": "Lični podaci",
     "fullName": "Puno ime",
@@ -299,11 +314,7 @@
     "paymentLabel": "Uplata",
     "thankYouAdvertising": "Hvala što se oglašavate s nama",
     "notChargedUntilConfirm": "Nećete biti naplaćeni dok ne potvrdite",
-    "soonTitle": "Oglašavanje uskoro stiže",
-    "soonBody": "Poslovni oglasi još nisu dostupni u ovoj verziji. Javit ćemo vam kada budu aktivni.",
-    "soonCta": "U redu",
-    "reachLine": "Oglašavajte svoj posao za više od 3.000 članova zajednice putem aplikacije.",
-    "pricingComingSoon": "Cijene ćemo objaviti kada oglašavanje bude aktivno."
+    "reachLine": "Oglašavajte svoj posao za više od 3.000 članova zajednice putem aplikacije."
   },
   "auth": {
     "devSignOutReset": "[DEV] Odjava i resetovanje",
@@ -332,6 +343,8 @@
     "alreadyHaveAccount": "Već imate nalog? ",
     "joinOrgFailed": "Pridruživanje organizaciji nije uspjelo. Molimo pokušajte ponovo.",
     "signInFailed": "Prijava nije uspjela",
+    "noAccountAtMasjid": "Još nemate račun za {{masjid}}. Kreirajte ga da započnete.",
+    "savePreferencesFailed": "Nismo mogli sačuvati vaše postavke. Pokušajte se odjaviti i ponovo prijaviti.",
     "additionalStepRequired": "Potreban dodatni korak: {{status}}",
     "signInCouldNotComplete": "Prijava nije mogla biti dovršena. Molimo pokušajte ponovo.",
     "createTitle": "Kreirajte svoj\nnalog",
@@ -528,10 +541,7 @@
     "errorTitle": "Greška",
     "somethingWentWrong": "Nešto je pošlo po zlu.",
     "paymentNotCompleted": "Uplata nije dovršena.",
-    "paymentFailedTitle": "Uplata nije uspjela",
-    "soonTitle": "Donacije uskoro stižu",
-    "soonBody": "Doniranje još nije dostupno u ovoj verziji. Javit ćemo vam čim bude aktivno.",
-    "soonCta": "U redu"
+    "paymentFailedTitle": "Uplata nije uspjela"
   },
   "home": {
     "greeting": "Esselamu alejkum",
@@ -840,8 +850,6 @@
     "failedToRemoveCard": "Uklanjanje kartice nije uspjelo",
     "securedByStripe": "OSIGURANO PUTEM STRIPE",
     "stripeSecurityBody": "Vaši načini plaćanja su sigurno pohranjeni putem Stripe. Podaci o kartici se nikada ne čuvaju na našim serverima.",
-    "comingSoon": "Uskoro",
-    "cardManagementSoon": "Upravljanje karticama će uskoro biti dostupno.",
     "addNewCard": "Dodaj novu karticu",
     "noSavedCards": "Nema sačuvanih kartica",
     "noSavedCardsBody": "Dodirnite \"Dodaj novu karticu\" da sačuvate način plaćanja za brze buduće donacije.",
@@ -866,7 +874,11 @@
     "termsRow": "Uvjeti korištenja",
     "privacyRow": "Politika privatnosti",
     "sectionLegal": "Pravno",
-    "legalRow": "Uvjeti i privatnost"
+    "legalRow": "Uvjeti i privatnost",
+    "addingCard": "Dodavanje kartice…",
+    "addCardErrorTitle": "Kartica nije dodana",
+    "addCardErrorBody": "Došlo je do greške pri dodavanju kartice. Pokušajte ponovo.",
+    "addCardUnavailable": "Upravljanje karticama trenutno nije dostupno. Pokušajte uskoro."
   },
   "watch": {
     "notInterested": "Nisam zainteresovan",
@@ -903,7 +915,8 @@
     "noConnection": "Nema veze",
     "noConnectionBody": "Provjerite svoju internet vezu\ni pokušajte ponovo",
     "tryAgain": "Pokušaj ponovo",
-    "noReels": "Još nema reelova"
+    "noReels": "Još nema reelova",
+    "noReelsBody": "Novi isječci iz tvoje džamije\npojavit će se ovdje"
   },
   "legal": {
     "termsTitle": "Uvjeti korištenja",

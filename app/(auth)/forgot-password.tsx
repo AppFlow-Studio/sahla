@@ -1,20 +1,40 @@
-import { useSignIn } from '@clerk/clerk-expo';
+import { useClerk, useSignIn } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
+import { OnboardingPatternHeader } from '@/src/components/onboarding/onboarding-pattern';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
+import { checkMasjidMembership } from '@/src/lib/check-masjid-membership';
+import { joinOrgDirect } from '@/src/lib/join-org-direct';
 import { BackButton } from '@/src/components/ui/back-button';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
 
 type Step = 'email' | 'code' | 'new-password';
 
+/**
+ * `clerk.user` is not populated synchronously after `setActive` — the session
+ * has to propagate first. Poll briefly rather than guessing a fixed delay.
+ */
+async function resolveUserId(
+  clerk: ReturnType<typeof useClerk>,
+  timeoutMs = 3000,
+): Promise<string | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const id = clerk.user?.id;
+    if (id) return id;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return undefined;
+}
+
 export default function ForgotPasswordScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
+  const clerk = useClerk();
   const router = useRouter();
   const { t } = useTranslation();
   const config = useMasjidConfig();
@@ -45,6 +65,18 @@ export default function ForgotPasswordScreen() {
     setError(null);
     setSubmitting(true);
     try {
+      // Clerk would happily reset the password of an account that belongs to a
+      // DIFFERENT masjid — one Clerk instance backs every masjid app. Resetting
+      // it would sign the person into a tenant they aren't a member of, so stop
+      // before a code is ever sent and point them at sign-up instead.
+      if (config.clerkOrgId) {
+        const isMember = await checkMasjidMembership(config.clerkOrgId, { email });
+        if (!isMember) {
+          setError(t('auth.noAccountAtMasjid', { masjid: config.displayName }));
+          return;
+        }
+      }
+
       await signIn.create({
         strategy: 'reset_password_email_code',
         identifier: email,
@@ -55,7 +87,7 @@ export default function ForgotPasswordScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, email, submitting, t]);
+  }, [isLoaded, signIn, email, submitting, config.clerkOrgId, config.displayName, t]);
 
   const onVerifyCode = useCallback(async () => {
     if (!isLoaded || submitting) return;
@@ -90,6 +122,15 @@ export default function ForgotPasswordScreen() {
       const result = await signIn.resetPassword({ password });
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
+        // Parity with sign-in / sign-up / two-factor: the session needs the
+        // masjid org active or its JWT carries no `org_id` claim, and every
+        // tenant-scoped RLS write (personalization included) is rejected.
+        const orgId = config.clerkOrgId;
+        const userId = await resolveUserId(clerk);
+        if (orgId && userId) {
+          await joinOrgDirect(userId, orgId);
+          await clerk.setActive({ organization: orgId });
+        }
         router.replace('/(auth)/sign-in');
       } else {
         setError(t('auth.unexpectedStatus', { status: result.status }));
@@ -99,7 +140,7 @@ export default function ForgotPasswordScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [isLoaded, signIn, password, setActive, submitting, router, t]);
+  }, [isLoaded, signIn, password, setActive, submitting, router, clerk, config.clerkOrgId, t]);
 
   const titles: Record<Step, string> = {
     email: t('auth.resetTitle'),
@@ -109,9 +150,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <View className="flex-1 bg-onboarding-bg">
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
-        <OnboardingPattern />
-      </View>
+      <OnboardingPatternHeader />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-5 pt-2">

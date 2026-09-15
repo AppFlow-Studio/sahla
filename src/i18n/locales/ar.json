@@ -56,6 +56,15 @@
     "iqamahTimesSubtitle": "تحديد الإقامة لكل صلاة يومية",
     "businessAds": "إعلانات الأعمال",
     "businessAdsSubtitle": "مراجعة طلبات الإعلانات والموافقة عليها",
+    "volunteer": "التطوع",
+    "volunteerSubtitle": "حيث يسجّل الأعضاء للمساعدة",
+    "volunteerIntro": "أضف الرابط الذي يستقبل فيه مسجدك طلبات التطوع — نموذج أو صفحة في موقعكم أو أي أداة تستخدمونها. سيُفتح داخل التطبيق من زر التطوع في الصفحة الرئيسية.",
+    "volunteerLink": "رابط التسجيل",
+    "volunteerPlaceholder": "https://yourmasjid.org/volunteer",
+    "volunteerInvalid": "لا يبدو هذا عنوان ويب صالحًا.",
+    "volunteerEmptyHint": "اتركه فارغًا لإخفاء زر التطوع في الصفحة الرئيسية.",
+    "volunteerSavedHint": "سيفتح الأعضاء هذا الرابط من زر التطوع في الصفحة الرئيسية.",
+    "volunteerPreview": "افتح الرابط للتحقق منه",
     "filter": "تصفية",
     "clear": "مسح",
     "selectDate": "اختر التاريخ",
@@ -247,6 +256,9 @@
     "perMonth": "{{amount}}/شهر",
     "endingSoonSuffix": " · ينتهي قريبًا",
     "cancelSubscription": "إلغاء الاشتراك",
+    "renewSubscription": "تجديد الاشتراك",
+    "renewedLabel": "تم التجديد — استُبدل بإعلان أحدث",
+    "advertiseAnother": "أعلن عن نشاط تجاري آخر",
     "cancelConfirmTitle": "إلغاء الاشتراك؟",
     "cancelConfirmMessage": "سيبقى {{name}} نشطًا حتى نهاية فترة الفوترة الحالية، ثم يتوقف.",
     "keepIt": "الإبقاء عليه",
@@ -273,6 +285,9 @@
     "orderSummary": "ملخص الطلب",
     "processingPayment": "جارٍ معالجة دفعتك...",
     "cardDetails": "تفاصيل البطاقة",
+    "expires": "تنتهي {{expiry}}",
+    "useANewCard": "استخدم بطاقة جديدة",
+    "useSavedCard": "استخدم بطاقة محفوظة",
     "applyingAs": "التقديم باسم",
     "personalInformation": "المعلومات الشخصية",
     "fullName": "الاسم الكامل",
@@ -308,11 +323,7 @@
     "paymentLabel": "الدفع",
     "thankYouAdvertising": "شكرًا لإعلانك معنا",
     "notChargedUntilConfirm": "لن يتم خصم أي مبلغ حتى تؤكد",
-    "soonTitle": "الإعلانات قادمة قريباً",
-    "soonBody": "إعلانات الأعمال غير متاحة في هذا الإصدار بعد. سنتواصل معك عند توفرها.",
-    "soonCta": "حسناً",
-    "reachLine": "أعلن عن عملك لأكثر من 3,000 فرد من أفراد المجتمع عبر التطبيق.",
-    "pricingComingSoon": "سيتم مشاركة الأسعار عند إطلاق خدمة الإعلانات."
+    "reachLine": "أعلن عن عملك لأكثر من 3,000 فرد من أفراد المجتمع عبر التطبيق."
   },
   "auth": {
     "devSignOutReset": "[DEV] تسجيل الخروج وإعادة التعيين",
@@ -341,6 +352,8 @@
     "alreadyHaveAccount": "هل لديك حساب بالفعل؟ ",
     "joinOrgFailed": "تعذّر الانضمام إلى المؤسسة. يرجى المحاولة مرة أخرى.",
     "signInFailed": "فشل تسجيل الدخول",
+    "noAccountAtMasjid": "لا يوجد حساب في {{masjid}} بعد. أنشئ حسابًا للبدء.",
+    "savePreferencesFailed": "تعذر حفظ تفضيلاتك. جرّب تسجيل الخروج ثم الدخول مرة أخرى.",
     "additionalStepRequired": "مطلوب خطوة إضافية: {{status}}",
     "signInCouldNotComplete": "تعذّر إكمال تسجيل الدخول. يرجى المحاولة مرة أخرى.",
     "createTitle": "أنشئ\nحسابك",
@@ -537,10 +550,7 @@
     "errorTitle": "خطأ",
     "somethingWentWrong": "حدث خطأ ما.",
     "paymentNotCompleted": "لم تكتمل عملية الدفع.",
-    "paymentFailedTitle": "فشل الدفع",
-    "soonTitle": "التبرعات قادمة قريباً",
-    "soonBody": "التبرع غير متاح في هذا الإصدار بعد. سنعلمك فور توفره.",
-    "soonCta": "حسناً"
+    "paymentFailedTitle": "فشل الدفع"
   },
   "home": {
     "greeting": "السلام عليكم",
@@ -858,8 +868,6 @@
     "failedToRemoveCard": "تعذّرت إزالة البطاقة",
     "securedByStripe": "مؤمّن بواسطة Stripe",
     "stripeSecurityBody": "يتم تخزين طرق الدفع الخاصة بك بأمان بواسطة Stripe. لا يتم تخزين تفاصيل البطاقة على خوادمنا أبدًا.",
-    "comingSoon": "قريبًا",
-    "cardManagementSoon": "ستتوفر إدارة البطاقات قريبًا.",
     "addNewCard": "إضافة بطاقة جديدة",
     "noSavedCards": "لا توجد بطاقات محفوظة",
     "noSavedCardsBody": "اضغط على \"إضافة بطاقة جديدة\" لحفظ طريقة دفع للتبرعات المستقبلية السريعة.",
@@ -887,7 +895,11 @@
     "termsRow": "شروط الاستخدام",
     "privacyRow": "سياسة الخصوصية",
     "sectionLegal": "قانوني",
-    "legalRow": "الشروط والخصوصية"
+    "legalRow": "الشروط والخصوصية",
+    "addingCard": "جارٍ إضافة البطاقة…",
+    "addCardErrorTitle": "تعذّرت إضافة البطاقة",
+    "addCardErrorBody": "حدث خطأ أثناء إضافة بطاقتك. يُرجى المحاولة مرة أخرى.",
+    "addCardUnavailable": "إدارة البطاقات غير متاحة حاليًا. يُرجى المحاولة بعد قليل."
   },
   "watch": {
     "notInterested": "غير مهتم",
@@ -924,7 +936,8 @@
     "noConnection": "لا يوجد اتصال",
     "noConnectionBody": "تحقق من اتصالك بالإنترنت\nوحاول مرة أخرى",
     "tryAgain": "حاول مرة أخرى",
-    "noReels": "لا توجد مقاطع بعد"
+    "noReels": "لا توجد مقاطع بعد",
+    "noReelsBody": "ستظهر هنا المقاطع الجديدة\nمن مسجدك"
   },
   "legal": {
     "termsTitle": "شروط الاستخدام",

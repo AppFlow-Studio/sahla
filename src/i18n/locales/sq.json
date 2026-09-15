@@ -56,6 +56,15 @@
     "iqamahTimesSubtitle": "Cakto ikametin për çdo namaz ditor",
     "businessAds": "Reklamat e bizneseve",
     "businessAdsSubtitle": "Shqyrto dhe mirato aplikimet për reklama",
+    "volunteer": "Vullnetarizëm",
+    "volunteerSubtitle": "Ku anëtarët regjistrohen për të ndihmuar",
+    "volunteerIntro": "Shto lidhjen ku xhamia juaj pranon regjistrime vullnetarësh — një formular, një faqe në sitin tuaj, ose çfarëdo që përdorni tashmë. Hapet brenda aplikacionit nga butoni Vullnetar në Ballina.",
+    "volunteerLink": "Lidhja e regjistrimit",
+    "volunteerPlaceholder": "https://xhamiajuaj.org/vullnetar",
+    "volunteerInvalid": "Kjo nuk duket si adresë interneti e vlefshme.",
+    "volunteerEmptyHint": "Lëreni bosh për ta fshehur butonin Vullnetar në Ballina.",
+    "volunteerSavedHint": "Anëtarët do ta hapin këtë nga butoni Vullnetar në Ballina.",
+    "volunteerPreview": "Hap lidhjen për ta kontrolluar",
     "filter": "Filtro",
     "clear": "Pastro",
     "selectDate": "Zgjidh datën",
@@ -235,6 +244,9 @@
     "perMonth": "{{amount}}/muaj",
     "endingSoonSuffix": " · përfundon së shpejti",
     "cancelSubscription": "Anulo abonimin",
+    "renewSubscription": "Rinovo abonimin",
+    "renewedLabel": "Rinovuar — zëvendësuar nga një reklamë më e re",
+    "advertiseAnother": "Reklamo një biznes tjetër",
     "cancelConfirmTitle": "Ta anuloni abonimin?",
     "cancelConfirmMessage": "{{name}} do të mbetet aktive deri në fund të periudhës aktuale të faturimit, pastaj ndalon.",
     "keepIt": "Mbaje",
@@ -261,6 +273,9 @@
     "orderSummary": "Përmbledhja e porosisë",
     "processingPayment": "Duke përpunuar pagesën tuaj...",
     "cardDetails": "Detajet e kartës",
+    "expires": "Skadon {{expiry}}",
+    "useANewCard": "Përdor një kartë të re",
+    "useSavedCard": "Përdor një kartë të ruajtur",
     "applyingAs": "Duke aplikuar si",
     "personalInformation": "Informacioni personal",
     "fullName": "Emri i plotë",
@@ -296,11 +311,7 @@
     "paymentLabel": "Pagesa",
     "thankYouAdvertising": "Faleminderit që reklamoni me ne",
     "notChargedUntilConfirm": "Nuk do të tarifoheni derisa të konfirmoni",
-    "soonTitle": "Reklamimi po vjen së shpejti",
-    "soonBody": "Reklamat e bizneseve nuk janë ende të disponueshme në këtë version. Do t'ju njoftojmë kur të aktivizohen.",
-    "soonCta": "E kuptova",
-    "reachLine": "Reklamoni biznesin tuaj te mbi 3,000 anëtarë të komunitetit përmes aplikacionit.",
-    "pricingComingSoon": "Çmimet do të ndahen kur reklamimi të aktivizohet."
+    "reachLine": "Reklamoni biznesin tuaj te mbi 3,000 anëtarë të komunitetit përmes aplikacionit."
   },
   "auth": {
     "devSignOutReset": "[DEV] Dil & rivendos",
@@ -329,6 +340,8 @@
     "alreadyHaveAccount": "Keni tashmë një llogari? ",
     "joinOrgFailed": "Bashkimi me organizatën dështoi. Ju lutemi provoni përsëri.",
     "signInFailed": "Kyçja dështoi",
+    "noAccountAtMasjid": "Ende nuk keni llogari në {{masjid}}. Krijoni një për të filluar.",
+    "savePreferencesFailed": "Nuk arritëm t’i ruajmë preferencat e tua. Provo të dilesh dhe të hysh sërish.",
     "additionalStepRequired": "Kërkohet hap shtesë: {{status}}",
     "signInCouldNotComplete": "Kyçja nuk u përfundua dot. Ju lutemi provoni përsëri.",
     "createTitle": "Krijo\nllogarinë tënde",
@@ -525,10 +538,7 @@
     "errorTitle": "Gabim",
     "somethingWentWrong": "Diçka shkoi keq.",
     "paymentNotCompleted": "Pagesa nuk u përfundua.",
-    "paymentFailedTitle": "Pagesa dështoi",
-    "soonTitle": "Donacionet po vijnë së shpejti",
-    "soonBody": "Dhurimi nuk është ende i disponueshëm në këtë version. Do t'ju njoftojmë sapo të aktivizohet.",
-    "soonCta": "E kuptova"
+    "paymentFailedTitle": "Pagesa dështoi"
   },
   "home": {
     "greeting": "Es-selamu alejkum",
@@ -834,8 +844,6 @@
     "failedToRemoveCard": "Heqja e kartës dështoi",
     "securedByStripe": "SIGURUAR NGA STRIPE",
     "stripeSecurityBody": "Metodat tuaja të pagesës ruhen në mënyrë të sigurt nga Stripe. Detajet e kartës nuk ruhen kurrë në serverët tanë.",
-    "comingSoon": "Së shpejti",
-    "cardManagementSoon": "Menaxhimi i kartave do të jetë i disponueshëm së shpejti.",
     "addNewCard": "Shto kartë të re",
     "noSavedCards": "Nuk ka karta të ruajtura",
     "noSavedCardsBody": "Prek \"Shto kartë të re\" për të ruajtur një metodë pagese për dhurime të shpejta në të ardhmen.",
@@ -859,7 +867,11 @@
     "termsRow": "Kushtet e përdorimit",
     "privacyRow": "Politika e privatësisë",
     "sectionLegal": "Ligjore",
-    "legalRow": "Kushtet dhe privatësia"
+    "legalRow": "Kushtet dhe privatësia",
+    "addingCard": "Po shtohet karta…",
+    "addCardErrorTitle": "Karta nuk u shtua",
+    "addCardErrorBody": "Diçka shkoi keq gjatë shtimit të kartës. Ju lutemi provoni sërish.",
+    "addCardUnavailable": "Menaxhimi i kartave nuk është i disponueshëm për momentin. Provoni së shpejti."
   },
   "watch": {
     "notInterested": "Jo i interesuar",
@@ -896,7 +908,8 @@
     "noConnection": "Nuk ka lidhje",
     "noConnectionBody": "Kontrollo lidhjen tënde të internetit\ndhe provo përsëri",
     "tryAgain": "Provo përsëri",
-    "noReels": "Ende nuk ka reel-e"
+    "noReels": "Ende nuk ka reel-e",
+    "noReelsBody": "Klipet e reja nga xhamia jote\ndo të shfaqen këtu"
   },
   "legal": {
     "termsTitle": "Kushtet e përdorimit",

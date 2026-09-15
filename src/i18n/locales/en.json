@@ -56,6 +56,15 @@
     "iqamahTimesSubtitle": "Set iqamah for each daily prayer",
     "businessAds": "Business Ads",
     "businessAdsSubtitle": "Review and approve ad applications",
+    "volunteer": "Volunteer",
+    "volunteerSubtitle": "Where members sign up to help",
+    "volunteerIntro": "Add the link where your masjid takes volunteer sign-ups — a form, a page on your site, or whatever you already use. It opens inside the app from the Volunteer button on Home.",
+    "volunteerLink": "Sign-up link",
+    "volunteerPlaceholder": "https://yourmasjid.org/volunteer",
+    "volunteerInvalid": "That doesn't look like a valid web address.",
+    "volunteerEmptyHint": "Leave this empty to hide the Volunteer button on Home.",
+    "volunteerSavedHint": "Members will open this from the Volunteer button on Home.",
+    "volunteerPreview": "Open link to check it",
     "filter": "Filter",
     "clear": "Clear",
     "selectDate": "Select date",
@@ -235,6 +244,9 @@
     "perMonth": "{{amount}}/month",
     "endingSoonSuffix": " · ending soon",
     "cancelSubscription": "Cancel subscription",
+    "renewSubscription": "Renew subscription",
+    "renewedLabel": "Renewed — replaced by a newer ad",
+    "advertiseAnother": "Advertise another business",
     "cancelConfirmTitle": "Cancel subscription?",
     "cancelConfirmMessage": "{{name}} will stay active until the end of the current billing period, then stop.",
     "keepIt": "Keep it",
@@ -261,6 +273,9 @@
     "orderSummary": "Order Summary",
     "processingPayment": "Processing your payment...",
     "cardDetails": "Card Details",
+    "expires": "Expires {{expiry}}",
+    "useANewCard": "Use a new card",
+    "useSavedCard": "Use a saved card",
     "applyingAs": "Applying as",
     "personalInformation": "Personal Information",
     "fullName": "Full Name",
@@ -296,11 +311,7 @@
     "paymentLabel": "Payment",
     "thankYouAdvertising": "Thank you for advertising with us",
     "notChargedUntilConfirm": "You won't be charged until you confirm",
-    "soonTitle": "Advertising is coming soon",
-    "soonBody": "Business listings aren't available in this version yet. We'll be in touch when they go live.",
-    "soonCta": "Got it",
-    "reachLine": "Advertise your business to 3,000+ community members through the app.",
-    "pricingComingSoon": "Pricing will be shared when advertising goes live."
+    "reachLine": "Advertise your business to 3,000+ community members through the app."
   },
   "auth": {
     "devSignOutReset": "[DEV] Sign out & reset",
@@ -329,6 +340,8 @@
     "alreadyHaveAccount": "Already have an account? ",
     "joinOrgFailed": "Failed to join organization. Please try again.",
     "signInFailed": "Sign-in failed",
+    "noAccountAtMasjid": "No account at {{masjid}} yet. Create one to get started.",
+    "savePreferencesFailed": "We couldn't save your preferences. Try signing out and back in.",
     "additionalStepRequired": "Additional step required: {{status}}",
     "signInCouldNotComplete": "Sign-in could not be completed. Please try again.",
     "createTitle": "Create your\naccount",
@@ -525,10 +538,7 @@
     "errorTitle": "Error",
     "somethingWentWrong": "Something went wrong.",
     "paymentNotCompleted": "Payment was not completed.",
-    "paymentFailedTitle": "Payment failed",
-    "soonTitle": "Donations are coming soon",
-    "soonBody": "Giving isn't available in this version yet. We'll let you know as soon as it's live.",
-    "soonCta": "Got it"
+    "paymentFailedTitle": "Payment failed"
   },
   "home": {
     "greeting": "Assalamu Alaikum",
@@ -842,8 +852,6 @@
     "failedToRemoveCard": "Failed to remove card",
     "securedByStripe": "SECURED BY STRIPE",
     "stripeSecurityBody": "Your payment methods are securely stored by Stripe. Card details are never stored on our servers.",
-    "comingSoon": "Coming Soon",
-    "cardManagementSoon": "Card management will be available soon.",
     "addNewCard": "Add New Card",
     "noSavedCards": "No Saved Cards",
     "noSavedCardsBody": "Tap \"Add New Card\" to save a payment method for quick future donations.",
@@ -871,7 +879,11 @@
     "termsRow": "Terms of Use",
     "privacyRow": "Privacy Policy",
     "sectionLegal": "Legal",
-    "legalRow": "Terms & Privacy"
+    "legalRow": "Terms & Privacy",
+    "addingCard": "Adding card…",
+    "addCardErrorTitle": "Couldn't add card",
+    "addCardErrorBody": "Something went wrong adding your card. Please try again.",
+    "addCardUnavailable": "Card management isn't available right now. Please try again shortly."
   },
   "watch": {
     "notInterested": "Not interested",
@@ -908,7 +920,8 @@
     "noConnection": "No connection",
     "noConnectionBody": "Check your internet connection\nand try again",
     "tryAgain": "Try again",
-    "noReels": "No reels yet"
+    "noReels": "No reels yet",
+    "noReelsBody": "New clips from your masjid\nwill appear here"
   },
   "tutorial": {
     "next": "Next",

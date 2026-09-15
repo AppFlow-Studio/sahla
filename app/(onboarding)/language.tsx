@@ -48,7 +48,7 @@ export default function LanguageScreen() {
 
   return (
     <View className="flex-1 bg-onboarding-bg">
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '30%' }}>
+      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '10%' }}>
         <OnboardingPattern />
       </View>
 
