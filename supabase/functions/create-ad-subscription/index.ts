@@ -61,6 +61,7 @@ serve(async (req: Request) => {
       business_name,
       business_address,
       business_flyer_img,
+      renewed_from,
     } = await req.json();
 
     if (!user_id || !mosque_id) {
@@ -116,6 +117,9 @@ serve(async (req: Request) => {
         business_name: business_name ?? null,
         business_address: business_address ?? null,
         business_flyer_img: business_flyer_img ?? null,
+        // Set when the advertiser renewed an ended ad, so get-ad-status can
+        // stop offering "Renew" on the one this replaces.
+        renewed_from_submission_id: renewed_from ?? null,
         status: "pending_payment",
       })
       .select("submission_id")

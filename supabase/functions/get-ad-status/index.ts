@@ -40,7 +40,7 @@ serve(async (req: Request) => {
     // incomplete Stripe subscriptions the advertiser never completed.
     const { data: subs, error: subErr } = await supabase
       .from("business_ads_submissions")
-      .select("submission_id, business_name, business_flyer_img, status, created_at")
+      .select("submission_id, business_name, business_address, business_flyer_img, personal_full_name, personal_email, personal_phone, status, created_at")
       .eq("user_id", user_id)
       .eq("mosque_id", mosque_id)
       .neq("status", "pending_payment")
@@ -48,6 +48,22 @@ serve(async (req: Request) => {
     if (subErr) throw new Error(subErr.message);
 
     const ids = (subs ?? []).map((s) => s.submission_id);
+
+    // Which of these ads have already been renewed? Abandoned renew attempts
+    // are excluded — they stay 'pending_payment' forever, and counting them
+    // would permanently disable Renew on an ad the advertiser never replaced.
+    const renewedIds = new Set<string>();
+    if (ids.length > 0) {
+      const { data: successors } = await supabase
+        .from("business_ads_submissions")
+        .select("renewed_from_submission_id")
+        .in("renewed_from_submission_id", ids)
+        .neq("status", "pending_payment");
+      for (const r of successors ?? []) {
+        if (r.renewed_from_submission_id) renewedIds.add(r.renewed_from_submission_id);
+      }
+    }
+
     const adSubBySubmission: Record<string, any> = {};
     if (ids.length > 0) {
       const { data: adSubs } = await supabase
@@ -72,6 +88,17 @@ serve(async (req: Request) => {
         start_date: adSub?.start_date ?? null,
         can_cancel:
           subscriptionStatus === "active" || subscriptionStatus === "past_due",
+        // Dead ad → offer a re-application prefilled from this business, so an
+        // advertiser with several businesses renews the right one. 'canceling'
+        // is excluded: that ad is still live until the period closes, and an
+        // already-renewed ad is excluded so renewing twice can't charge the
+        // onboarding fee again for a business that is already running.
+        can_renew: subscriptionStatus === "canceled" && !renewedIds.has(s.submission_id),
+        renewed: renewedIds.has(s.submission_id),
+        business_address: s.business_address,
+        personal_full_name: s.personal_full_name,
+        personal_email: s.personal_email,
+        personal_phone: s.personal_phone,
       };
     });
 

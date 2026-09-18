@@ -2,9 +2,11 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as WebBrowser from 'expo-web-browser';
 
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useDonation } from '@/src/providers/donation-provider';
+import { useVolunteerUrl } from '@/src/hooks/use-volunteer';
 
 /**
  * Rendered with MaterialCommunityIcons rather than the shared `Icon` wrapper:
@@ -20,24 +22,52 @@ const QUICK_ACTIONS = [
   { id: 'quran', icon: 'book-open-variant' },
 ] as const;
 
+const TILE = 62;
+/**
+ * Gap to hold the row to when a tile is missing. justify-between across the
+ * full width flings four tiles ~29pt apart; this pulls them back together
+ * without touching the five-tile row, which still spreads edge to edge exactly
+ * as it always has.
+ */
+const SHORT_ROW_GAP = 22;
+
 export function QuickActions() {
   const { t } = useTranslation();
   const { colors } = useMasjidConfig();
   const { open: openDonation } = useDonation();
   const router = useRouter();
+  const { volunteerUrl } = useVolunteerUrl();
   const fgRgb = `rgb(${colors.foreground.replace(/ /g, ',')})`;
   const primaryRgb = `rgb(${colors.primary.replace(/ /g, ',')})`;
 
+  // No volunteer intake configured → drop the tile rather than link nowhere.
+  const actions = QUICK_ACTIONS.filter((a) => a.id !== 'volunteer' || !!volunteerUrl);
+
   const handlePress = (id: string) => {
     if (id === 'donate') openDonation();
-    else if (id === 'prayers') router.push('/prayer');
+    else if (id === 'volunteer' && volunteerUrl) {
+      WebBrowser.openBrowserAsync(volunteerUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        controlsColor: primaryRgb,
+      }).catch(() => {});
+    } else if (id === 'prayers') router.push('/prayer');
     else if (id === 'advertise') router.push('/advertise');
     else if (id === 'quran') router.push('/quran');
   };
 
+  // Only constrain a short row — at full length the original layout is correct.
+  const shortRow =
+    actions.length < QUICK_ACTIONS.length
+      ? {
+          width: '100%' as const,
+          maxWidth: actions.length * TILE + (actions.length - 1) * SHORT_ROW_GAP,
+          alignSelf: 'center' as const,
+        }
+      : undefined;
+
   return (
-    <View className="flex-row justify-between">
-      {QUICK_ACTIONS.map((action) => (
+    <View className="flex-row justify-between" style={shortRow}>
+      {actions.map((action) => (
         <TouchableOpacity
           key={action.id}
           className="flex-1 items-center"
@@ -50,8 +80,8 @@ export function QuickActions() {
           <View
             className="items-center justify-center rounded-2xl border border-foreground/10 bg-muted"
             style={{
-              height: 62,
-              width: 62,
+              height: TILE,
+              width: TILE,
               paddingHorizontal: 3,
               shadowColor: fgRgb,
               shadowOffset: { width: 0, height: 6 },
