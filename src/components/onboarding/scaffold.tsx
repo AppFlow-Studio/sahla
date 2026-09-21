@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { BackButton } from '@/src/components/ui/back-button';
-import { OnboardingPattern } from './onboarding-pattern';
+import { OnboardingPatternHeader } from './onboarding-pattern';
 
 type OnboardingScaffoldProps = {
   step: number;
@@ -68,9 +68,7 @@ export function OnboardingScaffold({
 
   return (
     <View className="flex-1 bg-onboarding-bg z-100">
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '10%' }}>
-        <OnboardingPattern />
-      </View>
+      <OnboardingPatternHeader />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-row items-center px-5 pt-2">

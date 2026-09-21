@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { OnboardingPattern } from '@/src/components/onboarding/onboarding-pattern';
+import { OnboardingPatternHeader } from '@/src/components/onboarding/onboarding-pattern';
 import { Icon } from '@/src/components/ui/icon';
 import { useFontFamily } from '@/src/hooks/use-font-family';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
@@ -48,9 +48,7 @@ export default function LanguageScreen() {
 
   return (
     <View className="flex-1 bg-onboarding-bg">
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: '10%' }}>
-        <OnboardingPattern />
-      </View>
+      <OnboardingPatternHeader />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <ScrollView
