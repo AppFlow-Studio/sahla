@@ -88,6 +88,16 @@ export default function AdminHub() {
           onPress={() => router.push('/profile/admin/iqamah')}
         />
         <AdminRow
+          title={t('admin.volunteer')}
+          subtitle={t('admin.volunteerSubtitle')}
+          icon="account-group"
+          fgRgb={fgRgb}
+          mutedRgb={mutedRgb}
+          borderColor={borderColor}
+          onPress={() => router.push('/profile/admin/volunteer')}
+        />
+
+        <AdminRow
           title={t('admin.businessAds')}
           subtitle={t('admin.businessAdsSubtitle')}
           icon="storefront-outline"

@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Icon } from '@/src/components/ui/icon';
 import { useMasjidConfig } from '@/src/hooks/use-masjid-config';
 import { useAutoStatusBarStyle } from '@/src/hooks/use-status-bar-style';
+import { useAdsEnabled } from '@/src/hooks/use-ads-enabled';
 import { useMyAds, useCancelAdSubscription, type MyAd } from '@/src/hooks/use-my-ads';
 import { BackButton } from '@/src/components/ui/back-button';
 
@@ -47,10 +48,28 @@ export default function AdvertiseStatusScreen() {
   const mutedRgb = `rgba(${colors.foreground.replace(/ /g, ',')}, 0.5)`;
 
   const { data: ads, isLoading } = useMyAds();
+  const adsEnabled = useAdsEnabled();
   const cancel = useCancelAdSubscription();
 
   const toneColor = (tone: 'good' | 'warn' | 'muted') =>
     tone === 'good' ? '#15803d' : tone === 'warn' ? '#8a6d1f' : mutedRgb;
+
+  // Renewing is a brand-new application (new submission, new subscription, and
+  // the masjid reviews it again) — we just carry this business's details over
+  // so someone advertising several businesses doesn't retype the right one.
+  const renew = (ad: MyAd) =>
+    router.push({
+      pathname: '/advertise-apply',
+      params: {
+        renewedFrom: ad.submission_id,
+        fullName: ad.personal_full_name ?? '',
+        email: ad.personal_email ?? '',
+        phone: ad.personal_phone ?? '',
+        businessName: ad.business_name ?? '',
+        businessAddress: ad.business_address ?? '',
+        flyerUrl: ad.business_flyer_img ?? '',
+      },
+    });
 
   const confirmCancel = (ad: MyAd) => {
     Alert.alert(
@@ -114,6 +133,7 @@ export default function AdvertiseStatusScreen() {
                 <View
                   key={ad.submission_id}
                   className="overflow-hidden rounded-2xl border border-foreground/10 bg-muted/30"
+                  style={ad.renewed ? { opacity: 0.55 } : undefined}
                 >
                   {ad.business_flyer_img ? (
                     <Image
@@ -154,11 +174,40 @@ export default function AdvertiseStatusScreen() {
                           {t('ads.cancelSubscription')}
                         </Text>
                       </Pressable>
+                    ) : ad.can_renew ? (
+                      <Pressable
+                        onPress={() => renew(ad)}
+                        className="mt-3 h-[42px] items-center justify-center rounded-full bg-foreground active:opacity-90"
+                      >
+                        <Text className="text-[14px] font-semibold text-background">
+                          {t('ads.renewSubscription')}
+                        </Text>
+                      </Pressable>
+                    ) : ad.renewed ? (
+                      <View className="mt-3 h-[38px] items-center justify-center">
+                        <Text style={{ color: mutedRgb, fontSize: 13, fontWeight: '600' }}>
+                          {t('ads.renewedLabel')}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                 </View>
               );
             })}
+
+            {/* Renew (on each card) re-runs a business you've had before; this
+                is the only way to add a different one. */}
+            {adsEnabled ? (
+              <Pressable
+                onPress={() => router.push('/advertise-apply')}
+                className="mt-1 h-[46px] flex-row items-center justify-center gap-2 rounded-full border border-dashed border-foreground/25 active:opacity-70"
+              >
+                <Icon name="add" size={16} color={mutedRgb} />
+                <Text style={{ color: mutedRgb, fontSize: 14, fontWeight: '600' }}>
+                  {t('ads.advertiseAnother')}
+                </Text>
+              </Pressable>
+            ) : null}
           </ScrollView>
         )}
       </SafeAreaView>

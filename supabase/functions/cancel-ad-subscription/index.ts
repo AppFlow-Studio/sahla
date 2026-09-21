@@ -9,6 +9,40 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, "Content-Type": "application/json" },
+  });
+
+/**
+ * Reconcile when Stripe says the subscription is already gone: the billing
+ * period is over, so stop billing AND take the ad down. Presence in
+ * approved_business_ads is what makes an ad live in Community Partners, so
+ * skipping that delete leaves a canceled advertiser's flyer up indefinitely.
+ */
+async function markCanceled(
+  supabase: ReturnType<typeof createClient>,
+  submissionId: string,
+) {
+  await supabase
+    .from("ad_subscriptions")
+    .update({
+      status: "canceled",
+      end_date: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("submission_id", submissionId);
+  await supabase
+    .from("approved_business_ads")
+    .delete()
+    .eq("submission_id", submissionId);
+  await supabase
+    .from("business_ads_submissions")
+    .update({ status: "canceled" })
+    .eq("submission_id", submissionId);
+}
+
 /**
  * Cancels a business-ad subscription at period end (the advertiser keeps the
  * month they paid for). Verifies ownership, then sets cancel_at_period_end on
@@ -83,10 +117,45 @@ serve(async (req: Request) => {
       });
     }
 
+    const stripeAccountOpts = { stripeAccount: mosque.stripe_account_id };
+
+    // Read Stripe's own view first. Our row can be stale — a dunning-exhausted
+    // subscription is already 'canceled' upstream, and Stripe rejects any
+    // update on one ("A canceled subscription can only update its
+    // cancellation_details and metadata"). Treat that as a no-op success and
+    // reconcile our row instead of failing the tap.
+    let subscription: Stripe.Subscription;
+    try {
+      subscription = await stripe.subscriptions.retrieve(
+        adSub.stripe_subscription_id,
+        stripeAccountOpts,
+      );
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === "resource_missing") {
+        await markCanceled(supabase, submission_id);
+        return json({ ok: true, already_canceled: true });
+      }
+      throw err;
+    }
+
+    if (subscription.status === "canceled" || subscription.status === "incomplete_expired") {
+      await markCanceled(supabase, submission_id);
+      return json({ ok: true, already_canceled: true });
+    }
+
+    if (subscription.cancel_at_period_end) {
+      await supabase
+        .from("ad_subscriptions")
+        .update({ status: "canceling", updated_at: new Date().toISOString() })
+        .eq("submission_id", submission_id);
+      return json({ ok: true, already_canceling: true });
+    }
+
     await stripe.subscriptions.update(
       adSub.stripe_subscription_id,
       { cancel_at_period_end: true },
-      { stripeAccount: mosque.stripe_account_id },
+      stripeAccountOpts,
     );
 
     await supabase
@@ -94,15 +163,12 @@ serve(async (req: Request) => {
       .update({ status: "canceling", updated_at: new Date().toISOString() })
       .eq("submission_id", submission_id);
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...CORS, "Content-Type": "application/json" },
-    });
+    return json({ ok: true });
   } catch (err) {
     console.error("[cancel-ad-subscription] Error:", err);
-    return new Response(JSON.stringify({ error: "Internal error", detail: String(err) }), {
-      status: 500,
-      headers: { ...CORS, "Content-Type": "application/json" },
-    });
+    // Surface Stripe's message so the app can show something actionable
+    // instead of a bare "non-2xx status code".
+    const message = err instanceof Error ? err.message : String(err);
+    return json({ error: message, detail: String(err) }, 500);
   }
 });
